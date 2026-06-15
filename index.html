@@ -1,238 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-  <title>Pay Calculator</title>
-
-  <!-- Add-to-home-screen / full-screen app behavior -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Pay Calc" />
-  <meta name="theme-color" content="#09090b" />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-  <!-- React + Babel via CDN so JSX runs with no build step -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <style>
-    html, body { margin: 0; padding: 0; background: #09090b; }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<title>Pay Calculator</title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Pay Calc" />
+<meta name="theme-color" content="#09090b" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+html, body { margin: 0; padding: 0; background: #09090b; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+</style>
 </head>
 <body>
-  <div id="root"></div>
-
-  <script type="text/babel" data-presets="react">
-    const { useState, useCallback } = React;
-
-    const fmt = (n) =>
-      n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
-
-    const n = (v) => parseFloat(v) || 0;
-
-    const INIT = { night: false, h1: "", ot1: "", dt1: "", h2: "", tax: "" };
-
-    function useHistory(initial) {
-      const [history, setHistory] = useState([initial]);
-      const [cursor, setCursor] = useState(0);
-      const state = history[cursor];
-      const set = useCallback((updater) => {
-        setHistory((prev) => {
-          const next = typeof updater === "function" ? updater(prev[cursor]) : updater;
-          return [...prev.slice(0, cursor + 1), next];
-        });
-        setCursor((c) => c + 1);
-      }, [cursor]);
-      const undo = useCallback(() => setCursor((c) => Math.max(0, c - 1)), []);
-      const redo = useCallback(() => setCursor((c) => Math.min(history.length - 1, c + 1)), [history.length]);
-      return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
-    }
-
-    function Field({ label, value, onChange, suffix = "" }) {
-      return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#71717a" }}>
-            {label}
-          </span>
-          <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #3f3f46", paddingBottom: 7 }}>
-            <input
-              type="number"
-              value={value}
-              placeholder="—"
-              onChange={onChange}
-              style={{
-                background: "transparent", border: "none", outline: "none",
-                color: "#ffffff", fontFamily: "'DM Mono', monospace",
-                fontSize: 17, width: "100%",
-              }}
-            />
-            {suffix && <span style={{ color: "#71717a", fontSize: 13, marginLeft: 4 }}>{suffix}</span>}
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useCallback } = React;
+const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+const n = (v) => parseFloat(v) || 0;
+const INIT = { night: false, d1: "", otd1: "", d2: "", deductions: "" };
+function useHistory(initial) {
+  const [history, setHistory] = useState([initial]);
+  const [cursor, setCursor] = useState(0);
+  const state = history[cursor];
+  const set = useCallback((updater) => {
+    setHistory((prev) => {
+      const next = typeof updater === "function" ? updater(prev[cursor]) : updater;
+      return [...prev.slice(0, cursor + 1), next];
+    });
+    setCursor((c) => c + 1);
+  }, [cursor]);
+  const undo = useCallback(() => setCursor((c) => Math.max(0, c - 1)), []);
+  const redo = useCallback(() => setCursor((c) => Math.min(history.length - 1, c + 1)), [history.length]);
+  return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
+}
+function Field({ label, value, onChange, suffix = "" }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #52525b", paddingBottom: 8 }}>
+        <input type="number" value={value} placeholder="—" onChange={onChange}
+          style={{ background: "transparent", border: "none", outline: "none", color: "#ffffff", fontFamily: "'DM Mono', monospace", fontSize: 18, width: "100%" }} />
+        {suffix && <span style={{ color: "#a1a1aa", fontSize: 13, marginLeft: 4 }}>{suffix}</span>}
+      </div>
+    </div>
+  );
+}
+function Line({ label, value, highlight = false, muted = false, large = false, note = "" }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: large ? "18px 0 0" : "9px 0", borderTop: large ? "1px solid #52525b" : "none" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#71717a" : "#d4d4d8" }}>{label}</span>
+        {note && <span style={{ fontSize: 10, color: "#71717a", fontFamily: "'DM Mono', monospace" }}>{note}</span>}
+      </div>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: large ? 26 : 15, fontWeight: large ? 500 : 400, color: highlight ? "#a3e635" : muted ? "#71717a" : "#e4e4e7" }}>{value}</span>
+    </div>
+  );
+}
+const SUTTER_BASE = 76.40;
+const NIGHT_DIFF = 6.00;
+const SUTTER_OT = 164.80;
+const NORTHBAY_RATE = 87.40;
+const HOURS_PER_DAY = 12;
+function Calc() {
+  const { state, set, undo, redo, canUndo, canRedo } = useHistory(INIT);
+  const { night, d1, otd1, d2, deductions } = state;
+  const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
+  const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
+  const dayRate = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
+  const otRate = SUTTER_OT;
+  const dayPay = dayRate * HOURS_PER_DAY;
+  const otDayPay = otRate * HOURS_PER_DAY;
+  const gross1 = n(d1) * dayPay + n(otd1) * otDayPay;
+  const gross2 = n(d2) * NORTHBAY_RATE * HOURS_PER_DAY;
+  const totalGross = gross1 + gross2;
+  const dedPct = n(deductions);
+  const dedAmt = totalGross * (dedPct / 100);
+  const totalNet = totalGross - dedAmt;
+  const hasData = totalGross > 0;
+  const iconColor = (active) => active ? "#d4d4d8" : "#52525b";
+  return (
+    <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff", display: "flex", justifyContent: "center", padding: "48px 24px" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        input[type=number] { -moz-appearance: textfield; }
+        input::placeholder { color: #52525b; }
+      `}</style>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
+          <div>
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>monthly</p>
+            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>Pay Calculator</h1>
+          </div>
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            {[
+              { fn: undo, can: canUndo, d: "M3 7v6h6 M3 13C5 7 10 3 16 3a9 9 0 0 1 0 18H3" },
+              { fn: redo, can: canRedo, d: "M21 7v6h-6 M21 13C19 7 14 3 8 3a9 9 0 0 0 0 18h13" },
+            ].map(({ fn, can, d }, i) => (
+              <button key={i} onClick={fn} disabled={!can} style={{ background: "transparent", border: `1px solid ${can ? "#52525b" : "#27272a"}`, borderRadius: 8, padding: "7px 10px", cursor: can ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor(can)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {d.split(" M").map((seg, j) => <path key={j} d={(j === 0 ? "" : "M") + seg} />)}
+                </svg>
+              </button>
+            ))}
           </div>
         </div>
-      );
-    }
-
-    function Line({ label, value, highlight = false, muted = false, large = false, note = "" }) {
-      return (
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "baseline",
-          padding: large ? "16px 0 0" : "8px 0",
-          borderTop: large ? "1px solid #3f3f46" : "none",
-        }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#52525b" : "#a1a1aa" }}>{label}</span>
-            {note && <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>{note}</span>}
-          </div>
-          <span style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: large ? 24 : 15, fontWeight: large ? 500 : 400,
-            color: highlight ? "#84cc16" : muted ? "#52525b" : "#d4d4d8",
-          }}>{value}</span>
-        </div>
-      );
-    }
-
-    const SUTTER_BASE = 76.40;
-    const NIGHT_DIFF = 6.00;
-    const NORTHBAY_RATE = 87.40;
-
-    function Calc() {
-      const { state, set, undo, redo, canUndo, canRedo } = useHistory(INIT);
-      const { night, h1, ot1, dt1, h2, tax } = state;
-
-      const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
-      const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
-
-      const effectiveRate = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
-      const otRate = effectiveRate * 1.5;
-      const dtRate = effectiveRate * 2;
-
-      const gross1 = effectiveRate * n(h1) + otRate * n(ot1) + dtRate * n(dt1);
-      const gross2 = NORTHBAY_RATE * n(h2);
-      const totalGross = gross1 + gross2;
-      const taxRate = n(tax);
-      const totalTax = totalGross * (taxRate / 100);
-      const totalNet = totalGross - totalTax;
-      const hasData = totalGross > 0;
-
-      const iconColor = (active) => active ? "#a1a1aa" : "#3f3f46";
-
-      return (
-        <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff", display: "flex", justifyContent: "center", padding: "48px 24px" }}>
-          <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
-            input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-            input[type=number] { -moz-appearance: textfield; }
-            input::placeholder { color: #3f3f46; }
-          `}</style>
-
-          <div style={{ width: "100%", maxWidth: 420 }}>
-
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
-              <div>
-                <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#71717a", letterSpacing: "0.06em", margin: "0 0 4px" }}>monthly</p>
-                <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>Pay Calculator</h1>
-              </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                {[
-                  { fn: undo, can: canUndo, d: "M3 7v6h6 M3 13C5 7 10 3 16 3a9 9 0 0 1 0 18H3" },
-                  { fn: redo, can: canRedo, d: "M21 7v6h-6 M21 13C19 7 14 3 8 3a9 9 0 0 0 0 18h13" },
-                ].map(({ fn, can, d }, i) => (
-                  <button key={i} onClick={fn} disabled={!can} style={{
-                    background: "transparent", border: `1px solid ${can ? "#3f3f46" : "#1c1c1f"}`,
-                    borderRadius: 8, padding: "7px 10px", cursor: can ? "pointer" : "not-allowed",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor(can)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      {d.split(" M").map((seg, j) => <path key={j} d={(j === 0 ? "" : "M") + seg} />)}
-                    </svg>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Job 1 — Sutter */}
-            <div style={{ marginBottom: 40 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
-                <div>
-                  <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", margin: "0 0 5px" }}>Job 01 · Sutter</p>
-                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#52525b", margin: 0, lineHeight: 1.8 }}>
-                    <span style={{ color: "#a1a1aa" }}>{fmt(effectiveRate)}</span>
-                    <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-                    <span style={{ color: "#71717a" }}>1.5×</span> <span style={{ color: "#a1a1aa" }}>{fmt(otRate)}</span>
-                    <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-                    <span style={{ color: "#71717a" }}>2×</span> <span style={{ color: "#a1a1aa" }}>{fmt(dtRate)}</span>
-                  </p>
-                </div>
-                <button onClick={toggleNight} style={{
-                  display: "flex", alignItems: "center", gap: 7, background: night ? "rgba(251,146,60,0.08)" : "transparent",
-                  border: `1px solid ${night ? "#fb923c" : "#3f3f46"}`, borderRadius: 20,
-                  padding: "6px 13px", cursor: "pointer",
-                }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: night ? "#fb923c" : "#52525b" }} />
-                  <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: night ? "#fb923c" : "#71717a", fontFamily: "'DM Mono', monospace" }}>Night</span>
-                </button>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 22 }}>
-                <Field label="Reg Hrs" value={h1} onChange={update("h1")} />
-                <Field label="OT 1.5×" value={ot1} onChange={update("ot1")} />
-                <Field label="DT 2×" value={dt1} onChange={update("dt1")} />
-              </div>
-            </div>
-
-            <div style={{ borderTop: "1px solid #1c1c1f", marginBottom: 40 }} />
-
-            {/* Job 2 — NorthBay */}
-            <div style={{ marginBottom: 40 }}>
-              <div style={{ marginBottom: 18 }}>
-                <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", margin: "0 0 5px" }}>Job 02 · NorthBay</p>
-                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#52525b", margin: 0 }}>
-                  flat <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE)}</span>/hr
-                </p>
-              </div>
-              <div style={{ maxWidth: 120 }}>
-                <Field label="Hours" value={h2} onChange={update("h2")} />
-              </div>
-            </div>
-
-            <div style={{ borderTop: "1px solid #1c1c1f", marginBottom: 40 }} />
-
-            {/* Tax */}
-            <div style={{ marginBottom: 52 }}>
-              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", margin: "0 0 18px" }}>Tax Rate</p>
-              <div style={{ maxWidth: 120 }}>
-                <Field label="Effective %" value={tax} onChange={update("tax")} suffix="%" />
-              </div>
-            </div>
-
-            {/* Results */}
-            {hasData ? (
-              <div>
-                <Line label="Sutter Gross" value={fmt(gross1)} note={night ? "(night)" : ""} />
-                <Line label="NorthBay Gross" value={fmt(gross2)} />
-                <Line label="Total Gross" value={fmt(totalGross)} />
-                {taxRate > 0 && <Line label="Taxes" value={`− ${fmt(totalTax)}`} muted />}
-                <Line label="Take Home" value={fmt(totalNet)} highlight large />
-              </div>
-            ) : (
-              <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#3f3f46", fontSize: 15, margin: 0 }}>
-                Enter your hours above to see totals.
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+            <div>
+              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 01 · Sutter</p>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0, lineHeight: 2 }}>
+                <span style={{ color: "#e4e4e7" }}>{fmt(dayRate)}/hr</span>
+                <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(dayPay)}/day</span>
+                <br />
+                <span style={{ color: "#a1a1aa" }}>OT </span>
+                <span style={{ color: "#e4e4e7" }}>{fmt(SUTTER_OT)}/hr</span>
+                <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(otDayPay)}/day</span>
               </p>
-            )}
-
+            </div>
+            <button onClick={toggleNight} style={{ display: "flex", alignItems: "center", gap: 7, background: night ? "rgba(251,146,60,0.12)" : "transparent", border: `1px solid ${night ? "#fb923c" : "#52525b"}`, borderRadius: 20, padding: "6px 13px", cursor: "pointer" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: night ? "#fb923c" : "#71717a" }} />
+              <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: night ? "#fb923c" : "#a1a1aa", fontFamily: "'DM Mono', monospace" }}>Night</span>
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <Field label="Days Worked" value={d1} onChange={update("d1")} />
+            <Field label="OT Days" value={otd1} onChange={update("otd1")} />
           </div>
         </div>
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById("root")).render(<Calc />);
-  </script>
+        <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 02 · NorthBay</p>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0 }}>
+              <span style={{ color: "#e4e4e7" }}>{fmt(NORTHBAY_RATE)}/hr</span>
+              <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
+              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * HOURS_PER_DAY)}/day</span>
+            </p>
+          </div>
+          <div style={{ maxWidth: 160 }}>
+            <Field label="Days Worked" value={d2} onChange={update("d2")} />
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
+        <div style={{ marginBottom: 52 }}>
+          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 20px" }}>Deductions</p>
+          <div style={{ maxWidth: 160 }}>
+            <Field label="Effective %" value={deductions} onChange={update("deductions")} suffix="%" />
+          </div>
+        </div>
+        {hasData ? (
+          <div>
+            <Line label="Sutter Gross" value={fmt(gross1)} note={night ? "(night)" : ""} />
+            <Line label="NorthBay Gross" value={fmt(gross2)} />
+            <Line label="Total Gross" value={fmt(totalGross)} />
+            {dedPct > 0 && <Line label="Deductions" value={`− ${fmt(dedAmt)}`} muted />}
+            <Line label="Take Home" value={fmt(totalNet)} highlight large />
+          </div>
+        ) : (
+          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 15, margin: 0 }}>Enter your days above to see totals.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Calc />);
+</script>
 </body>
 </html>
