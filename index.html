@@ -70,17 +70,18 @@ const SUTTER_BASE = 76.40;
 const NIGHT_DIFF = 6.00;
 const SUTTER_OT = 164.80;
 const NORTHBAY_RATE = 87.40;
-const HOURS_PER_DAY = 12;
+const SUTTER_HRS = 12;
+const NORTHBAY_HRS = 8;
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(INIT);
   const { night, d1, otd1, d2, deductions } = state;
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
   const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
   const dayRate = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
-  const dayPay = dayRate * HOURS_PER_DAY;
-  const otDayPay = SUTTER_OT * HOURS_PER_DAY;
+  const dayPay = dayRate * SUTTER_HRS;
+  const otDayPay = SUTTER_OT * SUTTER_HRS;
   const gross1 = n(d1) * dayPay + n(otd1) * otDayPay;
-  const gross2 = n(d2) * NORTHBAY_RATE * HOURS_PER_DAY;
+  const gross2 = n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
   const totalGross = gross1 + gross2;
   const dedPct = n(deductions);
   const dedAmt = totalGross * (dedPct / 100);
@@ -146,7 +147,7 @@ function Calc() {
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0 }}>
               <span style={{ color: "#e4e4e7" }}>{fmt(NORTHBAY_RATE)}/hr</span>
               <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * HOURS_PER_DAY)}/day</span>
+              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * NORTHBAY_HRS)}/day</span>
             </p>
           </div>
           <div style={{ maxWidth: 160 }}>
