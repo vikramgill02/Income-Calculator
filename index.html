@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Pay Calc" />
 <meta name="theme-color" content="#09090b" />
+<link rel="apple-touch-icon" href="icon.png" />
+<link rel="manifest" href="manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -75,9 +77,8 @@ function Calc() {
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
   const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
   const dayRate = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
-  const otRate = SUTTER_OT;
   const dayPay = dayRate * HOURS_PER_DAY;
-  const otDayPay = otRate * HOURS_PER_DAY;
+  const otDayPay = SUTTER_OT * HOURS_PER_DAY;
   const gross1 = n(d1) * dayPay + n(otd1) * otDayPay;
   const gross2 = n(d2) * NORTHBAY_RATE * HOURS_PER_DAY;
   const totalGross = gross1 + gross2;
