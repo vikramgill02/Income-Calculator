@@ -9,29 +9,27 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Pay Calc" />
 <meta name="theme-color" content="#09090b" />
-<link rel="apple-touch-icon" href="icon.png" />
-<link rel="manifest" href="manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <style>
 html, body { margin: 0; padding: 0; background: #09090b; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-input[type=number] { -moz-appearance: textfield; }
-input::placeholder { color: #52525b; }
 </style>
 </head>
 <body>
 <div id="root"></div>
+
 <script type="text/babel" data-presets="react">
 const { useState, useCallback } = React;
-const fmt = (num) => num.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
-const toNum = (v) => parseFloat(v) || 0;
+
+const fmt = (n) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+
+const n = (v) => parseFloat(v) || 0;
+
 const INIT = { night: false, d1: "", otd1: "", d2: "", deductions: "" };
 
 function useHistory(initial) {
@@ -50,97 +48,141 @@ function useHistory(initial) {
   return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
 }
 
-function Field({ label, value, onChange, suffix }) {
+function Field({ label, value, onChange, suffix = "" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>{label}</span>
+      <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>
+        {label}
+      </span>
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #52525b", paddingBottom: 8 }}>
-        <input type="number" value={value} placeholder="—" onChange={onChange}
-          style={{ background: "transparent", border: "none", outline: "none", color: "#ffffff", fontFamily: "DM Mono, monospace", fontSize: 18, width: "100%" }} />
+        <input
+          type="number"
+          value={value}
+          placeholder="—"
+          onChange={onChange}
+          style={{
+            background: "transparent", border: "none", outline: "none",
+            color: "#ffffff", fontFamily: "'DM Mono', monospace",
+            fontSize: 18, width: "100%",
+          }}
+        />
         {suffix && <span style={{ color: "#a1a1aa", fontSize: 13, marginLeft: 4 }}>{suffix}</span>}
       </div>
     </div>
   );
 }
 
-function Line({ label, value, highlight, muted, large, note }) {
+function Line({ label, value, highlight = false, muted = false, large = false, note = "" }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: large ? "18px 0 0" : "9px 0", borderTop: large ? "1px solid #52525b" : "none" }}>
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+      padding: large ? "18px 0 0" : "9px 0",
+      borderTop: large ? "1px solid #52525b" : "none",
+    }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#71717a" : "#d4d4d8" }}>{label}</span>
-        {note && <span style={{ fontSize: 10, color: "#71717a", fontFamily: "DM Mono, monospace" }}>{note}</span>}
+        <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#71717a" : "#d4d4d8" }}>
+          {label}
+        </span>
+        {note && <span style={{ fontSize: 10, color: "#71717a", fontFamily: "'DM Mono', monospace" }}>{note}</span>}
       </div>
-      <span style={{ fontFamily: "DM Mono, monospace", fontSize: large ? 26 : 15, fontWeight: large ? 500 : 400, color: highlight ? "#a3e635" : muted ? "#71717a" : "#e4e4e7" }}>{value}</span>
+      <span style={{
+        fontFamily: "'DM Mono', monospace",
+        fontSize: large ? 26 : 15, fontWeight: large ? 500 : 400,
+        color: highlight ? "#a3e635" : muted ? "#71717a" : "#e4e4e7",
+      }}>{value}</span>
     </div>
   );
 }
 
-const SUTTER_BASE = 76.40;
-const NIGHT_DIFF = 6.00;
-const SUTTER_OT = 164.80;
+// Constants
+const SUTTER_BASE   = 76.40;
+const NIGHT_DIFF    = 6.00;
+const SUTTER_OT     = 164.80;   // flat OT rate per hour
 const NORTHBAY_RATE = 87.40;
-const SUTTER_HRS = 12;
-const NORTHBAY_HRS = 8;
+const HOURS_PER_DAY = 12;
 
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(INIT);
   const { night, d1, otd1, d2, deductions } = state;
+
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
   const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
-  const dayRate = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
-  const dayPay = dayRate * SUTTER_HRS;
-  const otDayPay = SUTTER_OT * SUTTER_HRS;
-  const gross1 = toNum(d1) * dayPay + toNum(otd1) * otDayPay;
-  const gross2 = toNum(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
+
+  const dayRate   = SUTTER_BASE + (night ? NIGHT_DIFF : 0);   // per hour
+  const otRate    = SUTTER_OT;                                  // per hour
+  const dayPay    = dayRate * HOURS_PER_DAY;
+  const otDayPay  = otRate  * HOURS_PER_DAY;
+
+  const gross1    = n(d1) * dayPay + n(otd1) * otDayPay;
+  const gross2    = n(d2) * NORTHBAY_RATE * HOURS_PER_DAY;
   const totalGross = gross1 + gross2;
-  const dedPct = toNum(deductions);
-  const dedAmt = totalGross * (dedPct / 100);
-  const totalNet = totalGross - dedAmt;
-  const hasData = totalGross > 0;
-  const ic = (on) => on ? "#d4d4d8" : "#52525b";
-  const undoPath = "M3 7v6h6 M3 13C5 7 10 3 16 3a9 9 0 0 1 0 18H3";
-  const redoPath = "M21 7v6h-6 M21 13C19 7 14 3 8 3a9 9 0 0 0 0 18h13";
+  const dedPct    = n(deductions);
+  const dedAmt    = totalGross * (dedPct / 100);
+  const totalNet  = totalGross - dedAmt;
+  const hasData   = totalGross > 0;
+
+  const iconColor = (active) => active ? "#d4d4d8" : "#52525b";
+
   return (
     <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff", display: "flex", justifyContent: "center", padding: "48px 24px" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        input[type=number] { -moz-appearance: textfield; }
+        input::placeholder { color: #52525b; }
+      `}</style>
+
       <div style={{ width: "100%", maxWidth: 420 }}>
 
+        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
           <div>
-            <p style={{ fontFamily: "Instrument Serif, serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>monthly</p>
-            <h1 style={{ fontFamily: "Instrument Serif, serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>Pay Calculator</h1>
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>monthly</p>
+            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>Pay Calculator</h1>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-            <button onClick={undo} disabled={!canUndo} style={{ background: "transparent", border: "1px solid " + ic(canUndo), borderRadius: 8, padding: "7px 10px", cursor: canUndo ? "pointer" : "not-allowed", display: "flex", alignItems: "center" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ic(canUndo)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {undoPath.split(" M").map((seg, j) => <path key={j} d={(j===0?"":"M")+seg} />)}
-              </svg>
-            </button>
-            <button onClick={redo} disabled={!canRedo} style={{ background: "transparent", border: "1px solid " + ic(canRedo), borderRadius: 8, padding: "7px 10px", cursor: canRedo ? "pointer" : "not-allowed", display: "flex", alignItems: "center" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ic(canRedo)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {redoPath.split(" M").map((seg, j) => <path key={j} d={(j===0?"":"M")+seg} />)}
-              </svg>
-            </button>
+            {[
+              { fn: undo, can: canUndo, d: "M3 7v6h6 M3 13C5 7 10 3 16 3a9 9 0 0 1 0 18H3" },
+              { fn: redo, can: canRedo, d: "M21 7v6h-6 M21 13C19 7 14 3 8 3a9 9 0 0 0 0 18h13" },
+            ].map(({ fn, can, d }, i) => (
+              <button key={i} onClick={fn} disabled={!can} style={{
+                background: "transparent", border: `1px solid ${can ? "#52525b" : "#27272a"}`,
+                borderRadius: 8, padding: "7px 10px", cursor: can ? "pointer" : "not-allowed",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor(can)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {d.split(" M").map((seg, j) => <path key={j} d={(j === 0 ? "" : "M") + seg} />)}
+                </svg>
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Job 1 — Sutter */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
             <div>
               <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 01 · Sutter</p>
-              <p style={{ fontFamily: "DM Mono, monospace", fontSize: 11, color: "#71717a", margin: 0, lineHeight: 2 }}>
+              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0, lineHeight: 2 }}>
                 <span style={{ color: "#e4e4e7" }}>{fmt(dayRate)}/hr</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
                 <span style={{ color: "#a1a1aa" }}>{fmt(dayPay)}/day</span>
                 <br />
                 <span style={{ color: "#a1a1aa" }}>OT </span>
                 <span style={{ color: "#e4e4e7" }}>{fmt(SUTTER_OT)}/hr</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
                 <span style={{ color: "#a1a1aa" }}>{fmt(otDayPay)}/day</span>
               </p>
             </div>
-            <button onClick={toggleNight} style={{ display: "flex", alignItems: "center", gap: 7, background: night ? "rgba(251,146,60,0.12)" : "transparent", border: "1px solid " + (night ? "#fb923c" : "#52525b"), borderRadius: 20, padding: "6px 13px", cursor: "pointer" }}>
+            <button onClick={toggleNight} style={{
+              display: "flex", alignItems: "center", gap: 7,
+              background: night ? "rgba(251,146,60,0.12)" : "transparent",
+              border: `1px solid ${night ? "#fb923c" : "#52525b"}`,
+              borderRadius: 20, padding: "6px 13px", cursor: "pointer",
+            }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: night ? "#fb923c" : "#71717a" }} />
-              <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: night ? "#fb923c" : "#a1a1aa", fontFamily: "DM Mono, monospace" }}>Night</span>
+              <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: night ? "#fb923c" : "#a1a1aa", fontFamily: "'DM Mono', monospace" }}>Night</span>
             </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
@@ -151,13 +193,14 @@ function Calc() {
 
         <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
 
+        {/* Job 2 — NorthBay */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 02 · NorthBay</p>
-            <p style={{ fontFamily: "DM Mono, monospace", fontSize: 11, color: "#71717a", margin: 0 }}>
+            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0 }}>
               <span style={{ color: "#e4e4e7" }}>{fmt(NORTHBAY_RATE)}/hr</span>
-              <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * NORTHBAY_HRS)}/day</span>
+              <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
+              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * HOURS_PER_DAY)}/day</span>
             </p>
           </div>
           <div style={{ maxWidth: 160 }}>
@@ -167,6 +210,7 @@ function Calc() {
 
         <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
 
+        {/* Deductions */}
         <div style={{ marginBottom: 52 }}>
           <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 20px" }}>Deductions</p>
           <div style={{ maxWidth: 160 }}>
@@ -174,17 +218,21 @@ function Calc() {
           </div>
         </div>
 
+        {/* Results */}
         {hasData ? (
           <div>
             <Line label="Sutter Gross" value={fmt(gross1)} note={night ? "(night)" : ""} />
             <Line label="NorthBay Gross" value={fmt(gross2)} />
             <Line label="Total Gross" value={fmt(totalGross)} />
-            {dedPct > 0 && <Line label="Deductions" value={"- " + fmt(dedAmt)} muted={true} />}
-            <Line label="Take Home" value={fmt(totalNet)} highlight={true} large={true} />
+            {dedPct > 0 && <Line label="Deductions" value={`− ${fmt(dedAmt)}`} muted />}
+            <Line label="Take Home" value={fmt(totalNet)} highlight large />
           </div>
         ) : (
-          <p style={{ fontFamily: "Instrument Serif, serif", fontStyle: "italic", color: "#52525b", fontSize: 15, margin: 0 }}>Enter your days above to see totals.</p>
+          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 15, margin: 0 }}>
+            Enter your days above to see totals.
+          </p>
         )}
+
       </div>
     </div>
   );
