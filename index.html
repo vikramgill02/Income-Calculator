@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#09090b" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -30,7 +31,7 @@ const fmt = (n) =>
 
 const n = (v) => parseFloat(v) || 0;
 
-const INIT = { night: false, d1: "", otd1: "", d2: "", deductions: "" };
+const INIT = { night: false, d1: "", otd1: "", d2: "", deductions: 35, useHours1: false, useHours2: false };
 
 function useHistory(initial) {
   const [history, setHistory] = useState([initial]);
@@ -100,21 +101,27 @@ const NIGHT_DIFF    = 6.00;
 const SUTTER_OT     = 164.80;   // flat OT rate per hour
 const NORTHBAY_RATE = 87.40;
 const HOURS_PER_DAY = 12;
+const NORTHBAY_HRS  = 8;
 
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(INIT);
-  const { night, d1, otd1, d2, deductions } = state;
+  const { night, d1, otd1, d2, deductions, useHours1, useHours2 } = state;
 
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
   const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
+  const toggleHours1 = () => set((s) => ({ ...s, useHours1: !s.useHours1, d1: "", otd1: "" }));
+  const toggleHours2 = () => set((s) => ({ ...s, useHours2: !s.useHours2, d2: "" }));
 
-  const dayRate   = SUTTER_BASE + (night ? NIGHT_DIFF : 0);   // per hour
-  const otRate    = SUTTER_OT;                                  // per hour
+  const dayRate   = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
   const dayPay    = dayRate * HOURS_PER_DAY;
-  const otDayPay  = otRate  * HOURS_PER_DAY;
+  const otDayPay  = SUTTER_OT * HOURS_PER_DAY;
 
-  const gross1    = n(d1) * dayPay + n(otd1) * otDayPay;
-  const gross2    = n(d2) * NORTHBAY_RATE * HOURS_PER_DAY;
+  const gross1    = useHours1
+    ? n(d1) * dayRate + n(otd1) * SUTTER_OT
+    : n(d1) * dayPay + n(otd1) * otDayPay;
+  const gross2    = useHours2
+    ? n(d2) * NORTHBAY_RATE
+    : n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
   const totalGross = gross1 + gross2;
   const dedPct    = n(deductions);
   const dedAmt    = totalGross * (dedPct / 100);
@@ -126,7 +133,6 @@ function Calc() {
   return (
     <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff", display: "flex", justifyContent: "center", padding: "48px 24px" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap');
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
         input[type=number] { -moz-appearance: textfield; }
@@ -185,9 +191,23 @@ function Calc() {
               <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: night ? "#fb923c" : "#a1a1aa", fontFamily: "'DM Mono', monospace" }}>Night</span>
             </button>
           </div>
+          <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
+            {["Days", "Hours"].map((mode) => {
+              const active = (mode === "Hours") === useHours1;
+              return (
+                <button key={mode} onClick={toggleHours1} style={{
+                  background: active ? "#27272a" : "transparent",
+                  border: `1px solid ${active ? "#52525b" : "#27272a"}`,
+                  borderRadius: 6, padding: "4px 12px", cursor: "pointer",
+                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                  color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
+                }}>{mode}</button>
+              );
+            })}
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <Field label="Days Worked" value={d1} onChange={update("d1")} />
-            <Field label="OT Days" value={otd1} onChange={update("otd1")} />
+            <Field label={useHours1 ? "Hours Worked" : "Days Worked"} value={d1} onChange={update("d1")} />
+            <Field label={useHours1 ? "OT Hours" : "OT Days"} value={otd1} onChange={update("otd1")} />
           </div>
         </div>
 
@@ -200,11 +220,25 @@ function Calc() {
             <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0 }}>
               <span style={{ color: "#e4e4e7" }}>{fmt(NORTHBAY_RATE)}/hr</span>
               <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * HOURS_PER_DAY)}/day</span>
+              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * NORTHBAY_HRS)}/day</span>
             </p>
           </div>
+          <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
+            {["Days", "Hours"].map((mode) => {
+              const active = (mode === "Hours") === useHours2;
+              return (
+                <button key={mode} onClick={toggleHours2} style={{
+                  background: active ? "#27272a" : "transparent",
+                  border: `1px solid ${active ? "#52525b" : "#27272a"}`,
+                  borderRadius: 6, padding: "4px 12px", cursor: "pointer",
+                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                  color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
+                }}>{mode}</button>
+              );
+            })}
+          </div>
           <div style={{ maxWidth: 160 }}>
-            <Field label="Days Worked" value={d2} onChange={update("d2")} />
+            <Field label={useHours2 ? "Hours Worked" : "Days Worked"} value={d2} onChange={update("d2")} />
           </div>
         </div>
 
@@ -212,9 +246,24 @@ function Calc() {
 
         {/* Deductions */}
         <div style={{ marginBottom: 52 }}>
-          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 20px" }}>Deductions</p>
-          <div style={{ maxWidth: 160 }}>
-            <Field label="Effective %" value={deductions} onChange={update("deductions")} suffix="%" />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: 0 }}>Deductions</p>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#ffffff" }}>{deductions}%</span>
+          </div>
+          <style>{`
+            input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+            input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #27272a; border-radius: 2px; }
+            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #ffffff; margin-top: -8px; cursor: pointer; }
+            input[type=range]::-moz-range-track { height: 2px; background: #27272a; border-radius: 2px; }
+            input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #ffffff; border: none; cursor: pointer; }
+          `}</style>
+          <input type="range" min="25" max="50" step="1"
+            value={deductions}
+            onChange={(e) => set((s) => ({ ...s, deductions: Number(e.target.value) }))}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+            <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>25%</span>
+            <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>50%</span>
           </div>
         </div>
 
