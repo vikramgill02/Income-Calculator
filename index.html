@@ -111,7 +111,7 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
 function TabBar({ view, setView }) {
   return (
     <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "20px 24px 0" }}>
-      {[["dash", "Dashboard"], ["calc", "Pay Calc"]].map(([key, label]) => {
+      {[["calc", "Pay Calc"], ["dash", "Dashboard"]].map(([key, label]) => {
         const active = view === key;
         return (
           <button key={key} onClick={() => setView(key)} style={{
@@ -557,10 +557,10 @@ function Dashboard() {
         </div>
 
         <div className="dash-stats">
-          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#a3e635" />
-          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#38bdf8" />
-          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#a78bfa" />
+          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#e4e4e7" />
           <StatCard label="Taxes / Other" value={fmt(taxesOther)} sub={totals.gross ? `${((taxesOther / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#f87171" />
+          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#22c55e" />
+          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#a78bfa" />
         </div>
 
         <div className="dash-pie-grid">
@@ -601,15 +601,21 @@ function Dashboard() {
 
 function App() {
   const [view, setView] = useState(() => {
-    if (typeof window === "undefined") return "dash";
-    return window.localStorage.getItem("view") || "dash";
+    if (typeof window === "undefined") return "calc";
+    return window.localStorage.getItem("view") || "calc";
   });
   const changeView = (v) => {
     setView(v);
     try { window.localStorage.setItem("view", v); } catch (e) {}
   };
   return (
-    <div style={{ minHeight: "100vh", background: "#09090b", color: "#fff" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "#09090b",
+      color: "#fff",
+      paddingTop: "env(safe-area-inset-top)",
+      paddingBottom: "env(safe-area-inset-bottom)",
+    }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
