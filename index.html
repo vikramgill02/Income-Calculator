@@ -24,32 +24,20 @@ html, body { margin: 0; padding: 0; background: #09090b; }
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useCallback } = React;
+const { useState, useEffect, useMemo, useCallback } = React;
 
 const fmt = (n) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 
 const n = (v) => parseFloat(v) || 0;
 
-const INIT = { night: false, d1: "", otd1: "", d2: "", deductions: 35, useHours1: false, useHours2: false };
+const EMPLOYERS = ["Sutter", "NorthBay"];
 
-function useHistory(initial) {
-  const [history, setHistory] = useState([initial]);
-  const [cursor, setCursor] = useState(0);
-  const state = history[cursor];
-  const set = useCallback((updater) => {
-    setHistory((prev) => {
-      const next = typeof updater === "function" ? updater(prev[cursor]) : updater;
-      return [...prev.slice(0, cursor + 1), next];
-    });
-    setCursor((c) => c + 1);
-  }, [cursor]);
-  const undo = useCallback(() => setCursor((c) => Math.max(0, c - 1)), []);
-  const redo = useCallback(() => setCursor((c) => Math.min(history.length - 1, c + 1)), [history.length]);
-  return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
-}
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Shared bits                                                                */
+/* ────────────────────────────────────────────────────────────────────────── */
 
-function Field({ label, value, onChange, suffix = "" }) {
+function Field({ label, value, onChange, suffix = "", placeholder = "—" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>
@@ -58,8 +46,9 @@ function Field({ label, value, onChange, suffix = "" }) {
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #52525b", paddingBottom: 8 }}>
         <input
           type="number"
+          step="0.01"
           value={value}
-          placeholder="—"
+          placeholder={placeholder}
           onChange={onChange}
           style={{
             background: "transparent", border: "none", outline: "none",
@@ -95,16 +84,63 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
   );
 }
 
-// Constants
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Tab bar                                                                    */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function TabBar({ view, setView }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "center", gap: 6,
+      padding: "20px 24px 0",
+    }}>
+      {[["calc", "Pay Calc"], ["ytd", "YTD"]].map(([key, label]) => {
+        const active = view === key;
+        return (
+          <button key={key} onClick={() => setView(key)} style={{
+            background: active ? "#27272a" : "transparent",
+            border: `1px solid ${active ? "#52525b" : "#27272a"}`,
+            borderRadius: 8, padding: "8px 18px", cursor: "pointer",
+            fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase",
+            color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
+          }}>{label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  Pay Calculator                                                             */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function useHistory(initial) {
+  const [history, setHistory] = useState([initial]);
+  const [cursor, setCursor] = useState(0);
+  const state = history[cursor];
+  const set = useCallback((updater) => {
+    setHistory((prev) => {
+      const next = typeof updater === "function" ? updater(prev[cursor]) : updater;
+      return [...prev.slice(0, cursor + 1), next];
+    });
+    setCursor((c) => c + 1);
+  }, [cursor]);
+  const undo = useCallback(() => setCursor((c) => Math.max(0, c - 1)), []);
+  const redo = useCallback(() => setCursor((c) => Math.min(history.length - 1, c + 1)), [history.length]);
+  return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
+}
+
+const CALC_INIT = { night: false, d1: "", otd1: "", d2: "", deductions: 35, useHours1: false, useHours2: false };
+
 const SUTTER_BASE   = 76.40;
 const NIGHT_DIFF    = 6.00;
-const SUTTER_OT     = 164.80;   // flat OT rate per hour
+const SUTTER_OT     = 164.80;
 const NORTHBAY_RATE = 87.40;
 const HOURS_PER_DAY = 12;
 const NORTHBAY_HRS  = 8;
 
 function Calc() {
-  const { state, set, undo, redo, canUndo, canRedo } = useHistory(INIT);
+  const { state, set, undo, redo, canUndo, canRedo } = useHistory(CALC_INIT);
   const { night, d1, otd1, d2, deductions, useHours1, useHours2 } = state;
 
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
@@ -131,14 +167,7 @@ function Calc() {
   const iconColor = (active) => active ? "#d4d4d8" : "#52525b";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff", display: "flex", justifyContent: "center", padding: "48px 24px" }}>
-      <style>{`
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-        input[type=number] { -moz-appearance: textfield; }
-        input::placeholder { color: #52525b; }
-      `}</style>
-
+    <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
 
         {/* Header */}
@@ -287,7 +316,270 @@ function Calc() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<Calc />);
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  YTD                                                                        */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function Ytd() {
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [paystubs, setPaystubs] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const [employer, setEmployer] = useState(EMPLOYERS[0]);
+  const [gross, setGross] = useState("");
+  const [r403b, setR403b] = useState("");
+
+  useEffect(() => {
+    fetch("paystubs.json", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : { year: new Date().getFullYear(), paystubs: [] })
+      .then((data) => {
+        if (data.year) setYear(data.year);
+        setPaystubs(Array.isArray(data.paystubs) ? data.paystubs : []);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  const totals = useMemo(() => {
+    const out = { gross: 0, r403b: 0, byEmployer: {} };
+    for (const p of paystubs) {
+      const g = n(p.gross);
+      const r = n(p.retirement_403b);
+      out.gross += g;
+      out.r403b += r;
+      if (!out.byEmployer[p.employer]) out.byEmployer[p.employer] = { gross: 0, r403b: 0, count: 0 };
+      out.byEmployer[p.employer].gross += g;
+      out.byEmployer[p.employer].r403b += r;
+      out.byEmployer[p.employer].count += 1;
+    }
+    return out;
+  }, [paystubs]);
+
+  const addPaystub = () => {
+    const g = n(gross);
+    if (g <= 0) return;
+    setPaystubs((prev) => [...prev, {
+      employer,
+      gross: g,
+      retirement_403b: n(r403b),
+    }]);
+    setGross("");
+    setR403b("");
+  };
+
+  const removePaystub = (idx) => {
+    setPaystubs((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const downloadJson = () => {
+    const blob = new Blob(
+      [JSON.stringify({ year, paystubs }, null, 2) + "\n"],
+      { type: "application/json" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "paystubs.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyJson = useCallback(async () => {
+    const text = JSON.stringify({ year, paystubs }, null, 2) + "\n";
+    try { await navigator.clipboard.writeText(text); } catch (e) { /* ignore */ }
+  }, [year, paystubs]);
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
+      <div style={{ width: "100%", maxWidth: 460 }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 44 }}>
+          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>
+            year to date · {year}
+          </p>
+          <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>
+            Gross Income
+          </h1>
+        </div>
+
+        {/* Big total */}
+        <div style={{ marginBottom: 44 }}>
+          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 8px" }}>YTD Gross</p>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 44, fontWeight: 500, color: "#a3e635", margin: 0, lineHeight: 1 }}>
+            {fmt(totals.gross)}
+          </p>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#71717a", margin: "10px 0 0" }}>
+            {paystubs.length} paystub{paystubs.length === 1 ? "" : "s"}
+            <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+            403b {fmt(totals.r403b)}
+          </p>
+        </div>
+
+        {/* Per-employer */}
+        {paystubs.length > 0 && (
+          <div style={{ marginBottom: 44 }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 16px" }}>By Employer</p>
+            {[...EMPLOYERS, ...Object.keys(totals.byEmployer).filter((e) => !EMPLOYERS.includes(e))].map((emp) => {
+              const stats = totals.byEmployer[emp];
+              if (!stats) return null;
+              return (
+                <div key={emp} style={{ marginBottom: 18 }}>
+                  <Line label={emp} value={fmt(stats.gross)} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#71717a", marginTop: -4 }}>
+                    <span>{stats.count} stub{stats.count === 1 ? "" : "s"}</span>
+                    <span>403b {fmt(stats.r403b)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
+
+        {/* Add paystub */}
+        <div style={{ marginBottom: 40 }}>
+          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 20px" }}>Add Paystub</p>
+
+          <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
+            {EMPLOYERS.map((emp) => {
+              const active = employer === emp;
+              return (
+                <button key={emp} onClick={() => setEmployer(emp)} style={{
+                  background: active ? "#27272a" : "transparent",
+                  border: `1px solid ${active ? "#52525b" : "#27272a"}`,
+                  borderRadius: 6, padding: "6px 14px", cursor: "pointer",
+                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                  color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
+                }}>{emp}</button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <Field label="Gross Pay" value={gross} onChange={(e) => setGross(e.target.value)} />
+            <Field label="403(b)" value={r403b} onChange={(e) => setR403b(e.target.value)} />
+          </div>
+
+          <button onClick={addPaystub} disabled={n(gross) <= 0} style={{
+            width: "100%",
+            background: n(gross) > 0 ? "#a3e635" : "#27272a",
+            color: n(gross) > 0 ? "#09090b" : "#52525b",
+            border: "none", borderRadius: 8, padding: "12px 16px",
+            cursor: n(gross) > 0 ? "pointer" : "not-allowed",
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase",
+            fontWeight: 500,
+          }}>+ Add</button>
+        </div>
+
+        <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
+
+        {/* Paystub list */}
+        <div style={{ marginBottom: 40 }}>
+          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 16px" }}>
+            Paystubs {loaded ? `(${paystubs.length})` : ""}
+          </p>
+          {!loaded ? (
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 14, margin: 0 }}>
+              Loading…
+            </p>
+          ) : paystubs.length === 0 ? (
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 14, margin: 0 }}>
+              No paystubs yet. Add one above.
+            </p>
+          ) : (
+            paystubs.map((p, i) => (
+              <div key={i} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid #18181b",
+              }}>
+                <div>
+                  <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 4 }}>
+                    #{i + 1} · {p.employer}
+                  </div>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>
+                    403b {fmt(n(p.retirement_403b))}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, color: "#e4e4e7" }}>
+                    {fmt(n(p.gross))}
+                  </span>
+                  <button onClick={() => removePaystub(i)} title="Delete" style={{
+                    background: "transparent", border: "1px solid #27272a", borderRadius: 6,
+                    width: 28, height: 28, cursor: "pointer", color: "#52525b",
+                    fontFamily: "'DM Mono', monospace", fontSize: 14, lineHeight: 1,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>×</button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
+
+        {/* Export */}
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 10px" }}>
+            Save Changes
+          </p>
+          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#71717a", fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
+            Edits made here live only in this browser. Export the file and replace it in the repo to keep them.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={downloadJson} style={{
+              flex: 1, background: "transparent", border: "1px solid #52525b",
+              borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#e4e4e7",
+              fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.16em",
+              textTransform: "uppercase",
+            }}>Download</button>
+            <button onClick={copyJson} style={{
+              flex: 1, background: "transparent", border: "1px solid #52525b",
+              borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#e4e4e7",
+              fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.16em",
+              textTransform: "uppercase",
+            }}>Copy</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  App shell                                                                  */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function App() {
+  const [view, setView] = useState(() => {
+    if (typeof window === "undefined") return "calc";
+    return window.localStorage.getItem("view") || "calc";
+  });
+
+  const changeView = (v) => {
+    setView(v);
+    try { window.localStorage.setItem("view", v); } catch (e) {}
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff" }}>
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        input[type=number] { -moz-appearance: textfield; }
+        input::placeholder { color: #52525b; }
+      `}</style>
+      <TabBar view={view} setView={changeView} />
+      {view === "calc" ? <Calc /> : <Ytd />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>

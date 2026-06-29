@@ -1,0 +1,11 @@
+{
+  "year": 2026,
+  "paystubs": [
+    { "employer": "NorthBay", "gross": 2785.63, "retirement_403b": 0 },
+    { "employer": "NorthBay", "gross": 2877.87, "retirement_403b": 0 },
+    { "employer": "NorthBay", "gross": 2100.26, "retirement_403b": 0 },
+    { "employer": "NorthBay", "gross": 2748.49, "retirement_403b": 0 },
+    { "employer": "NorthBay", "gross": 703.29,  "retirement_403b": 0 },
+    { "employer": "Sutter",   "gross": 5866.12, "retirement_403b": 1349.21 }
+  ]
+}
