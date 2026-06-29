@@ -325,10 +325,6 @@ function Ytd() {
   const [paystubs, setPaystubs] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
-  const [employer, setEmployer] = useState(EMPLOYERS[0]);
-  const [gross, setGross] = useState("");
-  const [r403b, setR403b] = useState("");
-
   useEffect(() => {
     fetch("paystubs.json", { cache: "no-store" })
       .then((r) => r.ok ? r.json() : { year: new Date().getFullYear(), paystubs: [] })
@@ -354,40 +350,6 @@ function Ytd() {
     }
     return out;
   }, [paystubs]);
-
-  const addPaystub = () => {
-    const g = n(gross);
-    if (g <= 0) return;
-    setPaystubs((prev) => [...prev, {
-      employer,
-      gross: g,
-      retirement_403b: n(r403b),
-    }]);
-    setGross("");
-    setR403b("");
-  };
-
-  const removePaystub = (idx) => {
-    setPaystubs((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const downloadJson = () => {
-    const blob = new Blob(
-      [JSON.stringify({ year, paystubs }, null, 2) + "\n"],
-      { type: "application/json" }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "paystubs.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copyJson = useCallback(async () => {
-    const text = JSON.stringify({ year, paystubs }, null, 2) + "\n";
-    try { await navigator.clipboard.writeText(text); } catch (e) { /* ignore */ }
-  }, [year, paystubs]);
 
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
@@ -438,46 +400,8 @@ function Ytd() {
 
         <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
 
-        {/* Add paystub */}
-        <div style={{ marginBottom: 40 }}>
-          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 20px" }}>Add Paystub</p>
-
-          <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
-            {EMPLOYERS.map((emp) => {
-              const active = employer === emp;
-              return (
-                <button key={emp} onClick={() => setEmployer(emp)} style={{
-                  background: active ? "#27272a" : "transparent",
-                  border: `1px solid ${active ? "#52525b" : "#27272a"}`,
-                  borderRadius: 6, padding: "6px 14px", cursor: "pointer",
-                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
-                  color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
-                }}>{emp}</button>
-              );
-            })}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
-            <Field label="Gross Pay" value={gross} onChange={(e) => setGross(e.target.value)} />
-            <Field label="403(b)" value={r403b} onChange={(e) => setR403b(e.target.value)} />
-          </div>
-
-          <button onClick={addPaystub} disabled={n(gross) <= 0} style={{
-            width: "100%",
-            background: n(gross) > 0 ? "#a3e635" : "#27272a",
-            color: n(gross) > 0 ? "#09090b" : "#52525b",
-            border: "none", borderRadius: 8, padding: "12px 16px",
-            cursor: n(gross) > 0 ? "pointer" : "not-allowed",
-            fontFamily: "'DM Mono', monospace",
-            fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase",
-            fontWeight: 500,
-          }}>+ Add</button>
-        </div>
-
-        <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
-
         {/* Paystub list */}
-        <div style={{ marginBottom: 40 }}>
+        <div style={{ marginBottom: 16 }}>
           <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 16px" }}>
             Paystubs {loaded ? `(${paystubs.length})` : ""}
           </p>
@@ -487,7 +411,7 @@ function Ytd() {
             </p>
           ) : paystubs.length === 0 ? (
             <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 14, margin: 0 }}>
-              No paystubs yet. Add one above.
+              No paystubs yet.
             </p>
           ) : (
             paystubs.map((p, i) => (
@@ -503,46 +427,12 @@ function Ytd() {
                     403b {fmt(n(p.retirement_403b))}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, color: "#e4e4e7" }}>
-                    {fmt(n(p.gross))}
-                  </span>
-                  <button onClick={() => removePaystub(i)} title="Delete" style={{
-                    background: "transparent", border: "1px solid #27272a", borderRadius: 6,
-                    width: 28, height: 28, cursor: "pointer", color: "#52525b",
-                    fontFamily: "'DM Mono', monospace", fontSize: 14, lineHeight: 1,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>×</button>
-                </div>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, color: "#e4e4e7" }}>
+                  {fmt(n(p.gross))}
+                </span>
               </div>
             ))
           )}
-        </div>
-
-        <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
-
-        {/* Export */}
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 10px" }}>
-            Save Changes
-          </p>
-          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#71717a", fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
-            Edits made here live only in this browser. Export the file and replace it in the repo to keep them.
-          </p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={downloadJson} style={{
-              flex: 1, background: "transparent", border: "1px solid #52525b",
-              borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#e4e4e7",
-              fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.16em",
-              textTransform: "uppercase",
-            }}>Download</button>
-            <button onClick={copyJson} style={{
-              flex: 1, background: "transparent", border: "1px solid #52525b",
-              borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: "#e4e4e7",
-              fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.16em",
-              textTransform: "uppercase",
-            }}>Copy</button>
-          </div>
         </div>
 
       </div>
