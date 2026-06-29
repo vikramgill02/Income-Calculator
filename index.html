@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-<title>Pay Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Income Dashboard</title>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Pay Calc" />
+<meta name="apple-mobile-web-app-title" content="Income" />
 <meta name="theme-color" content="#09090b" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,6 +18,30 @@
 <style>
 html, body { margin: 0; padding: 0; background: #09090b; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-track { background: #18181b; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.dash-pie-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.dash-employers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 820px) {
+  .dash-pie-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -28,34 +52,38 @@ const { useState, useEffect, useMemo, useCallback } = React;
 
 const fmt = (n) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+const fmt0 = (n) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 const n = (v) => parseFloat(v) || 0;
 
 const EMPLOYERS = ["CCMC", "NorthBay", "Sutter"];
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  Shared bits                                                                */
-/* ────────────────────────────────────────────────────────────────────────── */
+const EMPLOYER_META = {
+  CCMC:     { color: "#f97316", domain: "communitymedical.org", full: "Community Medical Centers" },
+  NorthBay: { color: "#38bdf8", domain: "northbay.org",         full: "NorthBay Healthcare" },
+  Sutter:   { color: "#22c55e", domain: "sutterhealth.org",     full: "Sutter Health" },
+};
+
+const colorFor = (emp) => EMPLOYER_META[emp]?.color || "#a3e635";
+
+const formatPayDate = (iso) => {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  const dt = new Date(Number(y), Number(m) - 1, Number(d));
+  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+/* ─── shared bits ─── */
 
 function Field({ label, value, onChange, suffix = "", placeholder = "—" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>
-        {label}
-      </span>
+      <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>{label}</span>
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #52525b", paddingBottom: 8 }}>
-        <input
-          type="number"
-          step="0.01"
-          value={value}
-          placeholder={placeholder}
-          onChange={onChange}
-          style={{
-            background: "transparent", border: "none", outline: "none",
-            color: "#ffffff", fontFamily: "'DM Mono', monospace",
-            fontSize: 18, width: "100%",
-          }}
-        />
+        <input type="number" step="0.01" value={value} placeholder={placeholder} onChange={onChange}
+          style={{ background: "transparent", border: "none", outline: "none", color: "#ffffff", fontFamily: "'DM Mono', monospace", fontSize: 18, width: "100%" }} />
         {suffix && <span style={{ color: "#a1a1aa", fontSize: 13, marginLeft: 4 }}>{suffix}</span>}
       </div>
     </div>
@@ -70,31 +98,20 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
       borderTop: large ? "1px solid #52525b" : "none",
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#71717a" : "#d4d4d8" }}>
-          {label}
-        </span>
+        <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#71717a" : "#d4d4d8" }}>{label}</span>
         {note && <span style={{ fontSize: 10, color: "#71717a", fontFamily: "'DM Mono', monospace" }}>{note}</span>}
       </div>
-      <span style={{
-        fontFamily: "'DM Mono', monospace",
-        fontSize: large ? 26 : 15, fontWeight: large ? 500 : 400,
-        color: highlight ? "#a3e635" : muted ? "#71717a" : "#e4e4e7",
-      }}>{value}</span>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: large ? 26 : 15, fontWeight: large ? 500 : 400, color: highlight ? "#a3e635" : muted ? "#71717a" : "#e4e4e7" }}>{value}</span>
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  Tab bar                                                                    */
-/* ────────────────────────────────────────────────────────────────────────── */
+/* ─── tab bar ─── */
 
 function TabBar({ view, setView }) {
   return (
-    <div style={{
-      display: "flex", justifyContent: "center", gap: 6,
-      padding: "20px 24px 0",
-    }}>
-      {[["calc", "Pay Calc"], ["ytd", "YTD"]].map(([key, label]) => {
+    <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "20px 24px 0" }}>
+      {[["dash", "Dashboard"], ["calc", "Pay Calc"]].map(([key, label]) => {
         const active = view === key;
         return (
           <button key={key} onClick={() => setView(key)} style={{
@@ -110,9 +127,7 @@ function TabBar({ view, setView }) {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  Pay Calculator                                                             */
-/* ────────────────────────────────────────────────────────────────────────── */
+/* ─── Pay Calc (unchanged) ─── */
 
 function useHistory(initial) {
   const [history, setHistory] = useState([initial]);
@@ -131,50 +146,37 @@ function useHistory(initial) {
 }
 
 const CALC_INIT = { night: false, d1: "", otd1: "", d2: "", deductions: 35, useHours1: false, useHours2: false };
-
-const SUTTER_BASE   = 76.40;
-const NIGHT_DIFF    = 6.00;
-const SUTTER_OT     = 164.80;
-const NORTHBAY_RATE = 87.40;
-const HOURS_PER_DAY = 12;
-const NORTHBAY_HRS  = 8;
+const SUTTER_BASE = 76.40, NIGHT_DIFF = 6.00, SUTTER_OT = 164.80;
+const NORTHBAY_RATE = 87.40, HOURS_PER_DAY = 12, NORTHBAY_HRS = 8;
 
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(CALC_INIT);
   const { night, d1, otd1, d2, deductions, useHours1, useHours2 } = state;
-
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
-  const toggleNight = () => set((s) => ({ ...s, night: !s.night }));
+  const toggleNight  = () => set((s) => ({ ...s, night: !s.night }));
   const toggleHours1 = () => set((s) => ({ ...s, useHours1: !s.useHours1, d1: "", otd1: "" }));
   const toggleHours2 = () => set((s) => ({ ...s, useHours2: !s.useHours2, d2: "" }));
 
   const dayRate   = SUTTER_BASE + (night ? NIGHT_DIFF : 0);
   const dayPay    = dayRate * HOURS_PER_DAY;
   const otDayPay  = SUTTER_OT * HOURS_PER_DAY;
-
-  const gross1    = useHours1
-    ? n(d1) * dayRate + n(otd1) * SUTTER_OT
-    : n(d1) * dayPay + n(otd1) * otDayPay;
-  const gross2    = useHours2
-    ? n(d2) * NORTHBAY_RATE
-    : n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
+  const gross1    = useHours1 ? n(d1) * dayRate + n(otd1) * SUTTER_OT : n(d1) * dayPay + n(otd1) * otDayPay;
+  const gross2    = useHours2 ? n(d2) * NORTHBAY_RATE : n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
   const totalGross = gross1 + gross2;
   const dedPct    = n(deductions);
   const dedAmt    = totalGross * (dedPct / 100);
   const totalNet  = totalGross - dedAmt;
   const hasData   = totalGross > 0;
-
   const iconColor = (active) => active ? "#d4d4d8" : "#52525b";
 
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
           <div>
             <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>monthly</p>
-            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>Pay Calculator</h1>
+            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>Pay Calculator</h1>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             {[
@@ -194,7 +196,6 @@ function Calc() {
           </div>
         </div>
 
-        {/* Job 1 — Sutter */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
             <div>
@@ -242,7 +243,6 @@ function Calc() {
 
         <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
 
-        {/* Job 2 — NorthBay */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 02 · NorthBay</p>
@@ -273,30 +273,26 @@ function Calc() {
 
         <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
 
-        {/* Deductions */}
         <div style={{ marginBottom: 52 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
             <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: 0 }}>Deductions</p>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#ffffff" }}>{deductions}%</span>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#fff" }}>{deductions}%</span>
           </div>
           <style>{`
             input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
             input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #27272a; border-radius: 2px; }
-            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #ffffff; margin-top: -8px; cursor: pointer; }
+            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; margin-top: -8px; cursor: pointer; }
             input[type=range]::-moz-range-track { height: 2px; background: #27272a; border-radius: 2px; }
-            input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #ffffff; border: none; cursor: pointer; }
+            input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
           `}</style>
-          <input type="range" min="25" max="50" step="1"
-            value={deductions}
-            onChange={(e) => set((s) => ({ ...s, deductions: Number(e.target.value) }))}
-          />
+          <input type="range" min="25" max="50" step="1" value={deductions}
+            onChange={(e) => set((s) => ({ ...s, deductions: Number(e.target.value) }))} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
             <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>25%</span>
             <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>50%</span>
           </div>
         </div>
 
-        {/* Results */}
         {hasData ? (
           <div>
             <Line label="Sutter Gross" value={fmt(gross1)} note={night ? "(night)" : ""} />
@@ -310,17 +306,193 @@ function Calc() {
             Enter your days above to see totals.
           </p>
         )}
-
       </div>
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  YTD                                                                        */
-/* ────────────────────────────────────────────────────────────────────────── */
+/* ─── Dashboard widgets ─── */
 
-function Ytd() {
+function Logo({ employer, size = 40 }) {
+  const meta = EMPLOYER_META[employer];
+  const [errored, setErrored] = useState(false);
+  if (!meta || errored) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: 10,
+        background: colorFor(employer), color: "#09090b",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'DM Mono', monospace", fontSize: size * 0.36, fontWeight: 600, flexShrink: 0,
+      }}>{employer.slice(0, 1)}</div>
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 10, overflow: "hidden",
+      background: "#fff", flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <img src={`https://logo.clearbit.com/${meta.domain}`} alt={meta.full}
+        onError={() => setErrored(true)}
+        style={{ width: "82%", height: "82%", objectFit: "contain" }} />
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, accent }) {
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      border: "1px solid #27272a", borderRadius: 16, padding: "22px 24px",
+      position: "relative", overflow: "hidden",
+    }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: accent }} />
+      <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 12 }}>{label}</div>
+      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 32, fontWeight: 500, color: accent, lineHeight: 1.05, letterSpacing: "-0.01em" }}>{value}</div>
+      {sub && <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", marginTop: 10 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function PieChart({ data, size = 240 }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) {
+    return (
+      <div style={{ textAlign: "center", color: "#52525b", fontFamily: "'Instrument Serif', serif", fontStyle: "italic", padding: "40px 0" }}>
+        No data
+      </div>
+    );
+  }
+  const cx = size / 2, cy = size / 2, r = size / 2 - 4, innerR = r * 0.58;
+  let cum = -Math.PI / 2;
+  const slices = data.map((d) => {
+    const angle = (d.value / total) * Math.PI * 2;
+    const a1 = cum, a2 = cum + angle;
+    cum = a2;
+    const large = angle > Math.PI ? 1 : 0;
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const xi1 = cx + innerR * Math.cos(a1), yi1 = cy + innerR * Math.sin(a1);
+    const xi2 = cx + innerR * Math.cos(a2), yi2 = cy + innerR * Math.sin(a2);
+    const path = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${innerR} ${innerR} 0 ${large} 0 ${xi1} ${yi1} Z`;
+    return { path, color: d.color, label: d.label, value: d.value, pct: (d.value / total) * 100 };
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <svg width={size} height={size}>
+        {slices.map((s, i) => (
+          <path key={i} d={s.path} fill={s.color} stroke="#09090b" strokeWidth="2" />
+        ))}
+        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#a1a1aa", fontSize: 9, letterSpacing: "0.16em", fontFamily: "'DM Mono', monospace" }}>YTD GROSS</text>
+        <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#fff", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>{fmt0(total)}</text>
+      </svg>
+      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+        {slices.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
+              <span style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#d4d4d8", fontFamily: "'DM Mono', monospace" }}>{s.label}</span>
+            </div>
+            <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#e4e4e7" }}>{fmt0(s.value)}</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", minWidth: 44, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmployerCard({ employer, stats }) {
+  const meta = EMPLOYER_META[employer] || {};
+  const color = meta.color || "#a3e635";
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      border: "1px solid #27272a",
+      borderLeft: `3px solid ${color}`,
+      borderRadius: 16, padding: 22,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+        <Logo employer={employer} size={44} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22, color: "#fff", lineHeight: 1 }}>{employer}</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.1em", color: "#71717a", textTransform: "uppercase", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta.full || employer}</div>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, rowGap: 16 }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Gross</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(stats.gross)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Net</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(stats.net)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>403(b)</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#a78bfa" }}>{fmt(stats.r403b)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Paystubs</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#e4e4e7" }}>{stats.count}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PaystubTable({ paystubs }) {
+  return (
+    <div style={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'DM Mono', monospace", minWidth: 640 }}>
+          <thead>
+            <tr style={{ background: "#0c0c0e" }}>
+              {[
+                ["#", "left"], ["Date", "left"], ["Employer", "left"],
+                ["Gross", "right"], ["Net", "right"], ["403(b)", "right"],
+              ].map(([h, align], i) => (
+                <th key={i} style={{ textAlign: align, padding: "14px 20px", fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", fontWeight: 500, borderBottom: "1px solid #27272a" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paystubs.map((p, i) => {
+              const color = colorFor(p.employer);
+              return (
+                <tr key={i} style={{ borderTop: i === 0 ? "none" : "1px solid #1e1e22" }}>
+                  <td style={{ padding: "14px 20px", fontSize: 11, color: "#71717a" }}>{i + 1}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 12, color: "#d4d4d8", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
+                  <td style={{ padding: "14px 20px" }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                      padding: "4px 10px", borderRadius: 6,
+                      background: `${color}1c`, color: color,
+                      fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
+                      {p.employer}
+                    </span>
+                  </td>
+                  <td style={{ padding: "14px 20px", fontSize: 13, color: "#e4e4e7", textAlign: "right" }}>{fmt(n(p.gross))}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13, color: "#e4e4e7", textAlign: "right" }}>{fmt(n(p.net))}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 12, color: "#a78bfa", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Dashboard ─── */
+
+function Dashboard() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [paystubs, setPaystubs] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -337,101 +509,76 @@ function Ytd() {
   }, []);
 
   const totals = useMemo(() => {
-    const out = { gross: 0, r403b: 0, byEmployer: {} };
+    const out = { gross: 0, net: 0, r403b: 0, byEmployer: {} };
     for (const p of paystubs) {
-      const g = n(p.gross);
-      const r = n(p.retirement_403b);
-      out.gross += g;
-      out.r403b += r;
-      if (!out.byEmployer[p.employer]) out.byEmployer[p.employer] = { gross: 0, r403b: 0, count: 0 };
+      const g = n(p.gross), net = n(p.net), r = n(p.retirement_403b);
+      out.gross += g; out.net += net; out.r403b += r;
+      if (!out.byEmployer[p.employer]) out.byEmployer[p.employer] = { gross: 0, net: 0, r403b: 0, count: 0 };
       out.byEmployer[p.employer].gross += g;
+      out.byEmployer[p.employer].net   += net;
       out.byEmployer[p.employer].r403b += r;
       out.byEmployer[p.employer].count += 1;
     }
     return out;
   }, [paystubs]);
 
-  return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
-      <div style={{ width: "100%", maxWidth: 460 }}>
+  const orderedEmployers = useMemo(() => [
+    ...EMPLOYERS.filter((e) => totals.byEmployer[e]),
+    ...Object.keys(totals.byEmployer).filter((e) => !EMPLOYERS.includes(e)),
+  ], [totals]);
 
-        {/* Header */}
-        <div style={{ marginBottom: 44 }}>
-          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>
+  const pieData = useMemo(() => orderedEmployers.map((e) => ({
+    label: e, value: totals.byEmployer[e].gross, color: colorFor(e),
+  })), [orderedEmployers, totals]);
+
+  const taxesOther = Math.max(0, totals.gross - totals.net - totals.r403b);
+
+  return (
+    <div style={{ padding: "28px 24px 56px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+
+        <div style={{ marginBottom: 32 }}>
+          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
             year to date · {year}
           </p>
-          <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#ffffff", lineHeight: 1.05 }}>
-            Gross Income
+          <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
+            Income Dashboard
           </h1>
         </div>
 
-        {/* Big total */}
-        <div style={{ marginBottom: 44 }}>
-          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 8px" }}>YTD Gross</p>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 44, fontWeight: 500, color: "#a3e635", margin: 0, lineHeight: 1 }}>
-            {fmt(totals.gross)}
-          </p>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#71717a", margin: "10px 0 0" }}>
-            {paystubs.length} paystub{paystubs.length === 1 ? "" : "s"}
-            <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-            403b {fmt(totals.r403b)}
-          </p>
+        <div className="dash-stats">
+          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#a3e635" />
+          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#38bdf8" />
+          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#a78bfa" />
+          <StatCard label="Taxes / Other" value={fmt(taxesOther)} sub={totals.gross ? `${((taxesOther / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#f87171" />
         </div>
 
-        {/* Per-employer */}
-        {paystubs.length > 0 && (
-          <div style={{ marginBottom: 44 }}>
-            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 16px" }}>By Employer</p>
-            {[...EMPLOYERS, ...Object.keys(totals.byEmployer).filter((e) => !EMPLOYERS.includes(e))].map((emp) => {
-              const stats = totals.byEmployer[emp];
-              if (!stats) return null;
-              return (
-                <div key={emp} style={{ marginBottom: 18 }}>
-                  <Line label={emp} value={fmt(stats.gross)} />
-                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#71717a", marginTop: -4 }}>
-                    <span>{stats.count} stub{stats.count === 1 ? "" : "s"}</span>
-                    <span>403b {fmt(stats.r403b)}</span>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="dash-pie-grid">
+          <div style={{
+            background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+            border: "1px solid #27272a", borderRadius: 16, padding: 28,
+          }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 24 }}>Income Split</div>
+            <PieChart data={pieData} size={240} />
           </div>
-        )}
+          <div className="dash-employers">
+            {orderedEmployers.map((emp) => (
+              <EmployerCard key={emp} employer={emp} stats={totals.byEmployer[emp]} />
+            ))}
+          </div>
+        </div>
 
-        <div style={{ borderTop: "1px solid #27272a", marginBottom: 32 }} />
-
-        {/* Paystub list */}
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 16px" }}>
-            Paystubs {loaded ? `(${paystubs.length})` : ""}
-          </p>
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>All Paystubs</div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>{paystubs.length} total</div>
+          </div>
           {!loaded ? (
-            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 14, margin: 0 }}>
-              Loading…
-            </p>
+            <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
           ) : paystubs.length === 0 ? (
-            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 14, margin: 0 }}>
-              No paystubs yet.
-            </p>
+            <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>No paystubs yet.</p>
           ) : (
-            paystubs.map((p, i) => (
-              <div key={i} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "12px 0", borderTop: i === 0 ? "none" : "1px solid #18181b",
-              }}>
-                <div>
-                  <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 4 }}>
-                    #{i + 1} · {p.employer}
-                  </div>
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>
-                    403b {fmt(n(p.retirement_403b))}
-                  </div>
-                </div>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 15, color: "#e4e4e7" }}>
-                  {fmt(n(p.gross))}
-                </span>
-              </div>
-            ))
+            <PaystubTable paystubs={paystubs} />
           )}
         </div>
 
@@ -440,23 +587,19 @@ function Ytd() {
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  App shell                                                                  */
-/* ────────────────────────────────────────────────────────────────────────── */
+/* ─── App shell ─── */
 
 function App() {
   const [view, setView] = useState(() => {
-    if (typeof window === "undefined") return "calc";
-    return window.localStorage.getItem("view") || "calc";
+    if (typeof window === "undefined") return "dash";
+    return window.localStorage.getItem("view") || "dash";
   });
-
   const changeView = (v) => {
     setView(v);
     try { window.localStorage.setItem("view", v); } catch (e) {}
   };
-
   return (
-    <div style={{ minHeight: "100vh", background: "#09090b", color: "#ffffff" }}>
+    <div style={{ minHeight: "100vh", background: "#09090b", color: "#fff" }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
@@ -464,7 +607,7 @@ function App() {
         input::placeholder { color: #52525b; }
       `}</style>
       <TabBar view={view} setView={changeView} />
-      {view === "calc" ? <Calc /> : <Ytd />}
+      {view === "dash" ? <Dashboard /> : <Calc />}
     </div>
   );
 }
