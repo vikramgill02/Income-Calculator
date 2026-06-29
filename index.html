@@ -48,7 +48,7 @@ html, body { margin: 0; padding: 0; background: #09090b; }
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo, useCallback } = React;
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
 const fmt = (n) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
@@ -497,8 +497,92 @@ function ProjectionCard({ ytdGross, projection }) {
 
 const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+function ChartTooltip({ ym, data, metric, ratios, x, y, containerW }) {
+  const [yearStr, monthStr] = ym.split("-");
+  const monthName = MONTH_LABELS[Number(monthStr) - 1] + " " + yearStr;
+  const stubs = data.stubs || [];
+  const proj = data.projBreakdown;
+  const isProj = !!data.isProjection;
+
+  let totalGross = 0, totalNet = 0;
+  if (isProj && proj) {
+    for (const emp in proj) {
+      const g = n(proj[emp]);
+      totalGross += g;
+      totalNet += g * (ratios[emp] != null ? ratios[emp] : 1);
+    }
+  } else {
+    for (const p of stubs) {
+      totalGross += n(p.gross);
+      totalNet += n(p.net);
+    }
+  }
+  const totalShown = metric === "net" ? totalNet : totalGross;
+  const totalColor = metric === "net" ? "#22c55e" : "#e4e4e7";
+
+  const tipW = 280;
+  let left = x + 16;
+  if (containerW && left + tipW > containerW - 12) left = Math.max(8, x - tipW - 16);
+  const top = Math.max(8, y - 20);
+
+  return (
+    <div style={{
+      position: "absolute", left, top, width: tipW,
+      background: "rgba(9,9,11,0.97)", border: "1px solid #3f3f46",
+      borderRadius: 10, padding: "12px 14px",
+      pointerEvents: "none", zIndex: 10,
+      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10, gap: 8 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#e4e4e7", fontFamily: "'DM Mono', monospace" }}>{monthName}</div>
+        {isProj && <div style={{ fontSize: 9, letterSpacing: "0.16em", color: "#fbbf24", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>Projected</div>}
+      </div>
+
+      {isProj && proj ? (
+        <div>
+          {Object.keys(proj).map((emp) => {
+            const g = n(proj[emp]);
+            const v = metric === "net" ? g * (ratios[emp] != null ? ratios[emp] : 1) : g;
+            return (
+              <div key={emp} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
+                <span style={{ color: colorFor(emp), fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{emp}</span>
+                <span style={{ color: "#e4e4e7" }}>{fmt(v)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : stubs.length === 0 ? (
+        <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#71717a", fontSize: 12 }}>No paychecks this month.</div>
+      ) : (
+        <div>
+          {stubs.map((p, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "6px 0", borderTop: i === 0 ? "none" : "1px solid #1e1e22",
+              fontSize: 11, fontFamily: "'DM Mono', monospace", gap: 12,
+            }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: colorFor(p.employer), fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{p.employer}</div>
+                <div style={{ color: "#71717a", fontSize: 10, marginTop: 2 }}>{formatPayDate(p.pay_date)}</div>
+              </div>
+              <div style={{ color: "#e4e4e7", whiteSpace: "nowrap" }}>{fmt(metric === "net" ? n(p.net) : n(p.gross))}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ borderTop: "1px solid #3f3f46", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: "'DM Mono', monospace" }}>
+        <span style={{ color: "#a1a1aa", letterSpacing: "0.14em", textTransform: "uppercase", fontSize: 10 }}>Total {metric}</span>
+        <span style={{ color: totalColor, fontSize: 13, fontWeight: 500 }}>{fmt(totalShown)}</span>
+      </div>
+    </div>
+  );
+}
+
 function MonthlyChart({ paystubs, projection, year }) {
   const [metric, setMetric] = useState("gross");
+  const [hovered, setHovered] = useState(null);
+  const containerRef = useRef(null);
 
   const ratios = useMemo(() => {
     const r = {};
@@ -515,18 +599,19 @@ function MonthlyChart({ paystubs, projection, year }) {
   const monthly = {};
   for (let m = 1; m <= 12; m++) {
     const ym = `${year}-${String(m).padStart(2, "0")}`;
-    monthly[ym] = { byEmployer: {}, isProjection: false };
+    monthly[ym] = { byEmployer: {}, isProjection: false, stubs: [], projBreakdown: null };
   }
   for (const p of paystubs) {
     if (!p.pay_date) continue;
     const ym = p.pay_date.slice(0, 7);
     if (!monthly[ym]) continue;
+    monthly[ym].stubs.push(p);
     const v = metric === "net" ? n(p.net) : n(p.gross);
     monthly[ym].byEmployer[p.employer] = (monthly[ym].byEmployer[p.employer] || 0) + v;
   }
   if (projection && projection.monthly) {
     for (const ym in projection.monthly) {
-      if (monthly[ym] && Object.keys(monthly[ym].byEmployer).length === 0) {
+      if (monthly[ym] && monthly[ym].stubs.length === 0) {
         const mp = projection.monthly[ym];
         const conv = {};
         for (const emp in mp) {
@@ -535,9 +620,17 @@ function MonthlyChart({ paystubs, projection, year }) {
         }
         monthly[ym].byEmployer = conv;
         monthly[ym].isProjection = true;
+        monthly[ym].projBreakdown = mp;
       }
     }
   }
+
+  const handleHover = (ym) => (e) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setHovered({ ym, x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+  const handleLeave = () => setHovered(null);
   const monthsArr = Object.keys(monthly).sort();
   const totals = monthsArr.map((k) => Object.values(monthly[k].byEmployer).reduce((s, v) => s + n(v), 0));
   const max = Math.max(...totals, 1);
@@ -563,9 +656,10 @@ function MonthlyChart({ paystubs, projection, year }) {
   ];
 
   return (
-    <div style={{
+    <div ref={containerRef} style={{
       background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
       border: "1px solid #27272a", borderRadius: 16, padding: 24,
+      position: "relative",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -628,6 +722,7 @@ function MonthlyChart({ paystubs, projection, year }) {
             return { x, y: yCursor, w: barWidth, h, color: colorFor(emp), emp };
           });
           const monthTotal = segments.reduce((s, seg) => s + (seg.h * yMax) / innerH, 0);
+          const isHovered = hovered && hovered.ym === ym;
           return (
             <g key={ym}>
               {segments.map((s, j) => (
@@ -635,7 +730,8 @@ function MonthlyChart({ paystubs, projection, year }) {
                   fill={data.isProjection ? `${s.color}55` : s.color}
                   stroke={data.isProjection ? s.color : "none"}
                   strokeDasharray={data.isProjection ? "3,3" : ""}
-                  strokeWidth="1.5" rx="2" />
+                  strokeWidth="1.5" rx="2"
+                  opacity={hovered && !isHovered ? 0.45 : 1} />
               ))}
               {monthTotal > 0 && (
                 <text x={x + barWidth / 2} y={MT + innerH - (monthTotal / yMax) * innerH - 6}
@@ -648,10 +744,21 @@ function MonthlyChart({ paystubs, projection, year }) {
                 style={{ fill: data.isProjection ? "#52525b" : "#a1a1aa", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
                 {MONTH_LABELS[i]}
               </text>
+              <rect x={ML + slot * i} y={MT} width={slot} height={innerH}
+                fill="transparent" style={{ cursor: "pointer" }}
+                onMouseEnter={handleHover(ym)}
+                onMouseMove={handleHover(ym)}
+                onMouseLeave={handleLeave} />
             </g>
           );
         })}
       </svg>
+      {hovered && monthly[hovered.ym] && (
+        <ChartTooltip ym={hovered.ym} data={monthly[hovered.ym]}
+          metric={metric} ratios={ratios}
+          x={hovered.x} y={hovered.y}
+          containerW={containerRef.current ? containerRef.current.clientWidth : 800} />
+      )}
     </div>
   );
 }
