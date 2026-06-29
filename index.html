@@ -444,6 +444,179 @@ function EmployerCard({ employer, stats }) {
   );
 }
 
+function ProjectionCard({ ytdGross, projection }) {
+  if (!projection || !projection.monthly) return null;
+  let remaining = 0;
+  const byEmployer = {};
+  for (const ym in projection.monthly) {
+    for (const emp in projection.monthly[ym]) {
+      const amt = n(projection.monthly[ym][emp]);
+      remaining += amt;
+      byEmployer[emp] = (byEmployer[emp] || 0) + amt;
+    }
+  }
+  const total = ytdGross + remaining;
+  const empKeys = [
+    ...EMPLOYERS.filter((e) => byEmployer[e]),
+    ...Object.keys(byEmployer).filter((e) => !EMPLOYERS.includes(e)),
+  ];
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #18181b 0%, #0c0c0e 100%)",
+      border: "1px solid #27272a", borderRadius: 16, padding: 28,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 10 }}>2026 Year-End Projection</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 40, color: "#a3e635", fontWeight: 500, lineHeight: 1, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", marginTop: 10 }}>
+            {fmt(ytdGross)} earned + {fmt(remaining)} projected
+          </div>
+        </div>
+        {projection.notes && (
+          <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#a1a1aa", fontSize: 13, maxWidth: 360, textAlign: "right", lineHeight: 1.5 }}>
+            {projection.notes}
+          </div>
+        )}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+        <div style={{ borderLeft: "2px solid #52525b", paddingLeft: 14 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 6 }}>YTD Earned</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(ytdGross)}</div>
+        </div>
+        {empKeys.map((emp) => (
+          <div key={emp} style={{ borderLeft: `2px solid ${colorFor(emp)}`, paddingLeft: 14 }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 6 }}>Projected {emp}</div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(byEmployer[emp])}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function MonthlyChart({ paystubs, projection, year }) {
+  const monthly = {};
+  for (let m = 1; m <= 12; m++) {
+    const ym = `${year}-${String(m).padStart(2, "0")}`;
+    monthly[ym] = { byEmployer: {}, isProjection: false };
+  }
+  for (const p of paystubs) {
+    if (!p.pay_date) continue;
+    const ym = p.pay_date.slice(0, 7);
+    if (!monthly[ym]) continue;
+    monthly[ym].byEmployer[p.employer] = (monthly[ym].byEmployer[p.employer] || 0) + n(p.gross);
+  }
+  if (projection && projection.monthly) {
+    for (const ym in projection.monthly) {
+      if (monthly[ym] && Object.keys(monthly[ym].byEmployer).length === 0) {
+        monthly[ym].byEmployer = { ...projection.monthly[ym] };
+        monthly[ym].isProjection = true;
+      }
+    }
+  }
+  const monthsArr = Object.keys(monthly).sort();
+  const totals = monthsArr.map((k) => Object.values(monthly[k].byEmployer).reduce((s, v) => s + n(v), 0));
+  const max = Math.max(...totals, 1);
+  const yMax = Math.ceil(max / 5000) * 5000 || 5000;
+
+  const W = 800, H = 280, ML = 56, MR = 12, MT = 12, MB = 30;
+  const innerW = W - ML - MR;
+  const innerH = H - MT - MB;
+  const slot = innerW / 12;
+  const barWidth = slot * 0.62;
+
+  const gridSteps = 4;
+  const gridLines = [];
+  for (let i = 0; i <= gridSteps; i++) {
+    const val = (yMax / gridSteps) * i;
+    const y = MT + innerH - (val / yMax) * innerH;
+    gridLines.push({ val, y });
+  }
+
+  const allEmployers = [
+    ...EMPLOYERS,
+    ...Array.from(new Set(monthsArr.flatMap((k) => Object.keys(monthly[k].byEmployer)))).filter((e) => !EMPLOYERS.includes(e)),
+  ];
+
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      border: "1px solid #27272a", borderRadius: 16, padding: 24,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>Monthly Gross · {year}</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          {allEmployers.map((emp) => (
+            <div key={emp} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: colorFor(emp) }} />
+              <span style={{ fontSize: 10, letterSpacing: "0.12em", color: "#d4d4d8", textTransform: "uppercase", fontFamily: "'DM Mono', monospace" }}>{emp}</span>
+            </div>
+          ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "transparent", border: "1px dashed #71717a" }} />
+            <span style={{ fontSize: 10, letterSpacing: "0.12em", color: "#71717a", textTransform: "uppercase", fontFamily: "'DM Mono', monospace" }}>Projected</span>
+          </div>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+        {gridLines.map((g, i) => (
+          <g key={i}>
+            <line x1={ML} x2={W - MR} y1={g.y} y2={g.y}
+              stroke="#27272a" strokeWidth="1"
+              strokeDasharray={i === 0 ? "" : "2,4"} />
+            <text x={ML - 8} y={g.y + 3} textAnchor="end"
+              style={{ fill: "#52525b", fontSize: 9, fontFamily: "'DM Mono', monospace" }}>
+              {g.val >= 1000 ? `$${(g.val / 1000).toFixed(0)}k` : `$${g.val.toFixed(0)}`}
+            </text>
+          </g>
+        ))}
+        {monthsArr.map((ym, i) => {
+          const data = monthly[ym];
+          const x = ML + slot * i + (slot - barWidth) / 2;
+          let yCursor = MT + innerH;
+          const empOrder = [
+            ...EMPLOYERS.filter((e) => data.byEmployer[e]),
+            ...Object.keys(data.byEmployer).filter((e) => !EMPLOYERS.includes(e)),
+          ];
+          const segments = empOrder.map((emp) => {
+            const amt = n(data.byEmployer[emp]);
+            const h = (amt / yMax) * innerH;
+            yCursor -= h;
+            return { x, y: yCursor, w: barWidth, h, color: colorFor(emp), emp };
+          });
+          const monthTotal = segments.reduce((s, seg) => s + (seg.h * yMax) / innerH, 0);
+          return (
+            <g key={ym}>
+              {segments.map((s, j) => (
+                <rect key={j} x={s.x} y={s.y} width={s.w} height={s.h}
+                  fill={data.isProjection ? `${s.color}55` : s.color}
+                  stroke={data.isProjection ? s.color : "none"}
+                  strokeDasharray={data.isProjection ? "3,3" : ""}
+                  strokeWidth="1.5" rx="2" />
+              ))}
+              {monthTotal > 0 && (
+                <text x={x + barWidth / 2} y={MT + innerH - (monthTotal / yMax) * innerH - 6}
+                  textAnchor="middle"
+                  style={{ fill: data.isProjection ? "#71717a" : "#e4e4e7", fontSize: 8.5, fontFamily: "'DM Mono', monospace" }}>
+                  {monthTotal >= 1000 ? `$${(monthTotal / 1000).toFixed(1)}k` : ""}
+                </text>
+              )}
+              <text x={x + barWidth / 2} y={H - MB + 18} textAnchor="middle"
+                style={{ fill: data.isProjection ? "#52525b" : "#a1a1aa", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
+                {MONTH_LABELS[i]}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function PaystubTable({ paystubs }) {
   return (
     <div style={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 16, overflow: "hidden" }}>
@@ -495,6 +668,7 @@ function PaystubTable({ paystubs }) {
 function Dashboard() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [paystubs, setPaystubs] = useState([]);
+  const [projection, setProjection] = useState(null);
   const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
 
@@ -504,6 +678,7 @@ function Dashboard() {
       .then((data) => {
         if (data.year) setYear(data.year);
         if (data.last_updated) setLastUpdated(data.last_updated);
+        if (data.projection) setProjection(data.projection);
         setPaystubs(Array.isArray(data.paystubs) ? data.paystubs : []);
         setLoaded(true);
       })
@@ -576,6 +751,16 @@ function Dashboard() {
               <EmployerCard key={emp} employer={emp} stats={totals.byEmployer[emp]} />
             ))}
           </div>
+        </div>
+
+        {projection && (
+          <div style={{ marginBottom: 32 }}>
+            <ProjectionCard ytdGross={totals.gross} projection={projection} />
+          </div>
+        )}
+
+        <div style={{ marginBottom: 32 }}>
+          <MonthlyChart paystubs={paystubs} projection={projection} year={year} />
         </div>
 
         <div>

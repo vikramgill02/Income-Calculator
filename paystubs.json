@@ -1,6 +1,17 @@
 {
   "year": 2026,
   "last_updated": "2026-06-29",
+  "projection": {
+    "notes": "Sutter biweekly @ $5,947.20 ($82.60 × 72 hrs) · NorthBay per-diem 32 hrs/mo @ $87.40",
+    "monthly": {
+      "2026-07": { "Sutter": 11894.40, "NorthBay": 2796.80 },
+      "2026-08": { "Sutter": 11894.40, "NorthBay": 2796.80 },
+      "2026-09": { "Sutter": 11894.40, "NorthBay": 2796.80 },
+      "2026-10": { "Sutter": 17841.60, "NorthBay": 2796.80 },
+      "2026-11": { "Sutter": 11894.40, "NorthBay": 2796.80 },
+      "2026-12": { "Sutter": 11894.40, "NorthBay": 2796.80 }
+    }
+  },
   "paystubs": [
     { "employer": "CCMC",     "pay_date": "2026-01-15", "gross": 4304.98, "net": 2710.81, "retirement_403b": 344.40 },
     { "employer": "CCMC",     "pay_date": "2026-01-29", "gross": 3889.70, "net": 2579.14, "retirement_403b": 311.18 },
