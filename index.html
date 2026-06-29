@@ -632,8 +632,14 @@ function MonthlyChart({ paystubs, projection, year }) {
   };
   const handleLeave = () => setHovered(null);
   const monthsArr = Object.keys(monthly).sort();
-  const totals = monthsArr.map((k) => Object.values(monthly[k].byEmployer).reduce((s, v) => s + n(v), 0));
-  const max = Math.max(...totals, 1);
+  const grossTotals = monthsArr.map((k) => {
+    const m = monthly[k];
+    if (m.isProjection && m.projBreakdown) {
+      return Object.values(m.projBreakdown).reduce((s, v) => s + n(v), 0);
+    }
+    return m.stubs.reduce((s, p) => s + n(p.gross), 0);
+  });
+  const max = Math.max(...grossTotals, 1);
   const yMax = Math.ceil(max / 5000) * 5000 || 5000;
 
   const W = 800, H = 280, ML = 56, MR = 12, MT = 12, MB = 30;
