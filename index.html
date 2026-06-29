@@ -498,6 +498,20 @@ function ProjectionCard({ ytdGross, projection }) {
 const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function MonthlyChart({ paystubs, projection, year }) {
+  const [metric, setMetric] = useState("gross");
+
+  const ratios = useMemo(() => {
+    const r = {};
+    for (const p of paystubs) {
+      if (!r[p.employer]) r[p.employer] = { g: 0, n: 0 };
+      r[p.employer].g += n(p.gross);
+      r[p.employer].n += n(p.net);
+    }
+    const out = {};
+    for (const e in r) out[e] = r[e].g > 0 ? r[e].n / r[e].g : 1;
+    return out;
+  }, [paystubs]);
+
   const monthly = {};
   for (let m = 1; m <= 12; m++) {
     const ym = `${year}-${String(m).padStart(2, "0")}`;
@@ -507,12 +521,19 @@ function MonthlyChart({ paystubs, projection, year }) {
     if (!p.pay_date) continue;
     const ym = p.pay_date.slice(0, 7);
     if (!monthly[ym]) continue;
-    monthly[ym].byEmployer[p.employer] = (monthly[ym].byEmployer[p.employer] || 0) + n(p.gross);
+    const v = metric === "net" ? n(p.net) : n(p.gross);
+    monthly[ym].byEmployer[p.employer] = (monthly[ym].byEmployer[p.employer] || 0) + v;
   }
   if (projection && projection.monthly) {
     for (const ym in projection.monthly) {
       if (monthly[ym] && Object.keys(monthly[ym].byEmployer).length === 0) {
-        monthly[ym].byEmployer = { ...projection.monthly[ym] };
+        const mp = projection.monthly[ym];
+        const conv = {};
+        for (const emp in mp) {
+          const g = n(mp[emp]);
+          conv[emp] = metric === "net" ? g * (ratios[emp] != null ? ratios[emp] : 1) : g;
+        }
+        monthly[ym].byEmployer = conv;
         monthly[ym].isProjection = true;
       }
     }
@@ -547,7 +568,25 @@ function MonthlyChart({ paystubs, projection, year }) {
       border: "1px solid #27272a", borderRadius: 16, padding: 24,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>Monthly Gross · {year}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>
+            Monthly {metric === "net" ? "Net" : "Gross"} · {year}
+          </div>
+          <div style={{ display: "flex", gap: 2, background: "#0c0c0e", border: "1px solid #27272a", borderRadius: 8, padding: 2 }}>
+            {[["gross", "Gross"], ["net", "Net"]].map(([key, label]) => {
+              const active = metric === key;
+              return (
+                <button key={key} onClick={() => setMetric(key)} style={{
+                  background: active ? (key === "net" ? "#22c55e" : "#e4e4e7") : "transparent",
+                  color: active ? "#09090b" : "#71717a",
+                  border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                  fontFamily: "'DM Mono', monospace", fontWeight: 500,
+                }}>{label}</button>
+              );
+            })}
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           {allEmployers.map((emp) => (
             <div key={emp} style={{ display: "flex", alignItems: "center", gap: 6 }}>
