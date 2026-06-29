@@ -495,6 +495,7 @@ function PaystubTable({ paystubs }) {
 function Dashboard() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [paystubs, setPaystubs] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -502,6 +503,7 @@ function Dashboard() {
       .then((r) => r.ok ? r.json() : { year: new Date().getFullYear(), paystubs: [] })
       .then((data) => {
         if (data.year) setYear(data.year);
+        if (data.last_updated) setLastUpdated(data.last_updated);
         setPaystubs(Array.isArray(data.paystubs) ? data.paystubs : []);
         setLoaded(true);
       })
@@ -537,13 +539,21 @@ function Dashboard() {
     <div style={{ padding: "28px 24px 56px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
 
-        <div style={{ marginBottom: 32 }}>
-          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
-            year to date · {year}
-          </p>
-          <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
-            Income Dashboard
-          </h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
+              year to date · {year}
+            </p>
+            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
+              Income Dashboard
+            </h1>
+          </div>
+          {lastUpdated && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#71717a", fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>Last Updated</div>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#d4d4d8" }}>{formatPayDate(lastUpdated)}</div>
+            </div>
+          )}
         </div>
 
         <div className="dash-stats">
