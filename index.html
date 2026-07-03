@@ -497,25 +497,22 @@ function ProjectionCard({ ytdGross, projection }) {
 
 const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function ChartTooltip({ ym, data, metric, ratios, x, y, containerW }) {
+function ChartTooltip({ ym, data, metric, x, y, containerW }) {
   const [yearStr, monthStr] = ym.split("-");
   const monthName = MONTH_LABELS[Number(monthStr) - 1] + " " + yearStr;
   const stubs = data.stubs || [];
-  const proj = data.projBreakdown;
-  const isProj = !!data.isProjection;
+  const projByEmp = data.projByEmp || {};
+  const hasActual = stubs.length > 0;
+  const hasProj = Object.keys(projByEmp).length > 0;
 
   let totalGross = 0, totalNet = 0;
-  if (isProj && proj) {
-    for (const emp in proj) {
-      const g = n(proj[emp]);
-      totalGross += g;
-      totalNet += g * (ratios[emp] != null ? ratios[emp] : 1);
-    }
-  } else {
-    for (const p of stubs) {
-      totalGross += n(p.gross);
-      totalNet += n(p.net);
-    }
+  for (const p of stubs) {
+    totalGross += n(p.gross);
+    totalNet += n(p.net);
+  }
+  for (const emp in projByEmp) {
+    totalGross += n(projByEmp[emp].gross);
+    totalNet += n(projByEmp[emp].netProxy);
   }
   const totalShown = metric === "net" ? totalNet : totalGross;
   const totalColor = metric === "net" ? "#22c55e" : "#e4e4e7";
@@ -524,6 +521,8 @@ function ChartTooltip({ ym, data, metric, ratios, x, y, containerW }) {
   let left = x + 16;
   if (containerW && left + tipW > containerW - 12) left = Math.max(8, x - tipW - 16);
   const top = Math.max(8, y - 20);
+
+  const label = hasProj && !hasActual ? "Projected" : hasProj && hasActual ? "Partial" : "";
 
   return (
     <div style={{
@@ -535,26 +534,11 @@ function ChartTooltip({ ym, data, metric, ratios, x, y, containerW }) {
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10, gap: 8 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#e4e4e7", fontFamily: "'DM Mono', monospace" }}>{monthName}</div>
-        {isProj && <div style={{ fontSize: 9, letterSpacing: "0.16em", color: "#fbbf24", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>Projected</div>}
+        {label && <div style={{ fontSize: 9, letterSpacing: "0.16em", color: "#fbbf24", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>{label}</div>}
       </div>
 
-      {isProj && proj ? (
-        <div>
-          {Object.keys(proj).map((emp) => {
-            const g = n(proj[emp]);
-            const v = metric === "net" ? g * (ratios[emp] != null ? ratios[emp] : 1) : g;
-            return (
-              <div key={emp} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
-                <span style={{ color: colorFor(emp), fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{emp}</span>
-                <span style={{ color: "#e4e4e7" }}>{fmt(v)}</span>
-              </div>
-            );
-          })}
-        </div>
-      ) : stubs.length === 0 ? (
-        <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#71717a", fontSize: 12 }}>No paychecks this month.</div>
-      ) : (
-        <div>
+      {hasActual && (
+        <div style={{ marginBottom: hasProj ? 12 : 0 }}>
           {stubs.map((p, i) => (
             <div key={i} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -569,6 +553,25 @@ function ChartTooltip({ ym, data, metric, ratios, x, y, containerW }) {
             </div>
           ))}
         </div>
+      )}
+
+      {hasProj && (
+        <div>
+          {hasActual && <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#fbbf24", fontFamily: "'DM Mono', monospace", marginBottom: 6 }}>Still Projected</div>}
+          {Object.keys(projByEmp).map((emp) => {
+            const v = metric === "net" ? n(projByEmp[emp].netProxy) : n(projByEmp[emp].gross);
+            return (
+              <div key={emp} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
+                <span style={{ color: colorFor(emp), fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{emp}</span>
+                <span style={{ color: "#e4e4e7", opacity: 0.75 }}>{fmt(v)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!hasActual && !hasProj && (
+        <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#71717a", fontSize: 12 }}>No paychecks this month.</div>
       )}
 
       <div style={{ borderTop: "1px solid #3f3f46", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: "'DM Mono', monospace" }}>
@@ -599,28 +602,30 @@ function MonthlyChart({ paystubs, projection, year }) {
   const monthly = {};
   for (let m = 1; m <= 12; m++) {
     const ym = `${year}-${String(m).padStart(2, "0")}`;
-    monthly[ym] = { byEmployer: {}, isProjection: false, stubs: [], projBreakdown: null };
+    monthly[ym] = { stubs: [], actualByEmp: {}, projByEmp: {}, hasProjection: false };
   }
   for (const p of paystubs) {
     if (!p.pay_date) continue;
     const ym = p.pay_date.slice(0, 7);
     if (!monthly[ym]) continue;
     monthly[ym].stubs.push(p);
-    const v = metric === "net" ? n(p.net) : n(p.gross);
-    monthly[ym].byEmployer[p.employer] = (monthly[ym].byEmployer[p.employer] || 0) + v;
+    if (!monthly[ym].actualByEmp[p.employer]) monthly[ym].actualByEmp[p.employer] = { gross: 0, net: 0 };
+    monthly[ym].actualByEmp[p.employer].gross += n(p.gross);
+    monthly[ym].actualByEmp[p.employer].net += n(p.net);
   }
   if (projection && projection.monthly) {
     for (const ym in projection.monthly) {
-      if (monthly[ym] && monthly[ym].stubs.length === 0) {
-        const mp = projection.monthly[ym];
-        const conv = {};
-        for (const emp in mp) {
-          const g = n(mp[emp]);
-          conv[emp] = metric === "net" ? g * (ratios[emp] != null ? ratios[emp] : 1) : g;
+      if (!monthly[ym]) continue;
+      const mp = projection.monthly[ym];
+      for (const emp in mp) {
+        const projected = n(mp[emp]);
+        const actualGross = (monthly[ym].actualByEmp[emp] && monthly[ym].actualByEmp[emp].gross) || 0;
+        const remaining = Math.max(0, projected - actualGross);
+        if (remaining > 0.01) {
+          const rat = ratios[emp] != null ? ratios[emp] : 1;
+          monthly[ym].projByEmp[emp] = { gross: remaining, netProxy: remaining * rat };
+          monthly[ym].hasProjection = true;
         }
-        monthly[ym].byEmployer = conv;
-        monthly[ym].isProjection = true;
-        monthly[ym].projBreakdown = mp;
       }
     }
   }
@@ -634,10 +639,10 @@ function MonthlyChart({ paystubs, projection, year }) {
   const monthsArr = Object.keys(monthly).sort();
   const grossTotals = monthsArr.map((k) => {
     const m = monthly[k];
-    if (m.isProjection && m.projBreakdown) {
-      return Object.values(m.projBreakdown).reduce((s, v) => s + n(v), 0);
-    }
-    return m.stubs.reduce((s, p) => s + n(p.gross), 0);
+    let total = 0;
+    for (const emp in m.actualByEmp) total += m.actualByEmp[emp].gross;
+    for (const emp in m.projByEmp) total += m.projByEmp[emp].gross;
+    return total;
   });
   const max = Math.max(...grossTotals, 1);
   const yMax = Math.ceil(max / 5000) * 5000 || 5000;
@@ -658,7 +663,10 @@ function MonthlyChart({ paystubs, projection, year }) {
 
   const allEmployers = [
     ...EMPLOYERS,
-    ...Array.from(new Set(monthsArr.flatMap((k) => Object.keys(monthly[k].byEmployer)))).filter((e) => !EMPLOYERS.includes(e)),
+    ...Array.from(new Set(monthsArr.flatMap((k) => [
+      ...Object.keys(monthly[k].actualByEmp),
+      ...Object.keys(monthly[k].projByEmp),
+    ]))).filter((e) => !EMPLOYERS.includes(e)),
   ];
 
   return (
@@ -717,37 +725,54 @@ function MonthlyChart({ paystubs, projection, year }) {
           const data = monthly[ym];
           const x = ML + slot * i + (slot - barWidth) / 2;
           let yCursor = MT + innerH;
+          const empSet = new Set([...Object.keys(data.actualByEmp), ...Object.keys(data.projByEmp)]);
           const empOrder = [
-            ...EMPLOYERS.filter((e) => data.byEmployer[e]),
-            ...Object.keys(data.byEmployer).filter((e) => !EMPLOYERS.includes(e)),
+            ...EMPLOYERS.filter((e) => empSet.has(e)),
+            ...Array.from(empSet).filter((e) => !EMPLOYERS.includes(e)),
           ];
-          const segments = empOrder.map((emp) => {
-            const amt = n(data.byEmployer[emp]);
-            const h = (amt / yMax) * innerH;
-            yCursor -= h;
-            return { x, y: yCursor, w: barWidth, h, color: colorFor(emp), emp };
-          });
+          const segments = [];
+          for (const emp of empOrder) {
+            const act = data.actualByEmp[emp];
+            if (act) {
+              const val = metric === "net" ? act.net : act.gross;
+              if (val > 0) {
+                const h = (val / yMax) * innerH;
+                yCursor -= h;
+                segments.push({ x, y: yCursor, w: barWidth, h, color: colorFor(emp), emp, isProjection: false });
+              }
+            }
+            const proj = data.projByEmp[emp];
+            if (proj) {
+              const val = metric === "net" ? proj.netProxy : proj.gross;
+              if (val > 0) {
+                const h = (val / yMax) * innerH;
+                yCursor -= h;
+                segments.push({ x, y: yCursor, w: barWidth, h, color: colorFor(emp), emp, isProjection: true });
+              }
+            }
+          }
           const monthTotal = segments.reduce((s, seg) => s + (seg.h * yMax) / innerH, 0);
           const isHovered = hovered && hovered.ym === ym;
+          const isAllProjection = data.stubs.length === 0 && data.hasProjection;
           return (
             <g key={ym}>
               {segments.map((s, j) => (
                 <rect key={j} x={s.x} y={s.y} width={s.w} height={s.h}
-                  fill={data.isProjection ? `${s.color}55` : s.color}
-                  stroke={data.isProjection ? s.color : "none"}
-                  strokeDasharray={data.isProjection ? "3,3" : ""}
+                  fill={s.isProjection ? `${s.color}55` : s.color}
+                  stroke={s.isProjection ? s.color : "none"}
+                  strokeDasharray={s.isProjection ? "3,3" : ""}
                   strokeWidth="1.5" rx="2"
                   opacity={hovered && !isHovered ? 0.45 : 1} />
               ))}
               {monthTotal > 0 && (
                 <text x={x + barWidth / 2} y={MT + innerH - (monthTotal / yMax) * innerH - 6}
                   textAnchor="middle"
-                  style={{ fill: data.isProjection ? "#71717a" : "#e4e4e7", fontSize: 8.5, fontFamily: "'DM Mono', monospace" }}>
+                  style={{ fill: isAllProjection ? "#71717a" : "#e4e4e7", fontSize: 8.5, fontFamily: "'DM Mono', monospace" }}>
                   {monthTotal >= 1000 ? `$${(monthTotal / 1000).toFixed(1)}k` : ""}
                 </text>
               )}
               <text x={x + barWidth / 2} y={H - MB + 18} textAnchor="middle"
-                style={{ fill: data.isProjection ? "#52525b" : "#a1a1aa", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
+                style={{ fill: isAllProjection ? "#52525b" : "#a1a1aa", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
                 {MONTH_LABELS[i]}
               </text>
               <rect x={ML + slot * i} y={MT} width={slot} height={innerH}
@@ -761,7 +786,7 @@ function MonthlyChart({ paystubs, projection, year }) {
       </svg>
       {hovered && monthly[hovered.ym] && (
         <ChartTooltip ym={hovered.ym} data={monthly[hovered.ym]}
-          metric={metric} ratios={ratios}
+          metric={metric}
           x={hovered.x} y={hovered.y}
           containerW={containerRef.current ? containerRef.current.clientWidth : 800} />
       )}
