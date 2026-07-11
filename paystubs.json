@@ -1,6 +1,6 @@
 {
   "year": 2026,
-  "last_updated": "2026-07-03",
+  "last_updated": "2026-07-10",
   "projection": {
     "notes": "Sutter biweekly @ $5,947.20 ($82.60 × 72 hrs) · NorthBay per-diem 32 hrs/mo @ $87.40",
     "monthly": {
@@ -30,6 +30,7 @@
     { "employer": "NorthBay", "pay_date": "2026-06-12", "gross": 2748.49, "net": 1700.39, "retirement_403b": 0 },
     { "employer": "NorthBay", "pay_date": "2026-06-26", "gross": 703.29,  "net": 557.87,  "retirement_403b": 0 },
     { "employer": "Sutter",   "pay_date": "2026-06-26", "gross": 5866.12, "net": 2809.37, "retirement_403b": 1349.21 },
-    { "employer": "NorthBay", "pay_date": "2026-07-02", "gross": 699.36,  "net": 582.28,  "retirement_403b": 0 }
+    { "employer": "NorthBay", "pay_date": "2026-07-02", "gross": 699.36,  "net": 582.28,  "retirement_403b": 0 },
+    { "employer": "NorthBay", "pay_date": "2026-07-10", "gross": 701.98,  "net": 584.24,  "retirement_403b": 0 }
   ]
 }
