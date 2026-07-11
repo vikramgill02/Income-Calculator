@@ -497,11 +497,11 @@ function ProjectionCard({ ytdGross, projection }) {
 
 const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function ChartTooltip({ ym, data, metric, x, y, containerW }) {
+function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW }) {
   const [yearStr, monthStr] = ym.split("-");
   const monthName = MONTH_LABELS[Number(monthStr) - 1] + " " + yearStr;
   const stubs = data.stubs || [];
-  const projByEmp = data.projByEmp || {};
+  const projByEmp = showProjected ? (data.projByEmp || {}) : {};
   const hasActual = stubs.length > 0;
   const hasProj = Object.keys(projByEmp).length > 0;
 
@@ -584,6 +584,7 @@ function ChartTooltip({ ym, data, metric, x, y, containerW }) {
 
 function MonthlyChart({ paystubs, projection, year }) {
   const [metric, setMetric] = useState("gross");
+  const [showProjected, setShowProjected] = useState(true);
   const [hovered, setHovered] = useState(null);
   const containerRef = useRef(null);
 
@@ -694,6 +695,21 @@ function MonthlyChart({ paystubs, projection, year }) {
               );
             })}
           </div>
+          <button onClick={() => setShowProjected((v) => !v)} style={{
+            display: "flex", alignItems: "center", gap: 7,
+            background: showProjected ? "rgba(251,191,36,0.1)" : "transparent",
+            border: `1px solid ${showProjected ? "#fbbf24" : "#3f3f46"}`,
+            borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+            fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase",
+            color: showProjected ? "#fbbf24" : "#71717a", fontFamily: "'DM Mono', monospace",
+          }}>
+            <span style={{
+              width: 9, height: 9, borderRadius: 2,
+              background: showProjected ? "rgba(251,191,36,0.35)" : "transparent",
+              border: `1px dashed ${showProjected ? "#fbbf24" : "#71717a"}`,
+            }} />
+            Projected
+          </button>
         </div>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           {allEmployers.map((emp) => (
@@ -742,7 +758,7 @@ function MonthlyChart({ paystubs, projection, year }) {
               }
             }
             const proj = data.projByEmp[emp];
-            if (proj) {
+            if (proj && showProjected) {
               const val = metric === "net" ? proj.netProxy : proj.gross;
               if (val > 0) {
                 const h = (val / yMax) * innerH;
@@ -753,7 +769,7 @@ function MonthlyChart({ paystubs, projection, year }) {
           }
           const monthTotal = segments.reduce((s, seg) => s + (seg.h * yMax) / innerH, 0);
           const isHovered = hovered && hovered.ym === ym;
-          const isAllProjection = data.stubs.length === 0 && data.hasProjection;
+          const isAllProjection = data.stubs.length === 0 && data.hasProjection && showProjected;
           return (
             <g key={ym}>
               {segments.map((s, j) => (
@@ -786,7 +802,7 @@ function MonthlyChart({ paystubs, projection, year }) {
       </svg>
       {hovered && monthly[hovered.ym] && (
         <ChartTooltip ym={hovered.ym} data={monthly[hovered.ym]}
-          metric={metric}
+          metric={metric} showProjected={showProjected}
           x={hovered.x} y={hovered.y}
           containerW={containerRef.current ? containerRef.current.clientWidth : 800} />
       )}
