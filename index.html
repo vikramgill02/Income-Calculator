@@ -856,6 +856,53 @@ function PaystubTable({ paystubs }) {
   );
 }
 
+function PaystubSection({ paystubs, orderedEmployers, loaded }) {
+  const [filter, setFilter] = useState("all");
+  const filtered = useMemo(
+    () => filter === "all" ? paystubs : paystubs.filter((p) => p.employer === filter),
+    [paystubs, filter]
+  );
+  const options = ["all", ...orderedEmployers];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>All Paystubs</div>
+          <div style={{ display: "flex", gap: 2, background: "#0c0c0e", border: "1px solid #27272a", borderRadius: 8, padding: 2 }}>
+            {options.map((key) => {
+              const active = filter === key;
+              const isAll = key === "all";
+              const color = isAll ? "#e4e4e7" : colorFor(key);
+              return (
+                <button key={key} onClick={() => setFilter(key)} style={{
+                  background: active ? color : "transparent",
+                  color: active ? "#09090b" : "#71717a",
+                  border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                  fontFamily: "'DM Mono', monospace", fontWeight: 500,
+                }}>{isAll ? "All" : key}</button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>
+          {filter === "all" ? `${paystubs.length} total` : `${filtered.length} of ${paystubs.length}`}
+        </div>
+      </div>
+      {!loaded ? (
+        <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
+      ) : filtered.length === 0 ? (
+        <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>
+          {paystubs.length === 0 ? "No paystubs yet." : `No ${filter} paystubs.`}
+        </p>
+      ) : (
+        <PaystubTable paystubs={filtered} />
+      )}
+    </div>
+  );
+}
+
 /* ─── Dashboard ─── */
 
 function Dashboard() {
@@ -956,19 +1003,8 @@ function Dashboard() {
           <MonthlyChart paystubs={paystubs} projection={projection} year={year} />
         </div>
 
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>All Paystubs</div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>{paystubs.length} total</div>
-          </div>
-          {!loaded ? (
-            <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
-          ) : paystubs.length === 0 ? (
-            <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>No paystubs yet.</p>
-          ) : (
-            <PaystubTable paystubs={paystubs} />
-          )}
-        </div>
+        <PaystubSection paystubs={paystubs} orderedEmployers={orderedEmployers} loaded={loaded} />
+
 
       </div>
     </div>
