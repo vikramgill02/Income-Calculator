@@ -34,6 +34,7 @@
     { "employer": "NorthBay", "pay_date": "2026-07-10", "gross": 701.98,  "net": 584.24,  "retirement_403b": 0 },
     { "employer": "Sutter",   "pay_date": "2026-07-10", "gross": 4896.58, "net": 2470.42, "retirement_403b": 0 },
     { "employer": "NorthBay", "pay_date": "2026-07-17", "gross": 2180.69, "net": 1539.06, "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-07-24", "gross": 716.40,  "net": 595.00,  "retirement_403b": 0 }
+    { "employer": "NorthBay", "pay_date": "2026-07-24", "gross": 716.40,  "net": 595.00,  "retirement_403b": 0 },
+    { "employer": "Sutter",   "pay_date": "2026-07-24", "gross": 5356.91, "net": 2929.39, "retirement_403b": 696.40 }
   ]
 }
