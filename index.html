@@ -145,23 +145,30 @@ function useHistory(initial) {
   return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
 }
 
-const CALC_INIT = { night: false, d1: "", otd1: "", d2: "", deductions: 35, useHours1: false, useHours2: false };
-const SUTTER_BASE = 76.40, NIGHT_BLENDED_DIFF = 5.06, SUTTER_OT = 114.60;
-const NORTHBAY_RATE = 87.40, HOURS_PER_DAY = 12, NORTHBAY_HRS = 8;
+const CALC_INIT = { reg: "", pu1: "", pu2: "", d2: "", deductions: 35, useHours2: false };
+const SUTTER_BASE = 76.40;
+const SUTTER_EVE_RATE   = 79.90;   // base + $3.50 evening diff
+const SUTTER_NIGHT_RATE = 82.40;   // base + $6.00 night diff
+const SUTTER_EVE_OT     = 119.85;  // 1.5 × evening rate
+const SUTTER_NIGHT_OT   = 123.60;  // 1.5 × night rate
+// 12-hr pickup shift = 19:00-07:30 with 30min unpaid meal (during night hours)
+// = 5 hrs evening (19:00-24:00) + 7 hrs night (00:00-07:30 less meal)
+const SUTTER_REG_SHIFT  = 976.30;  // 5×79.90 + 7×82.40 — all straight-time
+const SUTTER_PICKUP_1   = 1304.65; // 4 ST eve + 1 OT eve + 7 OT night (crosses 40hr mid-shift)
+const SUTTER_PICKUP_2   = 1464.45; // 5 OT eve + 7 OT night (all past 40hr)
+const NORTHBAY_RATE = 87.40, NORTHBAY_HRS = 8;
 
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(CALC_INIT);
-  const { night, d1, otd1, d2, deductions, useHours1, useHours2 } = state;
+  const { reg, pu1, pu2, d2, deductions, useHours2 } = state;
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
-  const toggleNight  = () => set((s) => ({ ...s, night: !s.night }));
-  const toggleHours1 = () => set((s) => ({ ...s, useHours1: !s.useHours1, d1: "", otd1: "" }));
   const toggleHours2 = () => set((s) => ({ ...s, useHours2: !s.useHours2, d2: "" }));
 
-  const dayRate   = SUTTER_BASE + (night ? NIGHT_BLENDED_DIFF : 0);
-  const dayPay    = dayRate * HOURS_PER_DAY;
-  const otDayPay  = SUTTER_OT * HOURS_PER_DAY;
-  const gross1    = useHours1 ? n(d1) * dayRate + n(otd1) * SUTTER_OT : n(d1) * dayPay + n(otd1) * otDayPay;
-  const gross2    = useHours2 ? n(d2) * NORTHBAY_RATE : n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
+  const regGross = n(reg) * SUTTER_REG_SHIFT;
+  const pu1Gross = n(pu1) * SUTTER_PICKUP_1;
+  const pu2Gross = n(pu2) * SUTTER_PICKUP_2;
+  const gross1   = regGross + pu1Gross + pu2Gross;
+  const gross2   = useHours2 ? n(d2) * NORTHBAY_RATE : n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
   const totalGross = gross1 + gross2;
   const dedPct    = n(deductions);
   const dedAmt    = totalGross * (dedPct / 100);
@@ -197,47 +204,36 @@ function Calc() {
         </div>
 
         <div style={{ marginBottom: 40 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-            <div>
-              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 01 · Sutter</p>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0, lineHeight: 2 }}>
-                <span style={{ color: "#e4e4e7" }}>{fmt(dayRate)}/hr</span>
-                <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(dayPay)}/day</span>
-                <br />
-                <span style={{ color: "#a1a1aa" }}>OT </span>
-                <span style={{ color: "#e4e4e7" }}>{fmt(SUTTER_OT)}/hr</span>
-                <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(otDayPay)}/day</span>
-              </p>
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 10px" }}>Job 01 · Sutter</p>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", lineHeight: 1.9 }}>
+              <div>
+                <span style={{ color: "#e4e4e7" }}>Regular Night</span>
+                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_REG_SHIFT)}/shift</span>
+                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>$81.36/hr</span>
+              </div>
+              <div>
+                <span style={{ color: "#fb923c" }}>1st Pickup</span>
+                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_PICKUP_1)}/shift</span>
+                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>$108.72/hr</span>
+              </div>
+              <div>
+                <span style={{ color: "#f87171" }}>2nd Pickup</span>
+                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_PICKUP_2)}/shift</span>
+                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+                <span style={{ color: "#a1a1aa" }}>$122.04/hr</span>
+              </div>
             </div>
-            <button onClick={toggleNight} style={{
-              display: "flex", alignItems: "center", gap: 7,
-              background: night ? "rgba(251,146,60,0.12)" : "transparent",
-              border: `1px solid ${night ? "#fb923c" : "#52525b"}`,
-              borderRadius: 20, padding: "6px 13px", cursor: "pointer",
-            }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: night ? "#fb923c" : "#71717a" }} />
-              <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: night ? "#fb923c" : "#a1a1aa", fontFamily: "'DM Mono', monospace" }}>Night</span>
-            </button>
           </div>
-          <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
-            {["Days", "Hours"].map((mode) => {
-              const active = (mode === "Hours") === useHours1;
-              return (
-                <button key={mode} onClick={toggleHours1} style={{
-                  background: active ? "#27272a" : "transparent",
-                  border: `1px solid ${active ? "#52525b" : "#27272a"}`,
-                  borderRadius: 6, padding: "4px 12px", cursor: "pointer",
-                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
-                  color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
-                }}>{mode}</button>
-              );
-            })}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <Field label={useHours1 ? "Hours Worked" : "Days Worked"} value={d1} onChange={update("d1")} />
-            <Field label={useHours1 ? "OT Hours" : "OT Days"} value={otd1} onChange={update("otd1")} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <Field label="Regular" value={reg} onChange={update("reg")} />
+            <Field label="1st Pickup" value={pu1} onChange={update("pu1")} />
+            <Field label="2nd Pickup" value={pu2} onChange={update("pu2")} />
           </div>
         </div>
 
@@ -295,8 +291,11 @@ function Calc() {
 
         {hasData ? (
           <div>
-            <Line label="Sutter Gross" value={fmt(gross1)} note={night ? "(night)" : ""} />
-            <Line label="NorthBay Gross" value={fmt(gross2)} />
+            {regGross > 0 && <Line label="Regular Shifts" value={fmt(regGross)} muted />}
+            {pu1Gross > 0 && <Line label="1st Pickups" value={fmt(pu1Gross)} muted />}
+            {pu2Gross > 0 && <Line label="2nd Pickups" value={fmt(pu2Gross)} muted />}
+            {gross1 > 0 && <Line label="Sutter Gross" value={fmt(gross1)} />}
+            {gross2 > 0 && <Line label="NorthBay Gross" value={fmt(gross2)} />}
             <Line label="Total Gross" value={fmt(totalGross)} />
             {dedPct > 0 && <Line label="Deductions" value={`− ${fmt(dedAmt)}`} muted />}
             <Line label="Take Home" value={fmt(totalNet)} highlight large />
