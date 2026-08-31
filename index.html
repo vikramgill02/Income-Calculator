@@ -145,31 +145,29 @@ function useHistory(initial) {
   return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
 }
 
-const CALC_INIT = { reg: "", pu1: "", pu2: "", d2: "", deductions: 35, useHours2: false };
-const SUTTER_BASE = 76.40;
-const SUTTER_EVE_RATE   = 79.90;   // base + $3.50 evening diff
-const SUTTER_NIGHT_RATE = 82.40;   // base + $6.00 night diff
-const SUTTER_EVE_OT     = 119.85;  // 1.5 × evening rate
-const SUTTER_NIGHT_OT   = 123.60;  // 1.5 × night rate
-// 12-hr pickup shift = 19:00-07:30 with 30min unpaid meal (during night hours)
-// = 5 hrs evening (19:00-24:00) + 7 hrs night (00:00-07:30 less meal)
-const SUTTER_REG_SHIFT  = 976.30;  // 5×79.90 + 7×82.40 — all straight-time
-const SUTTER_PICKUP_1   = 1304.65; // 4 ST eve + 1 OT eve + 7 OT night (crosses 40hr mid-shift)
-const SUTTER_PICKUP_2   = 1464.45; // 5 OT eve + 7 OT night (all past 40hr)
-const NORTHBAY_RATE = 87.40, NORTHBAY_HRS = 8;
+const CALC_INIT = { w1: "", w2: "", deductions: 35 };
+const SUTTER_BASE   = 76.40;
+const SUTTER_OT     = 114.60;  // 1.5 × base
+const WEEKLY_OT_THRESHOLD = 40;
+const weekPay = (hrs) => {
+  const h = parseFloat(hrs) || 0;
+  if (h <= 0) return { hrs: 0, st: 0, ot: 0, total: 0 };
+  if (h <= WEEKLY_OT_THRESHOLD) return { hrs: h, st: h * SUTTER_BASE, ot: 0, total: h * SUTTER_BASE };
+  const st = WEEKLY_OT_THRESHOLD * SUTTER_BASE;
+  const ot = (h - WEEKLY_OT_THRESHOLD) * SUTTER_OT;
+  return { hrs: h, st, ot, total: st + ot };
+};
 
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(CALC_INIT);
-  const { reg, pu1, pu2, d2, deductions, useHours2 } = state;
+  const { w1, w2, deductions } = state;
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
-  const toggleHours2 = () => set((s) => ({ ...s, useHours2: !s.useHours2, d2: "" }));
 
-  const regGross = n(reg) * SUTTER_REG_SHIFT;
-  const pu1Gross = n(pu1) * SUTTER_PICKUP_1;
-  const pu2Gross = n(pu2) * SUTTER_PICKUP_2;
-  const gross1   = regGross + pu1Gross + pu2Gross;
-  const gross2   = useHours2 ? n(d2) * NORTHBAY_RATE : n(d2) * NORTHBAY_RATE * NORTHBAY_HRS;
-  const totalGross = gross1 + gross2;
+  const w1Pay = weekPay(w1);
+  const w2Pay = weekPay(w2);
+  const stTotal = w1Pay.st + w2Pay.st;
+  const otTotal = w1Pay.ot + w2Pay.ot;
+  const totalGross = w1Pay.total + w2Pay.total;
   const dedPct    = n(deductions);
   const dedAmt    = totalGross * (dedPct / 100);
   const totalNet  = totalGross - dedAmt;
@@ -182,7 +180,7 @@ function Calc() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
           <div>
-            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>monthly</p>
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>biweekly</p>
             <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>Pay Calculator</h1>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -204,66 +202,28 @@ function Calc() {
         </div>
 
         <div style={{ marginBottom: 40 }}>
-          <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 10px" }}>Job 01 · Sutter</p>
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 10px" }}>Sutter · Biweekly Paycheck</p>
             <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", lineHeight: 1.9 }}>
               <div>
-                <span style={{ color: "#e4e4e7" }}>Regular Night</span>
+                <span style={{ color: "#e4e4e7" }}>Base</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_REG_SHIFT)}/shift</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_BASE)}/hr</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>$81.36/hr</span>
+                <span style={{ color: "#a1a1aa" }}>first 40 hrs/week</span>
               </div>
               <div>
-                <span style={{ color: "#fb923c" }}>1st Pickup</span>
+                <span style={{ color: "#fb923c" }}>OT</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_PICKUP_1)}/shift</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_OT)}/hr</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>$108.72/hr</span>
-              </div>
-              <div>
-                <span style={{ color: "#f87171" }}>2nd Pickup</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_PICKUP_2)}/shift</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>$122.04/hr</span>
+                <span style={{ color: "#a1a1aa" }}>hours over 40/week</span>
               </div>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-            <Field label="Regular" value={reg} onChange={update("reg")} />
-            <Field label="1st Pickup" value={pu1} onChange={update("pu1")} />
-            <Field label="2nd Pickup" value={pu2} onChange={update("pu2")} />
-          </div>
-        </div>
-
-        <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
-
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 6px" }}>Job 02 · NorthBay</p>
-            <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", margin: 0 }}>
-              <span style={{ color: "#e4e4e7" }}>{fmt(NORTHBAY_RATE)}/hr</span>
-              <span style={{ margin: "0 10px", color: "#3f3f46" }}>·</span>
-              <span style={{ color: "#a1a1aa" }}>{fmt(NORTHBAY_RATE * NORTHBAY_HRS)}/day</span>
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
-            {["Days", "Hours"].map((mode) => {
-              const active = (mode === "Hours") === useHours2;
-              return (
-                <button key={mode} onClick={toggleHours2} style={{
-                  background: active ? "#27272a" : "transparent",
-                  border: `1px solid ${active ? "#52525b" : "#27272a"}`,
-                  borderRadius: 6, padding: "4px 12px", cursor: "pointer",
-                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
-                  color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
-                }}>{mode}</button>
-              );
-            })}
-          </div>
-          <div style={{ maxWidth: 160 }}>
-            <Field label={useHours2 ? "Hours Worked" : "Days Worked"} value={d2} onChange={update("d2")} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <Field label="Week 1 Hours" value={w1} onChange={update("w1")} />
+            <Field label="Week 2 Hours" value={w2} onChange={update("w2")} />
           </div>
         </div>
 
@@ -291,18 +251,29 @@ function Calc() {
 
         {hasData ? (
           <div>
-            {regGross > 0 && <Line label="Regular Shifts" value={fmt(regGross)} muted />}
-            {pu1Gross > 0 && <Line label="1st Pickups" value={fmt(pu1Gross)} muted />}
-            {pu2Gross > 0 && <Line label="2nd Pickups" value={fmt(pu2Gross)} muted />}
-            {gross1 > 0 && <Line label="Sutter Gross" value={fmt(gross1)} />}
-            {gross2 > 0 && <Line label="NorthBay Gross" value={fmt(gross2)} />}
+            {w1Pay.total > 0 && (
+              <Line
+                label={`Week 1 · ${w1Pay.hrs}h${w1Pay.ot > 0 ? ` (${WEEKLY_OT_THRESHOLD} ST + ${(w1Pay.hrs - WEEKLY_OT_THRESHOLD).toFixed(2)} OT)` : ""}`}
+                value={fmt(w1Pay.total)}
+                muted
+              />
+            )}
+            {w2Pay.total > 0 && (
+              <Line
+                label={`Week 2 · ${w2Pay.hrs}h${w2Pay.ot > 0 ? ` (${WEEKLY_OT_THRESHOLD} ST + ${(w2Pay.hrs - WEEKLY_OT_THRESHOLD).toFixed(2)} OT)` : ""}`}
+                value={fmt(w2Pay.total)}
+                muted
+              />
+            )}
+            {otTotal > 0 && <Line label="Straight Time" value={fmt(stTotal)} muted />}
+            {otTotal > 0 && <Line label="Overtime" value={fmt(otTotal)} muted />}
             <Line label="Total Gross" value={fmt(totalGross)} />
             {dedPct > 0 && <Line label="Deductions" value={`− ${fmt(dedAmt)}`} muted />}
             <Line label="Take Home" value={fmt(totalNet)} highlight large />
           </div>
         ) : (
           <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 15, margin: 0 }}>
-            Enter your days above to see totals.
+            Enter your hours above to see totals.
           </p>
         )}
       </div>
