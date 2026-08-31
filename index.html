@@ -443,15 +443,24 @@ function EmployerCard({ employer, stats }) {
   );
 }
 
-function ProjectionCard({ ytdGross, projection }) {
+function ProjectionCard({ ytdGross, projection, paystubs }) {
   if (!projection || !projection.monthly) return null;
+  const actualsByMonth = {};
+  for (const p of paystubs || []) {
+    if (!p.pay_date) continue;
+    const ym = p.pay_date.slice(0, 7);
+    if (!actualsByMonth[ym]) actualsByMonth[ym] = {};
+    actualsByMonth[ym][p.employer] = (actualsByMonth[ym][p.employer] || 0) + n(p.gross);
+  }
   let remaining = 0;
   const byEmployer = {};
   for (const ym in projection.monthly) {
     for (const emp in projection.monthly[ym]) {
-      const amt = n(projection.monthly[ym][emp]);
-      remaining += amt;
-      byEmployer[emp] = (byEmployer[emp] || 0) + amt;
+      const proj = n(projection.monthly[ym][emp]);
+      const actual = (actualsByMonth[ym] && actualsByMonth[ym][emp]) || 0;
+      const rem = Math.max(0, proj - actual);
+      remaining += rem;
+      if (rem > 0) byEmployer[emp] = (byEmployer[emp] || 0) + rem;
     }
   }
   const total = ytdGross + remaining;
@@ -994,7 +1003,7 @@ function Dashboard() {
 
         {projection && (
           <div style={{ marginBottom: 32 }}>
-            <ProjectionCard ytdGross={totals.gross} projection={projection} />
+            <ProjectionCard ytdGross={totals.gross} projection={projection} paystubs={paystubs} />
           </div>
         )}
 
