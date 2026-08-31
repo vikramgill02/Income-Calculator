@@ -1,15 +1,15 @@
 {
   "year": 2026,
-  "last_updated": "2026-08-14",
+  "last_updated": "2026-08-31",
   "projection": {
-    "notes": "Sutter biweekly @ $5,947.20 ($82.60 × 72 hrs) · NorthBay per-diem 32 hrs/mo @ $87.40",
+    "notes": "Sutter biweekly @ $5,947.20 ($82.60 × 72 hrs). NorthBay: quit as of 8/21/2026. Missing 9/4 Sutter check (traveling abroad).",
     "monthly": {
       "2026-07": { "Sutter": 11894.40, "NorthBay": 2796.80 },
-      "2026-08": { "Sutter": 11894.40, "NorthBay": 2796.80 },
-      "2026-09": { "Sutter": 11894.40, "NorthBay": 2796.80 },
-      "2026-10": { "Sutter": 17841.60, "NorthBay": 2796.80 },
-      "2026-11": { "Sutter": 11894.40, "NorthBay": 2796.80 },
-      "2026-12": { "Sutter": 11894.40, "NorthBay": 2796.80 }
+      "2026-08": { "Sutter": 11894.40 },
+      "2026-09": { "Sutter": 5947.20 },
+      "2026-10": { "Sutter": 17841.60 },
+      "2026-11": { "Sutter": 11894.40 },
+      "2026-12": { "Sutter": 11894.40 }
     }
   },
   "paystubs": [
@@ -37,6 +37,7 @@
     { "employer": "NorthBay", "pay_date": "2026-07-24", "gross": 716.40,  "net": 595.00,  "retirement_403b": 0 },
     { "employer": "Sutter",   "pay_date": "2026-07-24", "gross": 5356.91, "net": 2929.39, "retirement_403b": 696.40 },
     { "employer": "Sutter",   "pay_date": "2026-08-07", "gross": 10429.00, "net": 4741.58, "retirement_403b": 1355.77 },
-    { "employer": "NorthBay", "pay_date": "2026-08-14", "gross": 701.98,   "net": 584.24,   "retirement_403b": 0 }
+    { "employer": "NorthBay", "pay_date": "2026-08-14", "gross": 701.98,   "net": 584.24,   "retirement_403b": 0 },
+    { "employer": "NorthBay", "pay_date": "2026-08-21", "gross": 1389.98,  "net": 1072.26,  "retirement_403b": 0 }
   ]
 }
