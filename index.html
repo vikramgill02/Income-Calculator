@@ -145,26 +145,34 @@ function useHistory(initial) {
   return { state, set, undo, redo, canUndo: cursor > 0, canRedo: cursor < history.length - 1 };
 }
 
-const CALC_INIT = { w1: "", w2: "", deductions: 35 };
+const CALC_INIT = { w1: "", w2: "", blended: false, deductions: 35 };
 const SUTTER_BASE   = 76.40;
 const SUTTER_OT     = 114.60;  // 1.5 × base
+// Blended Night+Weekend rate, derived from paystubs: a standard 12-hr shift
+// is 5 hrs evening (+$3.50/hr) + 7 hrs night (+$6.00/hr), plus a flat
+// $1.80/hr weekend diff on all 12 hrs (weekend diff isn't OT-multiplied).
+const SUTTER_BLENDED_BASE = 83.16;  // (5×79.90 + 7×82.40)/12 + 1.80
+const SUTTER_BLENDED_OT   = 123.84; // (5×119.85 + 7×123.60)/12 + 1.80
 const WEEKLY_OT_THRESHOLD = 40;
-const weekPay = (hrs) => {
+const weekPay = (hrs, blended) => {
   const h = parseFloat(hrs) || 0;
+  const base = blended ? SUTTER_BLENDED_BASE : SUTTER_BASE;
+  const ot   = blended ? SUTTER_BLENDED_OT   : SUTTER_OT;
   if (h <= 0) return { hrs: 0, st: 0, ot: 0, total: 0 };
-  if (h <= WEEKLY_OT_THRESHOLD) return { hrs: h, st: h * SUTTER_BASE, ot: 0, total: h * SUTTER_BASE };
-  const st = WEEKLY_OT_THRESHOLD * SUTTER_BASE;
-  const ot = (h - WEEKLY_OT_THRESHOLD) * SUTTER_OT;
-  return { hrs: h, st, ot, total: st + ot };
+  if (h <= WEEKLY_OT_THRESHOLD) return { hrs: h, st: h * base, ot: 0, total: h * base };
+  const st = WEEKLY_OT_THRESHOLD * base;
+  const otPay = (h - WEEKLY_OT_THRESHOLD) * ot;
+  return { hrs: h, st, ot: otPay, total: st + otPay };
 };
 
 function Calc() {
   const { state, set, undo, redo, canUndo, canRedo } = useHistory(CALC_INIT);
-  const { w1, w2, deductions } = state;
+  const { w1, w2, blended, deductions } = state;
   const update = (key) => (e) => set((s) => ({ ...s, [key]: e.target.value }));
+  const toggleBlended = () => set((s) => ({ ...s, blended: !s.blended }));
 
-  const w1Pay = weekPay(w1);
-  const w2Pay = weekPay(w2);
+  const w1Pay = weekPay(w1, blended);
+  const w2Pay = weekPay(w2, blended);
   const stTotal = w1Pay.st + w2Pay.st;
   const otTotal = w1Pay.ot + w2Pay.ot;
   const totalGross = w1Pay.total + w2Pay.total;
@@ -203,19 +211,30 @@ function Calc() {
 
         <div style={{ marginBottom: 40 }}>
           <div style={{ marginBottom: 24 }}>
-            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: "0 0 10px" }}>Sutter · Biweekly Paycheck</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: 0 }}>Sutter · Biweekly Paycheck</p>
+              <button onClick={toggleBlended} style={{
+                display: "flex", alignItems: "center", gap: 7,
+                background: blended ? "rgba(129,140,248,0.12)" : "transparent",
+                border: `1px solid ${blended ? "#818cf8" : "#52525b"}`,
+                borderRadius: 20, padding: "5px 12px", cursor: "pointer",
+              }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: blended ? "#818cf8" : "#71717a" }} />
+                <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: blended ? "#818cf8" : "#a1a1aa", fontFamily: "'DM Mono', monospace" }}>Night + Weekend</span>
+              </button>
+            </div>
             <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", lineHeight: 1.9 }}>
               <div>
                 <span style={{ color: "#e4e4e7" }}>Base</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_BASE)}/hr</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(blended ? SUTTER_BLENDED_BASE : SUTTER_BASE)}/hr</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
                 <span style={{ color: "#a1a1aa" }}>first 40 hrs/week</span>
               </div>
               <div>
                 <span style={{ color: "#fb923c" }}>OT</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(SUTTER_OT)}/hr</span>
+                <span style={{ color: "#a1a1aa" }}>{fmt(blended ? SUTTER_BLENDED_OT : SUTTER_OT)}/hr</span>
                 <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
                 <span style={{ color: "#a1a1aa" }}>hours over 40/week</span>
               </div>
