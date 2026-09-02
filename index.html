@@ -1019,65 +1019,118 @@ const CADENCE_META = {
   multiyear:  { label: "Multi-Year",  order: 5 },
 };
 
-const periodKey = (cadence, d) => {
-  const dt = d || new Date();
-  const y = dt.getFullYear(), m = dt.getMonth();
-  if (cadence === "monthly")    return `${y}-${String(m + 1).padStart(2, "0")}`;
-  if (cadence === "quarterly")  return `${y}-Q${Math.floor(m / 3) + 1}`;
-  if (cadence === "semiannual") return `${y}-H${m < 6 ? 1 : 2}`;
-  if (cadence === "multiyear")  return "once";
-  return `${y}`;
+// Every period in `year` for a cadence, tagged past / current / future.
+const periodsFor = (cadence, year, today) => {
+  const now = today || new Date();
+  const curY = now.getFullYear(), curM = now.getMonth();
+  const rel = (startM, endM) => {
+    if (year < curY) return "past";
+    if (year > curY) return "future";
+    if (curM > endM) return "past";
+    if (curM < startM) return "future";
+    return "current";
+  };
+  const out = [];
+  if (cadence === "monthly") {
+    for (let i = 0; i < 12; i++) {
+      out.push({ key: `${year}-${String(i + 1).padStart(2, "0")}`, label: MONTH_LABELS[i], when: rel(i, i) });
+    }
+  } else if (cadence === "quarterly") {
+    for (let i = 0; i < 4; i++) {
+      out.push({ key: `${year}-Q${i + 1}`, label: `Q${i + 1}`, when: rel(i * 3, i * 3 + 2) });
+    }
+  } else if (cadence === "semiannual") {
+    out.push({ key: `${year}-H1`, label: "Jan–Jun", when: rel(0, 5) });
+    out.push({ key: `${year}-H2`, label: "Jul–Dec", when: rel(6, 11) });
+  } else if (cadence === "annual") {
+    out.push({ key: `${year}`, label: String(year), when: rel(0, 11) });
+  } else {
+    out.push({ key: "once", label: "One-time", when: "current" });
+  }
+  return out;
 };
 
-const periodLabel = (cadence, d) => {
-  const dt = d || new Date();
-  const y = dt.getFullYear(), m = dt.getMonth();
-  if (cadence === "monthly")    return `${MONTH_LABELS[m]} ${y}`;
-  if (cadence === "quarterly")  return `Q${Math.floor(m / 3) + 1} ${y}`;
-  if (cadence === "semiannual") return m < 6 ? `Jan–Jun ${y}` : `Jul–Dec ${y}`;
-  if (cadence === "multiyear")  return "One-time";
-  return `${y}`;
+const benefitStatus = (benefit, year) => {
+  const periods = periodsFor(benefit.cadence, year);
+  const cs = new Set(benefit.claimed || []);
+  const per = n(benefit.per);
+  const hits   = periods.filter((p) => cs.has(p.key));
+  const missed = periods.filter((p) => !cs.has(p.key) && p.when === "past");
+  const open   = periods.filter((p) => !cs.has(p.key) && p.when === "current");
+  return {
+    periods, claimedSet: cs, hits, missed, open, per,
+    captured: hits.length * per,
+    total: periods.length * per,
+    atStake: (missed.length + open.length) * per,
+  };
 };
 
-function BenefitRow({ benefit, cardId, claimed, onToggle, accent, first }) {
-  const key = `${cardId}:${benefit.id}:${periodKey(benefit.cadence)}`;
-  const isDone = !!claimed[key];
+function Pill({ text, color, border, bg }) {
+  return (
+    <span style={{
+      fontSize: 8.5, letterSpacing: "0.12em", textTransform: "uppercase",
+      color, border: `1px solid ${border}`, background: bg,
+      borderRadius: 4, padding: "1px 6px", fontFamily: "'DM Mono', monospace",
+      whiteSpace: "nowrap",
+    }}>{text}</span>
+  );
+}
+
+function PeriodChip({ period, hit, accent, wide }) {
+  let bg = "transparent", border = "#27272a", color = "#3f3f46", weight = 400;
+  if (hit)                                { bg = accent; border = accent; color = "#09090b"; weight = 600; }
+  else if (period.when === "past")        { border = "#7f1d1d"; color = "#f87171"; bg = "rgba(248,113,113,0.07)"; }
+  else if (period.when === "current")     { border = "#fbbf24"; color = "#fbbf24"; bg = "rgba(251,191,36,0.08)"; }
   return (
     <div style={{
-      display: "flex", alignItems: "flex-start", gap: 12,
-      padding: "11px 0", borderTop: first ? "none" : "1px solid #1e1e22",
-    }}>
-      <button onClick={() => onToggle(key)} style={{
-        width: 18, height: 18, flexShrink: 0, marginTop: 2,
-        borderRadius: 5, cursor: "pointer",
-        background: isDone ? accent : "transparent",
-        border: `1px solid ${isDone ? accent : "#52525b"}`,
-        color: "#09090b", fontSize: 11, lineHeight: 1, fontWeight: 700,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>{isDone ? "✓" : ""}</button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 12, color: isDone ? "#71717a" : "#e4e4e7",
-          textDecoration: isDone ? "line-through" : "none",
-          fontFamily: "'DM Mono', monospace", marginBottom: 3,
-        }}>{benefit.name}</div>
-        <div style={{ fontSize: 10.5, color: "#71717a", lineHeight: 1.5 }}>{benefit.detail}</div>
+      minWidth: wide ? 64 : 36, height: 25, padding: "0 6px",
+      borderRadius: 5, background: bg, border: `1px solid ${border}`, color,
+      fontFamily: "'DM Mono', monospace", fontSize: 9.5, fontWeight: weight,
+      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+    }}>{period.label}</div>
+  );
+}
+
+function BenefitRow({ benefit, year, accent, first }) {
+  const st = benefitStatus(benefit, year);
+  const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
+  return (
+    <div style={{ padding: "14px 0", borderTop: first ? "none" : "1px solid #1e1e22" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, marginBottom: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12.5, color: "#e4e4e7", fontFamily: "'DM Mono', monospace" }}>{benefit.name}</span>
+            {benefit.auto && <Pill text="Auto" color="#22c55e" border="#14532d" bg="rgba(34,197,94,0.1)" />}
+            {st.missed.length > 0 && <Pill text={`${st.missed.length} missed`} color="#f87171" border="#7f1d1d" bg="rgba(248,113,113,0.1)" />}
+            {st.open.length > 0 && <Pill text="Open now" color="#fbbf24" border="#78350f" bg="rgba(251,191,36,0.1)" />}
+          </div>
+          <div style={{ fontSize: 10.5, color: "#71717a", lineHeight: 1.5 }}>{benefit.detail}</div>
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ fontSize: 13, color: st.captured > 0 ? "#e4e4e7" : "#52525b" }}>{fmt0(st.captured)}</div>
+          <div style={{ fontSize: 10, color: "#52525b", marginTop: 2 }}>of {fmt0(st.total)}</div>
+        </div>
       </div>
-      <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "'DM Mono', monospace" }}>
-        <div style={{ fontSize: 13, color: isDone ? "#52525b" : "#e4e4e7" }}>{fmt(n(benefit.per))}</div>
-        {benefit.cadence !== "annual" && benefit.cadence !== "multiyear" && (
-          <div style={{ fontSize: 10, color: "#52525b", marginTop: 2 }}>{fmt0(n(benefit.value))}/yr</div>
-        )}
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {st.periods.map((p) => (
+          <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)} accent={accent} wide={wide} />
+        ))}
       </div>
     </div>
   );
 }
 
-function CardBlock({ card, claimed, onToggle }) {
+function CardBlock({ card, year }) {
   const accent = card.color || "#a3e635";
-  const annualBenefits = (card.benefits || []).filter((b) => b.cadence !== "multiyear");
-  const totalCredits = annualBenefits.reduce((s, b) => s + n(b.value), 0);
-  const net = totalCredits - n(card.annual_fee);
+  let captured = 0, total = 0, missedN = 0, openN = 0;
+  for (const b of card.benefits || []) {
+    const st = benefitStatus(b, year);
+    captured += st.captured;
+    total    += st.total;
+    missedN  += st.missed.length;
+    openN    += st.open.length;
+  }
+  const pct = total ? (captured / total) * 100 : 0;
 
   const groups = {};
   for (const b of card.benefits || []) {
@@ -1088,70 +1141,51 @@ function CardBlock({ card, claimed, onToggle }) {
     (a, b) => (CADENCE_META[a]?.order || 99) - (CADENCE_META[b]?.order || 99)
   );
 
-  const trackable = (card.benefits || []).filter((b) => b.cadence !== "multiyear");
-  const doneCount = trackable.filter(
-    (b) => claimed[`${card.id}:${b.id}:${periodKey(b.cadence)}`]
-  ).length;
-  const pct = trackable.length ? (doneCount / trackable.length) * 100 : 0;
-
   return (
     <div style={{
       background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
       border: "1px solid #27272a", borderLeft: `3px solid ${accent}`,
       borderRadius: 16, padding: 26, marginBottom: 20,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
             width: 46, height: 30, borderRadius: 5, flexShrink: 0,
             background: `linear-gradient(135deg, ${accent} 0%, ${accent}88 100%)`,
-            display: "flex", alignItems: "flex-end", justifyContent: "flex-start", padding: 4,
+            display: "flex", alignItems: "flex-end", padding: 4,
           }}>
             <div style={{ width: 12, height: 8, borderRadius: 2, background: "rgba(0,0,0,0.25)" }} />
           </div>
           <div>
-            <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, color: "#fff", lineHeight: 1 }}>{card.name}</div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.12em", color: "#71717a", textTransform: "uppercase", marginTop: 5 }}>{card.issuer}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, color: "#fff", lineHeight: 1 }}>{card.name}</span>
+              {missedN > 0 && <Pill text={`${missedN} missed`} color="#f87171" border="#7f1d1d" bg="rgba(248,113,113,0.1)" />}
+              {openN > 0 && <Pill text={`${openN} open`} color="#fbbf24" border="#78350f" bg="rgba(251,191,36,0.1)" />}
+            </div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.12em", color: "#71717a", textTransform: "uppercase", marginTop: 5 }}>
+              {card.issuer} · {fmt0(n(card.annual_fee))}/yr fee
+            </div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Annual Fee</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, color: "#f87171" }}>{fmt0(n(card.annual_fee))}</div>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 14, marginBottom: 22 }}>
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 5 }}>Credits / yr</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color: "#e4e4e7" }}>{fmt0(totalCredits)}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 5 }}>Net Value</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color: net >= 0 ? "#22c55e" : "#f87171" }}>
-            {net >= 0 ? "+" : "−"}{fmt0(Math.abs(net))}
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Captured {year}</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, color: accent }}>
+            {fmt0(captured)} <span style={{ fontSize: 12, color: "#52525b" }}>/ {fmt0(total)}</span>
           </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 5 }}>Claimed Now</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color: accent }}>{doneCount}/{trackable.length}</div>
         </div>
       </div>
 
       <div style={{ height: 3, borderRadius: 2, background: "#27272a", marginBottom: 24, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: accent, borderRadius: 2, transition: "width 0.2s" }} />
+        <div style={{ height: "100%", width: `${pct}%`, background: accent, borderRadius: 2 }} />
       </div>
 
       {cadences.map((cad) => (
         <div key={cad} style={{ marginBottom: 22 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>
-              {CADENCE_META[cad]?.label || cad}
-            </div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#52525b" }}>{periodLabel(cad)}</div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 4 }}>
+            {CADENCE_META[cad]?.label || cad}
           </div>
           {groups[cad].map((b, i) => (
-            <BenefitRow key={b.id} benefit={b} cardId={card.id} claimed={claimed}
-              onToggle={onToggle} accent={accent} first={i === 0} />
+            <BenefitRow key={b.id} benefit={b} year={year} accent={accent} first={i === 0} />
           ))}
         </div>
       ))}
@@ -1168,54 +1202,109 @@ function CardBlock({ card, claimed, onToggle }) {
   );
 }
 
+function AttentionPanel({ rows, year }) {
+  if (rows.length === 0) {
+    return (
+      <div style={{
+        background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+        border: "1px solid #14532d", borderRadius: 16, padding: 24, marginBottom: 24,
+      }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#22c55e", marginBottom: 8 }}>All Caught Up</div>
+        <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#a1a1aa", fontSize: 14 }}>
+          Nothing outstanding right now. Next credits unlock when the period rolls over.
+        </div>
+      </div>
+    );
+  }
+  const openTotal   = rows.reduce((s, r) => s + r.open.length * r.per, 0);
+  const missedTotal = rows.reduce((s, r) => s + r.missed.length * r.per, 0);
+
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      border: "1px solid #27272a", borderLeft: "3px solid #fbbf24",
+      borderRadius: 16, padding: 24, marginBottom: 24,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#fbbf24" }}>Needs Attention</div>
+        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>
+          <span style={{ color: "#fbbf24" }}>{fmt0(openTotal)} claimable now</span>
+          {missedTotal > 0 && (
+            <>
+              <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
+              <span style={{ color: "#f87171" }}>{fmt0(missedTotal)} missed</span>
+            </>
+          )}
+        </div>
+      </div>
+      {rows.map((r, i) => (
+        <div key={`${r.card.id}-${r.benefit.id}`} style={{
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14,
+          padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid #1e1e22",
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#e4e4e7", marginBottom: 3 }}>
+              <span style={{ color: r.card.color }}>{r.card.name}</span>
+              <span style={{ margin: "0 7px", color: "#3f3f46" }}>·</span>
+              {r.benefit.name}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", fontFamily: "'DM Mono', monospace", fontSize: 10 }}>
+              {r.open.length > 0 && (
+                <span style={{ color: "#fbbf24" }}>Open: {r.open.map((p) => p.label).join(", ")}</span>
+              )}
+              {r.missed.length > 0 && (
+                <span style={{ color: "#f87171" }}>Missed: {r.missed.map((p) => p.label).join(", ")}</span>
+              )}
+            </div>
+          </div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#e4e4e7", flexShrink: 0 }}>
+            {fmt0(r.atStake)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Cards() {
   const [cards, setCards] = useState([]);
+  const [year, setYear] = useState(new Date().getFullYear());
   const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [claimed, setClaimed] = useState(() => {
-    try { return JSON.parse(window.localStorage.getItem("claimedBenefits") || "{}"); }
-    catch (e) { return {}; }
-  });
 
   useEffect(() => {
     fetch("cards.json", { cache: "no-store" })
       .then((r) => r.ok ? r.json() : { cards: [] })
       .then((data) => {
         setCards(Array.isArray(data.cards) ? data.cards : []);
+        if (data.year) setYear(data.year);
         if (data.last_updated) setLastUpdated(data.last_updated);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
   }, []);
 
-  const onToggle = (key) => {
-    setClaimed((prev) => {
-      const next = { ...prev };
-      if (next[key]) delete next[key]; else next[key] = true;
-      try { window.localStorage.setItem("claimedBenefits", JSON.stringify(next)); } catch (e) {}
-      return next;
-    });
-  };
-
-  const totals = useMemo(() => {
-    let credits = 0, fees = 0;
+  const attention = useMemo(() => {
+    const rows = [];
     for (const c of cards) {
-      fees += n(c.annual_fee);
       for (const b of c.benefits || []) {
-        if (b.cadence !== "multiyear") credits += n(b.value);
+        const st = benefitStatus(b, year);
+        if (st.missed.length || st.open.length) {
+          rows.push({ card: c, benefit: b, missed: st.missed, open: st.open, per: st.per, atStake: st.atStake });
+        }
       }
     }
-    return { credits, fees, net: credits - fees };
-  }, [cards]);
+    return rows.sort((a, b) => b.atStake - a.atStake);
+  }, [cards, year]);
 
   return (
     <div style={{ padding: "28px 24px 56px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
           <div>
             <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
-              credits &amp; perks
+              credits checklist · {year}
             </p>
             <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
               Card Benefits
@@ -1229,25 +1318,33 @@ function Cards() {
           )}
         </div>
 
-        {loaded && cards.length > 0 && (
-          <div className="dash-stats">
-            <StatCard label="Total Credits" value={fmt0(totals.credits)} sub={`${cards.length} cards`} accent="#e4e4e7" />
-            <StatCard label="Total Fees" value={fmt0(totals.fees)} sub="per year" accent="#f87171" />
-            <StatCard label="Net Value" value={`${totals.net >= 0 ? "+" : "−"}${fmt0(Math.abs(totals.net))}`} sub="if fully used" accent="#22c55e" />
-          </div>
-        )}
+        {loaded && cards.length > 0 && <AttentionPanel rows={attention} year={year} />}
 
         {!loaded ? (
           <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
         ) : cards.length === 0 ? (
           <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>No cards yet.</p>
         ) : (
-          cards.map((c) => <CardBlock key={c.id} card={c} claimed={claimed} onToggle={onToggle} />)
+          cards.map((c) => <CardBlock key={c.id} card={c} year={year} />)
         )}
 
-        <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 12.5, lineHeight: 1.6, marginTop: 8 }}>
-          Checkboxes are saved in this browser only and reset automatically when each credit's period rolls over.
-          Issuers change benefit terms often — verify current offers in the Amex and Capital One apps before relying on a credit.
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginTop: 4, marginBottom: 10 }}>
+          {[
+            ["Claimed", "#a1a1aa", "#a1a1aa", "#a1a1aa"],
+            ["Open now", "transparent", "#fbbf24", "#fbbf24"],
+            ["Missed", "transparent", "#7f1d1d", "#f87171"],
+            ["Upcoming", "transparent", "#27272a", "#3f3f46"],
+          ].map(([label, bg, border, color]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ width: 14, height: 14, borderRadius: 4, background: bg, border: `1px solid ${border}` }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 12.5, lineHeight: 1.6 }}>
+          Tell Claude what you've hit and it updates <span style={{ fontFamily: "'DM Mono', monospace", fontStyle: "normal" }}>cards.json</span>.
+          Issuers change benefit terms often — verify current offers in the Amex and Capital One apps.
         </p>
 
       </div>

@@ -1,5 +1,6 @@
 {
   "last_updated": "2026-09-02",
+  "year": 2026,
   "cards": [
     {
       "id": "amex-platinum",
@@ -7,21 +8,79 @@
       "issuer": "American Express",
       "annual_fee": 895,
       "color": "#a8b0b8",
-      "opened": null,
       "benefits": [
-        { "id": "plat-digital",   "name": "Digital Entertainment",   "value": 300, "cadence": "monthly",    "per": 25,  "detail": "Disney+, Hulu, ESPN+, Peacock, NYT, WSJ, Audible, SiriusXM. Enrollment required." },
-        { "id": "plat-uber-cash", "name": "Uber Cash",               "value": 200, "cadence": "monthly",    "per": 15,  "detail": "$15/mo + $20 bonus in December. US Uber rides & Uber Eats." },
-        { "id": "plat-walmart",   "name": "Walmart+ Membership",     "value": 155, "cadence": "monthly",    "per": 12.95, "detail": "Covers monthly Walmart+ membership fee (excl. Plus Up)." },
-        { "id": "plat-uber-one",  "name": "Uber One Membership",     "value": 120, "cadence": "monthly",    "per": 10,  "detail": "Statement credit toward Uber One membership." },
-        { "id": "plat-resy",      "name": "Resy Dining Credit",      "value": 400, "cadence": "quarterly",  "per": 100, "detail": "US Resy restaurants + Resy-booked reservations." },
-        { "id": "plat-lulu",      "name": "Lululemon Credit",        "value": 300, "cadence": "quarterly",  "per": 75,  "detail": "US Lululemon stores and lululemon.com." },
-        { "id": "plat-hotel",     "name": "Hotel Credit",            "value": 600, "cadence": "semiannual", "per": 300, "detail": "Fine Hotels + Resorts or The Hotel Collection, 2+ night stay, prepaid via Amex Travel." },
-        { "id": "plat-equinox",   "name": "Equinox Credit",          "value": 300, "cadence": "semiannual", "per": 150, "detail": "Equinox gym memberships and Equinox+ app." },
-        { "id": "plat-saks",      "name": "Saks Fifth Avenue",       "value": 100, "cadence": "semiannual", "per": 50,  "detail": "$50 Jan–Jun, $50 Jul–Dec. In-store or saks.com." },
-        { "id": "plat-airline",   "name": "Airline Fee Credit",      "value": 200, "cadence": "annual",     "per": 200, "detail": "Incidental fees (bags, seats, lounge day passes) on one pre-selected airline." },
-        { "id": "plat-oura",      "name": "Oura Ring Credit",        "value": 200, "cadence": "annual",     "per": 200, "detail": "Oura Ring hardware and membership." },
-        { "id": "plat-clear",     "name": "CLEAR Plus",              "value": 199, "cadence": "annual",     "per": 199, "detail": "Covers full CLEAR Plus annual membership." },
-        { "id": "plat-globalentry","name": "Global Entry / TSA PreCheck", "value": 120, "cadence": "multiyear", "per": 120, "detail": "$120 Global Entry every 4 yrs, or $85 TSA PreCheck every 4.5 yrs." }
+        {
+          "id": "plat-digital", "name": "Digital Entertainment", "value": 300,
+          "cadence": "monthly", "per": 25, "auto": true,
+          "detail": "Disney+ paid monthly — credit posts automatically.",
+          "claimed": ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"]
+        },
+        {
+          "id": "plat-uber-cash", "name": "Uber Cash", "value": 200,
+          "cadence": "monthly", "per": 15,
+          "detail": "$15/mo + $20 bonus in December. US Uber rides & Uber Eats. Expires end of each month.",
+          "claimed": []
+        },
+        {
+          "id": "plat-walmart", "name": "Walmart+ Membership", "value": 155,
+          "cadence": "monthly", "per": 12.95, "auto": true,
+          "detail": "Membership paid monthly — credit reimburses it automatically.",
+          "claimed": ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"]
+        },
+        {
+          "id": "plat-resy", "name": "Resy Dining Credit", "value": 400,
+          "cadence": "quarterly", "per": 100,
+          "detail": "US Resy restaurants + Resy-booked reservations.",
+          "claimed": ["2026-Q1","2026-Q2"]
+        },
+        {
+          "id": "plat-lulu", "name": "Lululemon Credit", "value": 300,
+          "cadence": "quarterly", "per": 75,
+          "detail": "US Lululemon stores and lululemon.com.",
+          "claimed": ["2026-Q1","2026-Q2","2026-Q3"]
+        },
+        {
+          "id": "plat-hotel", "name": "Hotel Credit", "value": 600,
+          "cadence": "semiannual", "per": 300,
+          "detail": "Fine Hotels + Resorts or The Hotel Collection, 2+ night stay, prepaid via Amex Travel.",
+          "claimed": ["2026-H1","2026-H2"]
+        },
+        {
+          "id": "plat-saks", "name": "Saks Fifth Avenue", "value": 100,
+          "cadence": "semiannual", "per": 50,
+          "detail": "In-store or saks.com. Enrollment required.",
+          "claimed": []
+        },
+        {
+          "id": "plat-uber-one", "name": "Uber One Membership", "value": 120,
+          "cadence": "annual", "per": 120,
+          "detail": "Membership renews Oct 15 annually — credit posts against that charge.",
+          "claimed": []
+        },
+        {
+          "id": "plat-airline", "name": "Airline Fee Credit", "value": 200,
+          "cadence": "annual", "per": 200,
+          "detail": "Incidental fees (bags, seats, lounge day passes) on one pre-selected airline.",
+          "claimed": ["2026"]
+        },
+        {
+          "id": "plat-oura", "name": "Oura Ring Credit", "value": 200,
+          "cadence": "annual", "per": 200,
+          "detail": "Oura Ring hardware and membership.",
+          "claimed": ["2026"]
+        },
+        {
+          "id": "plat-clear", "name": "CLEAR Plus", "value": 199,
+          "cadence": "annual", "per": 199,
+          "detail": "Covers full CLEAR Plus annual membership.",
+          "claimed": ["2026"]
+        },
+        {
+          "id": "plat-globalentry", "name": "Global Entry / TSA PreCheck", "value": 120,
+          "cadence": "multiyear", "per": 120,
+          "detail": "Global Entry + TSA PreCheck already active. Renews every 4 years.",
+          "claimed": ["once"]
+        }
       ],
       "perks": [
         "5x points on flights booked direct or via Amex Travel (first $500k/yr)",
@@ -41,12 +100,31 @@
       "issuer": "American Express",
       "annual_fee": 325,
       "color": "#d4a843",
-      "opened": null,
       "benefits": [
-        { "id": "gold-uber",    "name": "Uber Cash",          "value": 120, "cadence": "monthly",    "per": 10, "detail": "US Uber rides & Uber Eats. Card must be added to Uber account." },
-        { "id": "gold-dining",  "name": "Dining Credit",      "value": 120, "cadence": "monthly",    "per": 10, "detail": "Grubhub, Five Guys, Goldbelly, Wine.com, Milk Bar. Enrollment required." },
-        { "id": "gold-dunkin",  "name": "Dunkin' Credit",     "value": 84,  "cadence": "monthly",    "per": 7,  "detail": "$7/mo at Dunkin' on purchases of $7+. Enrollment required." },
-        { "id": "gold-resy",    "name": "Resy Credit",        "value": 100, "cadence": "semiannual", "per": 50, "detail": "$50 Jan–Jun, $50 Jul–Dec at US Resy restaurants." }
+        {
+          "id": "gold-uber", "name": "Uber Cash", "value": 120,
+          "cadence": "monthly", "per": 10,
+          "detail": "US Uber rides & Uber Eats. Card must be selected in Uber app.",
+          "claimed": ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08"]
+        },
+        {
+          "id": "gold-dining", "name": "Dining Credit (Grubhub)", "value": 120,
+          "cadence": "monthly", "per": 10,
+          "detail": "Grubhub, Five Guys, Goldbelly, Wine.com, Milk Bar. Enrollment required.",
+          "claimed": ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07"]
+        },
+        {
+          "id": "gold-dunkin", "name": "Dunkin' Credit", "value": 84,
+          "cadence": "monthly", "per": 7,
+          "detail": "$7/mo at Dunkin' on purchases of $7+. Enrollment required.",
+          "claimed": ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08"]
+        },
+        {
+          "id": "gold-resy", "name": "Resy Credit", "value": 100,
+          "cadence": "semiannual", "per": 50,
+          "detail": "US Resy restaurants. $50 Jan–Jun, $50 Jul–Dec.",
+          "claimed": ["2026-H1"]
+        }
       ],
       "perks": [
         "4x points at restaurants worldwide (first $50k/yr)",
@@ -65,9 +143,24 @@
       "color": "#4f8ff7",
       "opened": "2026-09-02",
       "benefits": [
-        { "id": "vx-travel",      "name": "Travel Credit",              "value": 300, "cadence": "annual",    "per": 300, "detail": "Bookings made through Capital One Travel. Resets on card anniversary, not calendar year." },
-        { "id": "vx-anniversary", "name": "Anniversary Bonus Miles",    "value": 100, "cadence": "annual",    "per": 100, "detail": "10,000 miles every account anniversary (~$100 toward travel)." },
-        { "id": "vx-globalentry", "name": "Global Entry / TSA PreCheck","value": 120, "cadence": "multiyear", "per": 120, "detail": "$120 credit every 4 years." }
+        {
+          "id": "vx-travel", "name": "Travel Credit", "value": 300,
+          "cadence": "annual", "per": 300,
+          "detail": "Capital One Travel bookings. Resets on card anniversary (Sep 2), not calendar year.",
+          "claimed": []
+        },
+        {
+          "id": "vx-anniversary", "name": "Anniversary Bonus Miles", "value": 100,
+          "cadence": "annual", "per": 100,
+          "detail": "10,000 miles on each account anniversary — first one lands Sep 2, 2027.",
+          "claimed": []
+        },
+        {
+          "id": "vx-globalentry", "name": "Global Entry / TSA PreCheck", "value": 120,
+          "cadence": "multiyear", "per": 120,
+          "detail": "Already covered by Amex Platinum — save this one for your next renewal.",
+          "claimed": []
+        }
       ],
       "perks": [
         "10x miles on hotels & rental cars booked via Capital One Travel",
