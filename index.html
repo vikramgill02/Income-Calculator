@@ -39,6 +39,16 @@ html, body { margin: 0; padding: 0; background: #09090b; }
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
 }
+.bene-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .bene-row { gap: 6px; }
+}
 @media (max-width: 820px) {
   .dash-pie-grid { grid-template-columns: 1fr; }
 }
@@ -1054,38 +1064,25 @@ const benefitStatus = (benefit, year) => {
   const periods = periodsFor(benefit.cadence, year);
   const cs = new Set(benefit.claimed || []);
   const per = n(benefit.per);
-  const hits   = periods.filter((p) => cs.has(p.key));
-  const missed = periods.filter((p) => !cs.has(p.key) && p.when === "past");
-  const open   = periods.filter((p) => !cs.has(p.key) && p.when === "current");
+  const hits = periods.filter((p) => cs.has(p.key));
+  const open = periods.filter((p) => !cs.has(p.key) && p.when === "current");
   return {
-    periods, claimedSet: cs, hits, missed, open, per,
+    periods, claimedSet: cs, hits, open, per,
     captured: hits.length * per,
     total: periods.length * per,
-    atStake: (missed.length + open.length) * per,
+    atStake: open.length * per,
   };
 };
 
-function Pill({ text, color, border, bg }) {
-  return (
-    <span style={{
-      fontSize: 8.5, letterSpacing: "0.12em", textTransform: "uppercase",
-      color, border: `1px solid ${border}`, background: bg,
-      borderRadius: 4, padding: "1px 6px", fontFamily: "'DM Mono', monospace",
-      whiteSpace: "nowrap",
-    }}>{text}</span>
-  );
-}
-
 function PeriodChip({ period, hit, accent, wide }) {
-  let bg = "transparent", border = "#27272a", color = "#3f3f46", weight = 400;
-  if (hit)                                { bg = accent; border = accent; color = "#09090b"; weight = 600; }
-  else if (period.when === "past")        { border = "#7f1d1d"; color = "#f87171"; bg = "rgba(248,113,113,0.07)"; }
-  else if (period.when === "current")     { border = "#fbbf24"; color = "#fbbf24"; bg = "rgba(251,191,36,0.08)"; }
+  let bg = "transparent", border = "#232326", color = "#3f3f46", weight = 400;
+  if (hit)                            { bg = accent; border = accent; color = "#09090b"; weight = 600; }
+  else if (period.when === "current") { border = "#fbbf24"; color = "#fbbf24"; bg = "rgba(251,191,36,0.1)"; }
   return (
     <div style={{
-      minWidth: wide ? 64 : 36, height: 25, padding: "0 6px",
-      borderRadius: 5, background: bg, border: `1px solid ${border}`, color,
-      fontFamily: "'DM Mono', monospace", fontSize: 9.5, fontWeight: weight,
+      minWidth: wide ? 58 : 27, height: 19, padding: "0 4px",
+      borderRadius: 4, background: bg, border: `1px solid ${border}`, color,
+      fontFamily: "'DM Mono', monospace", fontSize: 8.5, fontWeight: weight,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     }}>{period.label}</div>
   );
@@ -1094,40 +1091,44 @@ function PeriodChip({ period, hit, accent, wide }) {
 function BenefitRow({ benefit, year, accent, first }) {
   const st = benefitStatus(benefit, year);
   const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
+  const done = st.open.length === 0 && st.hits.length > 0;
   return (
-    <div style={{ padding: "14px 0", borderTop: first ? "none" : "1px solid #1e1e22" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, marginBottom: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12.5, color: "#e4e4e7", fontFamily: "'DM Mono', monospace" }}>{benefit.name}</span>
-            {benefit.auto && <Pill text="Auto" color="#22c55e" border="#14532d" bg="rgba(34,197,94,0.1)" />}
-            {st.missed.length > 0 && <Pill text={`${st.missed.length} missed`} color="#f87171" border="#7f1d1d" bg="rgba(248,113,113,0.1)" />}
-            {st.open.length > 0 && <Pill text="Open now" color="#fbbf24" border="#78350f" bg="rgba(251,191,36,0.1)" />}
-          </div>
-          <div style={{ fontSize: 10.5, color: "#71717a", lineHeight: 1.5 }}>{benefit.detail}</div>
-        </div>
-        <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "'DM Mono', monospace" }}>
-          <div style={{ fontSize: 13, color: st.captured > 0 ? "#e4e4e7" : "#52525b" }}>{fmt0(st.captured)}</div>
-          <div style={{ fontSize: 10, color: "#52525b", marginTop: 2 }}>of {fmt0(st.total)}</div>
-        </div>
+    <div className="bene-row" title={benefit.detail} style={{
+      borderTop: first ? "none" : "1px solid #1a1a1d",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, flex: "1 1 165px", minWidth: 0 }}>
+        <span style={{
+          fontSize: 11.5, fontFamily: "'DM Mono', monospace",
+          color: st.open.length > 0 ? "#fbbf24" : done ? "#a1a1aa" : "#d4d4d8",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>{benefit.name}</span>
+        {benefit.auto && (
+          <span style={{ fontSize: 7.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#22c55e", border: "1px solid #14532d", borderRadius: 3, padding: "0 4px", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>Auto</span>
+        )}
       </div>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#52525b", flexShrink: 0, minWidth: 34, textAlign: "right" }}>
+        {fmt0(st.per)}
+      </span>
+      <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
         {st.periods.map((p) => (
           <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)} accent={accent} wide={wide} />
         ))}
       </div>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10.5, color: "#71717a", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
+        {fmt0(st.captured)}<span style={{ color: "#3f3f46" }}> / {fmt0(st.total)}</span>
+      </span>
     </div>
   );
 }
 
 function CardBlock({ card, year }) {
   const accent = card.color || "#a3e635";
-  let captured = 0, total = 0, missedN = 0, openN = 0;
+  const [showPerks, setShowPerks] = useState(false);
+  let captured = 0, total = 0, openN = 0;
   for (const b of card.benefits || []) {
     const st = benefitStatus(b, year);
     captured += st.captured;
     total    += st.total;
-    missedN  += st.missed.length;
     openN    += st.open.length;
   }
   const pct = total ? (captured / total) * 100 : 0;
@@ -1143,45 +1144,34 @@ function CardBlock({ card, year }) {
 
   return (
     <div style={{
-      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      background: "linear-gradient(180deg, #161618 0%, #09090b 100%)",
       border: "1px solid #27272a", borderLeft: `3px solid ${accent}`,
-      borderRadius: 16, padding: 26, marginBottom: 20,
+      borderRadius: 12, padding: "16px 18px", marginBottom: 12,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
-            width: 46, height: 30, borderRadius: 5, flexShrink: 0,
+            width: 30, height: 20, borderRadius: 4, flexShrink: 0,
             background: `linear-gradient(135deg, ${accent} 0%, ${accent}88 100%)`,
-            display: "flex", alignItems: "flex-end", padding: 4,
-          }}>
-            <div style={{ width: 12, height: 8, borderRadius: 2, background: "rgba(0,0,0,0.25)" }} />
-          </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, color: "#fff", lineHeight: 1 }}>{card.name}</span>
-              {missedN > 0 && <Pill text={`${missedN} missed`} color="#f87171" border="#7f1d1d" bg="rgba(248,113,113,0.1)" />}
-              {openN > 0 && <Pill text={`${openN} open`} color="#fbbf24" border="#78350f" bg="rgba(251,191,36,0.1)" />}
-            </div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.12em", color: "#71717a", textTransform: "uppercase", marginTop: 5 }}>
-              {card.issuer} · {fmt0(n(card.annual_fee))}/yr fee
-            </div>
-          </div>
+          }} />
+          <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 19, color: "#fff", lineHeight: 1 }}>{card.name}</span>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9.5, color: "#52525b" }}>{fmt0(n(card.annual_fee))}/yr</span>
+          {openN > 0 && (
+            <span style={{ fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fbbf24", border: "1px solid #78350f", background: "rgba(251,191,36,0.1)", borderRadius: 3, padding: "1px 5px", fontFamily: "'DM Mono', monospace" }}>{openN} open</span>
+          )}
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Captured {year}</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, color: accent }}>
-            {fmt0(captured)} <span style={{ fontSize: 12, color: "#52525b" }}>/ {fmt0(total)}</span>
-          </div>
+        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: accent }}>
+          {fmt0(captured)}<span style={{ fontSize: 10, color: "#3f3f46" }}> / {fmt0(total)}</span>
         </div>
       </div>
 
-      <div style={{ height: 3, borderRadius: 2, background: "#27272a", marginBottom: 24, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: accent, borderRadius: 2 }} />
+      <div style={{ height: 2, borderRadius: 2, background: "#232326", marginBottom: 12, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: accent }} />
       </div>
 
       {cadences.map((cad) => (
-        <div key={cad} style={{ marginBottom: 22 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 4 }}>
+        <div key={cad} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 8, letterSpacing: "0.16em", textTransform: "uppercase", color: "#52525b", marginBottom: 2 }}>
             {CADENCE_META[cad]?.label || cad}
           </div>
           {groups[cad].map((b, i) => (
@@ -1191,75 +1181,55 @@ function CardBlock({ card, year }) {
       ))}
 
       {card.perks && card.perks.length > 0 && (
-        <div style={{ borderTop: "1px solid #27272a", paddingTop: 18 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 12 }}>Ongoing Perks</div>
-          <ul style={{ margin: 0, paddingLeft: 18, color: "#71717a", fontSize: 11.5, lineHeight: 1.85 }}>
-            {card.perks.map((p, i) => <li key={i}>{p}</li>)}
-          </ul>
+        <div style={{ borderTop: "1px solid #1a1a1d", paddingTop: 8, marginTop: 2 }}>
+          <button onClick={() => setShowPerks((v) => !v)} style={{
+            background: "transparent", border: "none", padding: 0, cursor: "pointer",
+            fontFamily: "'DM Mono', monospace", fontSize: 8.5, letterSpacing: "0.16em",
+            textTransform: "uppercase", color: "#52525b",
+          }}>
+            {showPerks ? "▾" : "▸"} Ongoing Perks ({card.perks.length})
+          </button>
+          {showPerks && (
+            <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: "#71717a", fontSize: 10.5, lineHeight: 1.7 }}>
+              {card.perks.map((p, i) => <li key={i}>{p}</li>)}
+            </ul>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function AttentionPanel({ rows, year }) {
-  if (rows.length === 0) {
-    return (
-      <div style={{
-        background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
-        border: "1px solid #14532d", borderRadius: 16, padding: 24, marginBottom: 24,
-      }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#22c55e", marginBottom: 8 }}>All Caught Up</div>
-        <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#a1a1aa", fontSize: 14 }}>
-          Nothing outstanding right now. Next credits unlock when the period rolls over.
-        </div>
-      </div>
-    );
-  }
-  const openTotal   = rows.reduce((s, r) => s + r.open.length * r.per, 0);
-  const missedTotal = rows.reduce((s, r) => s + r.missed.length * r.per, 0);
-
+function AttentionPanel({ rows }) {
+  const total = rows.reduce((s, r) => s + r.atStake, 0);
   return (
     <div style={{
-      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
-      border: "1px solid #27272a", borderLeft: "3px solid #fbbf24",
-      borderRadius: 16, padding: 24, marginBottom: 24,
+      background: "linear-gradient(180deg, #161618 0%, #09090b 100%)",
+      border: "1px solid #27272a",
+      borderLeft: `3px solid ${rows.length ? "#fbbf24" : "#22c55e"}`,
+      borderRadius: 12, padding: "14px 18px", marginBottom: 16,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#fbbf24" }}>Needs Attention</div>
-        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>
-          <span style={{ color: "#fbbf24" }}>{fmt0(openTotal)} claimable now</span>
-          {missedTotal > 0 && (
-            <>
-              <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-              <span style={{ color: "#f87171" }}>{fmt0(missedTotal)} missed</span>
-            </>
-          )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10, marginBottom: rows.length ? 8 : 0 }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: rows.length ? "#fbbf24" : "#22c55e" }}>
+          {rows.length ? "Claim Now" : "All Caught Up"}
+        </div>
+        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: rows.length ? "#fbbf24" : "#22c55e" }}>
+          {rows.length ? `${fmt0(total)} on the table` : "Nothing outstanding"}
         </div>
       </div>
       {rows.map((r, i) => (
         <div key={`${r.card.id}-${r.benefit.id}`} style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14,
-          padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid #1e1e22",
+          display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+          padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid #1a1a1d",
+          fontFamily: "'DM Mono', monospace", fontSize: 11,
         }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#e4e4e7", marginBottom: 3 }}>
-              <span style={{ color: r.card.color }}>{r.card.name}</span>
-              <span style={{ margin: "0 7px", color: "#3f3f46" }}>·</span>
-              {r.benefit.name}
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", fontFamily: "'DM Mono', monospace", fontSize: 10 }}>
-              {r.open.length > 0 && (
-                <span style={{ color: "#fbbf24" }}>Open: {r.open.map((p) => p.label).join(", ")}</span>
-              )}
-              {r.missed.length > 0 && (
-                <span style={{ color: "#f87171" }}>Missed: {r.missed.map((p) => p.label).join(", ")}</span>
-              )}
-            </div>
+          <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ color: r.card.color }}>{r.card.name}</span>
+            <span style={{ margin: "0 6px", color: "#3f3f46" }}>·</span>
+            <span style={{ color: "#d4d4d8" }}>{r.benefit.name}</span>
+            <span style={{ marginLeft: 8, color: "#52525b", fontSize: 9.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
           </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#e4e4e7", flexShrink: 0 }}>
-            {fmt0(r.atStake)}
-          </div>
+          <span style={{ color: "#e4e4e7", flexShrink: 0 }}>{fmt0(r.atStake)}</span>
         </div>
       ))}
     </div>
@@ -1289,36 +1259,29 @@ function Cards() {
     for (const c of cards) {
       for (const b of c.benefits || []) {
         const st = benefitStatus(b, year);
-        if (st.missed.length || st.open.length) {
-          rows.push({ card: c, benefit: b, missed: st.missed, open: st.open, per: st.per, atStake: st.atStake });
-        }
+        if (st.open.length) rows.push({ card: c, benefit: b, open: st.open, atStake: st.atStake });
       }
     }
     return rows.sort((a, b) => b.atStake - a.atStake);
   }, [cards, year]);
 
   return (
-    <div style={{ padding: "28px 24px 56px" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ padding: "20px 20px 40px" }}>
+      <div style={{ maxWidth: 940, margin: "0 auto" }}>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
-          <div>
-            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
-              credits checklist · {year}
-            </p>
-            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
-              Card Benefits
-            </h1>
-          </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
+          <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 30, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1 }}>
+            Card Benefits
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#52525b", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
+          </h1>
           {lastUpdated && (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#71717a", fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>Last Updated</div>
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#d4d4d8" }}>{formatPayDate(lastUpdated)}</div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#52525b" }}>
+              Updated {formatPayDate(lastUpdated)}
             </div>
           )}
         </div>
 
-        {loaded && cards.length > 0 && <AttentionPanel rows={attention} year={year} />}
+        {loaded && cards.length > 0 && <AttentionPanel rows={attention} />}
 
         {!loaded ? (
           <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
@@ -1328,24 +1291,19 @@ function Cards() {
           cards.map((c) => <CardBlock key={c.id} card={c} year={year} />)
         )}
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginTop: 4, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
           {[
-            ["Claimed", "#a1a1aa", "#a1a1aa", "#a1a1aa"],
-            ["Open now", "transparent", "#fbbf24", "#fbbf24"],
-            ["Missed", "transparent", "#7f1d1d", "#f87171"],
-            ["Upcoming", "transparent", "#27272a", "#3f3f46"],
-          ].map(([label, bg, border, color]) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ width: 14, height: 14, borderRadius: 4, background: bg, border: `1px solid ${border}` }} />
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color }}>{label}</span>
+            ["Claimed", "#71717a", "#71717a"],
+            ["Open now", "rgba(251,191,36,0.1)", "#fbbf24"],
+            ["Not claimed", "transparent", "#232326"],
+          ].map(([label, bg, border]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${border}` }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#52525b" }}>{label}</span>
             </div>
           ))}
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#3f3f46", marginLeft: "auto" }}>Hover a row for details</span>
         </div>
-
-        <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 12.5, lineHeight: 1.6 }}>
-          Tell Claude what you've hit and it updates <span style={{ fontFamily: "'DM Mono', monospace", fontStyle: "normal" }}>cards.json</span>.
-          Issuers change benefit terms often — verify current offers in the Amex and Capital One apps.
-        </p>
 
       </div>
     </div>
