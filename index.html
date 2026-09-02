@@ -8,18 +8,32 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Income" />
-<meta name="theme-color" content="#09090b" />
+<meta name="theme-color" content="#08080a" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <style>
-html, body { margin: 0; padding: 0; background: #09090b; }
+:root {
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+html, body {
+  margin: 0; padding: 0;
+  background: #08080a;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.006em;
+}
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+h1 { letter-spacing: -0.025em; }
+button { font-family: var(--font); transition: background 0.13s ease, border-color 0.13s ease, color 0.13s ease; }
+input { font-family: var(--font); }
 ::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-track { background: #18181b; }
+::-webkit-scrollbar-track { background: #101014; }
 ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
 
 .dash-stats {
@@ -60,6 +74,8 @@ html, body { margin: 0; padding: 0; background: #09090b; }
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
+const FONT = "var(--font)";
+
 const fmt = (n) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 const fmt0 = (n) =>
@@ -75,7 +91,7 @@ const EMPLOYER_META = {
   Sutter:   { color: "#1aa39b", logo: "logos/sutter.png",   full: "Sutter Health" },
 };
 
-const colorFor = (emp) => EMPLOYER_META[emp]?.color || "#a3e635";
+const colorFor = (emp) => EMPLOYER_META[emp]?.color || "#5ec98a";
 
 const formatPayDate = (iso) => {
   if (!iso) return "—";
@@ -90,11 +106,11 @@ const formatPayDate = (iso) => {
 function Field({ label, value, onChange, suffix = "", placeholder = "—" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a1a1aa" }}>{label}</span>
+      <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96" }}>{label}</span>
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #52525b", paddingBottom: 8 }}>
         <input type="number" step="0.01" value={value} placeholder={placeholder} onChange={onChange}
-          style={{ background: "transparent", border: "none", outline: "none", color: "#ffffff", fontFamily: "'DM Mono', monospace", fontSize: 18, width: "100%" }} />
-        {suffix && <span style={{ color: "#a1a1aa", fontSize: 13, marginLeft: 4 }}>{suffix}</span>}
+          style={{ background: "transparent", border: "none", outline: "none", color: "#ffffff", fontFamily: FONT, fontSize: 18, width: "100%" }} />
+        {suffix && <span style={{ color: "#8b8b96", fontSize: 13.5, marginLeft: 4 }}>{suffix}</span>}
       </div>
     </div>
   );
@@ -108,10 +124,10 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
       borderTop: large ? "1px solid #52525b" : "none",
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: muted ? "#71717a" : "#d4d4d8" }}>{label}</span>
-        {note && <span style={{ fontSize: 10, color: "#71717a", fontFamily: "'DM Mono', monospace" }}>{note}</span>}
+        <span style={{ fontSize: 12.5, letterSpacing: "0", color: muted ? "#7d7d88" : "#d8d8de" }}>{label}</span>
+        {note && <span style={{ fontSize: 13.5, color: "#7d7d88", fontFamily: FONT }}>{note}</span>}
       </div>
-      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: large ? 26 : 15, fontWeight: large ? 500 : 400, color: highlight ? "#a3e635" : muted ? "#71717a" : "#e4e4e7" }}>{value}</span>
+      <span style={{ fontFamily: FONT, fontSize: large ? 23 : 14, fontWeight: large ? 600 : 450, color: highlight ? "#5ec98a" : muted ? "#7d7d88" : "#ededf0" }}>{value}</span>
     </div>
   );
 }
@@ -120,19 +136,25 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
 
 function TabBar({ view, setView }) {
   return (
-    <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "20px 24px 0" }}>
-      {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"]].map(([key, label]) => {
-        const active = view === key;
-        return (
-          <button key={key} onClick={() => setView(key)} style={{
-            background: active ? "#27272a" : "transparent",
-            border: `1px solid ${active ? "#52525b" : "#27272a"}`,
-            borderRadius: 8, padding: "8px 18px", cursor: "pointer",
-            fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase",
-            color: active ? "#e4e4e7" : "#52525b", fontFamily: "'DM Mono', monospace",
-          }}>{label}</button>
-        );
-      })}
+    <div style={{ display: "flex", justifyContent: "center", padding: "22px 24px 0" }}>
+      <div style={{
+        display: "flex", gap: 2, padding: 3,
+        background: "rgba(255,255,255,0.035)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 10,
+      }}>
+        {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"]].map(([key, label]) => {
+          const active = view === key;
+          return (
+            <button key={key} onClick={() => setView(key)} style={{
+              background: active ? "rgba(255,255,255,0.09)" : "transparent",
+              border: "none", borderRadius: 7, padding: "7px 16px", cursor: "pointer",
+              fontSize: 13, fontWeight: active ? 550 : 450,
+              color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT,
+            }}>{label}</button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -190,7 +212,7 @@ function Calc() {
   const dedAmt    = totalGross * (dedPct / 100);
   const totalNet  = totalGross - dedAmt;
   const hasData   = totalGross > 0;
-  const iconColor = (active) => active ? "#d4d4d8" : "#52525b";
+  const iconColor = (active) => active ? "#d8d8de" : "#63636e";
 
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
@@ -198,8 +220,8 @@ function Calc() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
           <div>
-            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 12, color: "#a1a1aa", letterSpacing: "0.06em", margin: "0 0 4px" }}>biweekly</p>
-            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 38, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>Pay Calculator</h1>
+            <p style={{ fontFamily: FONT, fontSize: 13.5, color: "#8b8b96", letterSpacing: "0", margin: "0 0 4px" }}>biweekly</p>
+            <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Pay Calculator</h1>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             {[
@@ -207,7 +229,7 @@ function Calc() {
               { fn: redo, can: canRedo, d: "M21 7v6h-6 M21 13C19 7 14 3 8 3a9 9 0 0 0 0 18h13" },
             ].map(({ fn, can, d }, i) => (
               <button key={i} onClick={fn} disabled={!can} style={{
-                background: "transparent", border: `1px solid ${can ? "#52525b" : "#27272a"}`,
+                background: "transparent", border: `1px solid ${can ? "#63636e" : "rgba(255,255,255,0.08)"}`,
                 borderRadius: 8, padding: "7px 10px", cursor: can ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
@@ -222,31 +244,31 @@ function Calc() {
         <div style={{ marginBottom: 40 }}>
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: 0 }}>Sutter · Biweekly Paycheck</p>
+              <p style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, margin: 0 }}>Sutter · Biweekly Paycheck</p>
               <button onClick={toggleBlended} style={{
                 display: "flex", alignItems: "center", gap: 7,
                 background: blended ? "rgba(129,140,248,0.12)" : "transparent",
-                border: `1px solid ${blended ? "#818cf8" : "#52525b"}`,
+                border: `1px solid ${blended ? "#818cf8" : "#63636e"}`,
                 borderRadius: 20, padding: "5px 12px", cursor: "pointer",
               }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: blended ? "#818cf8" : "#71717a" }} />
-                <span style={{ fontSize: 10, letterSpacing: "0.13em", textTransform: "uppercase", color: blended ? "#818cf8" : "#a1a1aa", fontFamily: "'DM Mono', monospace" }}>Night + Weekend</span>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: blended ? "#818cf8" : "#7d7d88" }} />
+                <span style={{ fontSize: 13.5, letterSpacing: "0", color: blended ? "#818cf8" : "#8b8b96", fontFamily: FONT }}>Night + Weekend</span>
               </button>
             </div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", lineHeight: 1.9 }}>
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", lineHeight: 1.9 }}>
               <div>
-                <span style={{ color: "#e4e4e7" }}>Base</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(blended ? SUTTER_BLENDED_BASE : SUTTER_BASE)}/hr</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>first 40 hrs/week</span>
+                <span style={{ color: "#ededf0" }}>Base</span>
+                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
+                <span style={{ color: "#8b8b96" }}>{fmt(blended ? SUTTER_BLENDED_BASE : SUTTER_BASE)}/hr</span>
+                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
+                <span style={{ color: "#8b8b96" }}>first 40 hrs/week</span>
               </div>
               <div>
                 <span style={{ color: "#fb923c" }}>OT</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>{fmt(blended ? SUTTER_BLENDED_OT : SUTTER_OT)}/hr</span>
-                <span style={{ margin: "0 8px", color: "#3f3f46" }}>·</span>
-                <span style={{ color: "#a1a1aa" }}>hours over 40/week</span>
+                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
+                <span style={{ color: "#8b8b96" }}>{fmt(blended ? SUTTER_BLENDED_OT : SUTTER_OT)}/hr</span>
+                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
+                <span style={{ color: "#8b8b96" }}>hours over 40/week</span>
               </div>
             </div>
           </div>
@@ -256,25 +278,25 @@ function Calc() {
           </div>
         </div>
 
-        <div style={{ borderTop: "1px solid #27272a", marginBottom: 40 }} />
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", marginBottom: 40 }} />
 
         <div style={{ marginBottom: 52 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
-            <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", margin: 0 }}>Deductions</p>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#fff" }}>{deductions}%</span>
+            <p style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, margin: 0 }}>Deductions</p>
+            <span style={{ fontFamily: FONT, fontSize: 18, color: "#fff" }}>{deductions}%</span>
           </div>
           <style>{`
             input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-            input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #27272a; border-radius: 2px; }
+            input[type=range]::-webkit-slider-runnable-track { height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; }
             input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; margin-top: -8px; cursor: pointer; }
-            input[type=range]::-moz-range-track { height: 2px; background: #27272a; border-radius: 2px; }
+            input[type=range]::-moz-range-track { height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; }
             input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
           `}</style>
           <input type="range" min="25" max="50" step="1" value={deductions}
             onChange={(e) => set((s) => ({ ...s, deductions: Number(e.target.value) }))} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-            <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>25%</span>
-            <span style={{ fontSize: 10, color: "#52525b", fontFamily: "'DM Mono', monospace" }}>50%</span>
+            <span style={{ fontSize: 13.5, color: "#63636e", fontFamily: FONT }}>25%</span>
+            <span style={{ fontSize: 13.5, color: "#63636e", fontFamily: FONT }}>50%</span>
           </div>
         </div>
 
@@ -301,7 +323,7 @@ function Calc() {
             <Line label="Take Home" value={fmt(totalNet)} highlight large />
           </div>
         ) : (
-          <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 15, margin: 0 }}>
+          <p style={{ fontFamily: FONT, color: "#63636e", fontSize: 15, margin: 0 }}>
             Enter your hours above to see totals.
           </p>
         )}
@@ -321,7 +343,7 @@ function Logo({ employer, size = 40 }) {
         width: size, height: size, borderRadius: 10,
         background: colorFor(employer), color: "#fff",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'DM Mono', monospace", fontSize: size * 0.36, fontWeight: 600, flexShrink: 0,
+        fontFamily: FONT, fontSize: size * 0.36, fontWeight: 600, flexShrink: 0,
       }}>{employer.slice(0, 1)}</div>
     );
   }
@@ -341,14 +363,14 @@ function Logo({ employer, size = 40 }) {
 function StatCard({ label, value, sub, accent }) {
   return (
     <div style={{
-      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
-      border: "1px solid #27272a", borderRadius: 16, padding: "22px 24px",
+      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "22px 24px",
       position: "relative", overflow: "hidden",
     }}>
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: accent }} />
-      <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 12 }}>{label}</div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 32, fontWeight: 500, color: accent, lineHeight: 1.05, letterSpacing: "-0.01em" }}>{value}</div>
-      {sub && <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", marginTop: 10 }}>{sub}</div>}
+      <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, marginBottom: 12 }}>{label}</div>
+      <div style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, color: accent, lineHeight: 1.05, letterSpacing: "-0.01em" }}>{value}</div>
+      {sub && <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", marginTop: 10 }}>{sub}</div>}
     </div>
   );
 }
@@ -357,7 +379,7 @@ function PieChart({ data, size = 240 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
-      <div style={{ textAlign: "center", color: "#52525b", fontFamily: "'Instrument Serif', serif", fontStyle: "italic", padding: "40px 0" }}>
+      <div style={{ textAlign: "center", color: "#63636e", fontFamily: FONT, padding: "40px 0" }}>
         No data
       </div>
     );
@@ -381,21 +403,21 @@ function PieChart({ data, size = 240 }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <svg width={size} height={size}>
         {slices.map((s, i) => (
-          <path key={i} d={s.path} fill={s.color} stroke="#09090b" strokeWidth="2" />
+          <path key={i} d={s.path} fill={s.color} stroke="#08080a" strokeWidth="2" />
         ))}
-        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#a1a1aa", fontSize: 9, letterSpacing: "0.16em", fontFamily: "'DM Mono', monospace" }}>YTD GROSS</text>
-        <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#fff", fontSize: 22, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>{fmt0(total)}</text>
+        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#8b8b96", fontSize: 11.5, letterSpacing: "0", fontFamily: FONT }}>YTD GROSS</text>
+        <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#fff", fontSize: 19, fontFamily: FONT, fontWeight: 600 }}>{fmt0(total)}</text>
       </svg>
       <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
         {slices.map((s, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
-              <span style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#d4d4d8", fontFamily: "'DM Mono', monospace" }}>{s.label}</span>
+              <span style={{ fontSize: 12.5, letterSpacing: "0", color: "#d8d8de", fontFamily: FONT }}>{s.label}</span>
             </div>
             <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "#e4e4e7" }}>{fmt0(s.value)}</span>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", minWidth: 44, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
+              <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#ededf0" }}>{fmt0(s.value)}</span>
+              <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", minWidth: 44, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
             </div>
           </div>
         ))}
@@ -406,37 +428,37 @@ function PieChart({ data, size = 240 }) {
 
 function EmployerCard({ employer, stats }) {
   const meta = EMPLOYER_META[employer] || {};
-  const color = meta.color || "#a3e635";
+  const color = meta.color || "#5ec98a";
   return (
     <div style={{
-      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
-      border: "1px solid #27272a",
+      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+      border: "1px solid rgba(255,255,255,0.08)",
       borderLeft: `3px solid ${color}`,
       borderRadius: 16, padding: 22,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
         <Logo employer={employer} size={44} />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22, color: "#fff", lineHeight: 1 }}>{employer}</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.1em", color: "#71717a", textTransform: "uppercase", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta.full || employer}</div>
+          <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: "#fafafa", lineHeight: 1.2 }}>{employer}</div>
+          <div style={{ fontFamily: FONT, fontSize: 13.5, letterSpacing: "0.1em", color: "#7d7d88", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta.full || employer}</div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, rowGap: 16 }}>
         <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Gross</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(stats.gross)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>Gross</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(stats.gross)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Net</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(stats.net)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>Net</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(stats.net)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>403(b)</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#a78bfa" }}>{fmt(stats.r403b)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>403(b)</div>
+          <div style={{ fontFamily: FONT, fontSize: 14, color: "#9b8fd4" }}>{fmt(stats.r403b)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Paystubs</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 14, color: "#e4e4e7" }}>{stats.count}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>Paystubs</div>
+          <div style={{ fontFamily: FONT, fontSize: 14, color: "#ededf0" }}>{stats.count}</div>
         </div>
       </div>
     </div>
@@ -470,32 +492,32 @@ function ProjectionCard({ ytdGross, projection, paystubs }) {
   ];
   return (
     <div style={{
-      background: "linear-gradient(135deg, #18181b 0%, #0c0c0e 100%)",
-      border: "1px solid #27272a", borderRadius: 16, padding: 28,
+      background: "linear-gradient(135deg, #101014 0%, #0a0a0c 100%)",
+      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 10 }}>2026 Year-End Projection</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 40, color: "#a3e635", fontWeight: 500, lineHeight: 1, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a", marginTop: 10 }}>
+          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", marginBottom: 10 }}>2026 Year-End Projection</div>
+          <div style={{ fontFamily: FONT, fontSize: 34, color: "#5ec98a", fontWeight: 600, lineHeight: 1, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
+          <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", marginTop: 10 }}>
             {fmt(ytdGross)} earned + {fmt(remaining)} projected
           </div>
         </div>
         {projection.notes && (
-          <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#a1a1aa", fontSize: 13, maxWidth: 360, textAlign: "right", lineHeight: 1.5 }}>
+          <div style={{ fontFamily: FONT, color: "#8b8b96", fontSize: 13.5, maxWidth: 360, textAlign: "right", lineHeight: 1.5 }}>
             {projection.notes}
           </div>
         )}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
         <div style={{ borderLeft: "2px solid #52525b", paddingLeft: 14 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 6 }}>YTD Earned</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(ytdGross)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 6 }}>YTD Earned</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(ytdGross)}</div>
         </div>
         {empKeys.map((emp) => (
           <div key={emp} style={{ borderLeft: `2px solid ${colorFor(emp)}`, paddingLeft: 14 }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 6 }}>Projected {emp}</div>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, color: "#e4e4e7" }}>{fmt(byEmployer[emp])}</div>
+            <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 6 }}>Projected {emp}</div>
+            <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(byEmployer[emp])}</div>
           </div>
         ))}
       </div>
@@ -523,7 +545,7 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
     totalNet += n(projByEmp[emp].netProxy);
   }
   const totalShown = metric === "net" ? totalNet : totalGross;
-  const totalColor = metric === "net" ? "#22c55e" : "#e4e4e7";
+  const totalColor = metric === "net" ? "#5ec98a" : "#ededf0";
 
   const tipW = 280;
   let left = x + 16;
@@ -541,8 +563,8 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
       boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10, gap: 8 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#e4e4e7", fontFamily: "'DM Mono', monospace" }}>{monthName}</div>
-        {label && <div style={{ fontSize: 9, letterSpacing: "0.16em", color: "#fbbf24", fontFamily: "'DM Mono', monospace", textTransform: "uppercase" }}>{label}</div>}
+        <div style={{ fontSize: 12.5, letterSpacing: "0", color: "#ededf0", fontFamily: FONT }}>{monthName}</div>
+        {label && <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#f0b429", fontFamily: FONT }}>{label}</div>}
       </div>
 
       {hasActual && (
@@ -550,14 +572,14 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
           {stubs.map((p, i) => (
             <div key={i} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "6px 0", borderTop: i === 0 ? "none" : "1px solid #1e1e22",
-              fontSize: 11, fontFamily: "'DM Mono', monospace", gap: 12,
+              padding: "6px 0", borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+              fontSize: 12.5, fontFamily: FONT, gap: 12,
             }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: colorFor(p.employer), fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{p.employer}</div>
-                <div style={{ color: "#71717a", fontSize: 10, marginTop: 2 }}>{formatPayDate(p.pay_date)}</div>
+                <div style={{ color: colorFor(p.employer), fontSize: 13.5, letterSpacing: "0.1em" }}>{p.employer}</div>
+                <div style={{ color: "#7d7d88", fontSize: 13.5, marginTop: 2 }}>{formatPayDate(p.pay_date)}</div>
               </div>
-              <div style={{ color: "#e4e4e7", whiteSpace: "nowrap" }}>{fmt(metric === "net" ? n(p.net) : n(p.gross))}</div>
+              <div style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(metric === "net" ? n(p.net) : n(p.gross))}</div>
             </div>
           ))}
         </div>
@@ -565,13 +587,13 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
 
       {hasProj && (
         <div>
-          {hasActual && <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#fbbf24", fontFamily: "'DM Mono', monospace", marginBottom: 6 }}>Still Projected</div>}
+          {hasActual && <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#f0b429", fontFamily: FONT, marginBottom: 6 }}>Still Projected</div>}
           {Object.keys(projByEmp).map((emp) => {
             const v = metric === "net" ? n(projByEmp[emp].netProxy) : n(projByEmp[emp].gross);
             return (
-              <div key={emp} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
-                <span style={{ color: colorFor(emp), fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{emp}</span>
-                <span style={{ color: "#e4e4e7", opacity: 0.75 }}>{fmt(v)}</span>
+              <div key={emp} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12.5, fontFamily: FONT }}>
+                <span style={{ color: colorFor(emp), fontSize: 13.5, letterSpacing: "0.1em" }}>{emp}</span>
+                <span style={{ color: "#ededf0", opacity: 0.75 }}>{fmt(v)}</span>
               </div>
             );
           })}
@@ -579,12 +601,12 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
       )}
 
       {!hasActual && !hasProj && (
-        <div style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#71717a", fontSize: 12 }}>No paychecks this month.</div>
+        <div style={{ fontFamily: FONT, color: "#7d7d88", fontSize: 13.5 }}>No paychecks this month.</div>
       )}
 
-      <div style={{ borderTop: "1px solid #3f3f46", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: "'DM Mono', monospace" }}>
-        <span style={{ color: "#a1a1aa", letterSpacing: "0.14em", textTransform: "uppercase", fontSize: 10 }}>Total {metric}</span>
-        <span style={{ color: totalColor, fontSize: 13, fontWeight: 500 }}>{fmt(totalShown)}</span>
+      <div style={{ borderTop: "1px solid #3f3f46", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: FONT }}>
+        <span style={{ color: "#8b8b96", letterSpacing: "0", fontSize: 13.5 }}>Total {metric}</span>
+        <span style={{ color: totalColor, fontSize: 13.5, fontWeight: 500 }}>{fmt(totalShown)}</span>
       </div>
     </div>
   );
@@ -680,41 +702,41 @@ function MonthlyChart({ paystubs, projection, year }) {
 
   return (
     <div ref={containerRef} style={{
-      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
-      border: "1px solid #27272a", borderRadius: 16, padding: 24,
+      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
       position: "relative",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>
+          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96" }}>
             Monthly {metric === "net" ? "Net" : "Gross"} · {year}
           </div>
-          <div style={{ display: "flex", gap: 2, background: "#0c0c0e", border: "1px solid #27272a", borderRadius: 8, padding: 2 }}>
+          <div style={{ display: "flex", gap: 2, background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 2 }}>
             {[["gross", "Gross"], ["net", "Net"]].map(([key, label]) => {
               const active = metric === key;
               return (
                 <button key={key} onClick={() => setMetric(key)} style={{
-                  background: active ? (key === "net" ? "#22c55e" : "#e4e4e7") : "transparent",
-                  color: active ? "#09090b" : "#71717a",
+                  background: active ? (key === "net" ? "#5ec98a" : "#ededf0") : "transparent",
+                  color: active ? "#08080a" : "#7d7d88",
                   border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
-                  fontFamily: "'DM Mono', monospace", fontWeight: 500,
+                  fontSize: 13.5, letterSpacing: "0",
+                  fontFamily: FONT, fontWeight: 500,
                 }}>{label}</button>
               );
             })}
           </div>
           <button onClick={() => setShowProjected((v) => !v)} style={{
             display: "flex", alignItems: "center", gap: 7,
-            background: showProjected ? "rgba(251,191,36,0.1)" : "transparent",
-            border: `1px solid ${showProjected ? "#fbbf24" : "#3f3f46"}`,
+            background: showProjected ? "rgba(240,180,41,0.12)" : "transparent",
+            border: `1px solid ${showProjected ? "#f0b429" : "#4a4a54"}`,
             borderRadius: 8, padding: "6px 12px", cursor: "pointer",
-            fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase",
-            color: showProjected ? "#fbbf24" : "#71717a", fontFamily: "'DM Mono', monospace",
+            fontSize: 13.5, letterSpacing: "0",
+            color: showProjected ? "#f0b429" : "#7d7d88", fontFamily: FONT,
           }}>
             <span style={{
               width: 9, height: 9, borderRadius: 2,
               background: showProjected ? "rgba(251,191,36,0.35)" : "transparent",
-              border: `1px dashed ${showProjected ? "#fbbf24" : "#71717a"}`,
+              border: `1px dashed ${showProjected ? "#f0b429" : "#7d7d88"}`,
             }} />
             Projected
           </button>
@@ -723,12 +745,12 @@ function MonthlyChart({ paystubs, projection, year }) {
           {allEmployers.map((emp) => (
             <div key={emp} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: colorFor(emp) }} />
-              <span style={{ fontSize: 10, letterSpacing: "0.12em", color: "#d4d4d8", textTransform: "uppercase", fontFamily: "'DM Mono', monospace" }}>{emp}</span>
+              <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#d8d8de", fontFamily: FONT }}>{emp}</span>
             </div>
           ))}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: "transparent", border: "1px dashed #71717a" }} />
-            <span style={{ fontSize: 10, letterSpacing: "0.12em", color: "#71717a", textTransform: "uppercase", fontFamily: "'DM Mono', monospace" }}>Projected</span>
+            <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#7d7d88", fontFamily: FONT }}>Projected</span>
           </div>
         </div>
       </div>
@@ -737,10 +759,10 @@ function MonthlyChart({ paystubs, projection, year }) {
         {gridLines.map((g, i) => (
           <g key={i}>
             <line x1={ML} x2={W - MR} y1={g.y} y2={g.y}
-              stroke="#27272a" strokeWidth="1"
+              stroke="rgba(255,255,255,0.08)" strokeWidth="1"
               strokeDasharray={i === 0 ? "" : "2,4"} />
             <text x={ML - 8} y={g.y + 3} textAnchor="end"
-              style={{ fill: "#52525b", fontSize: 9, fontFamily: "'DM Mono', monospace" }}>
+              style={{ fill: "#63636e", fontSize: 11.5, fontFamily: FONT }}>
               {g.val >= 1000 ? `$${(g.val / 1000).toFixed(0)}k` : `$${g.val.toFixed(0)}`}
             </text>
           </g>
@@ -791,12 +813,12 @@ function MonthlyChart({ paystubs, projection, year }) {
               {monthTotal > 0 && (
                 <text x={x + barWidth / 2} y={MT + innerH - (monthTotal / yMax) * innerH - 6}
                   textAnchor="middle"
-                  style={{ fill: isAllProjection ? "#71717a" : "#e4e4e7", fontSize: 8.5, fontFamily: "'DM Mono', monospace" }}>
+                  style={{ fill: isAllProjection ? "#7d7d88" : "#ededf0", fontSize: 12.5, fontFamily: FONT }}>
                   {monthTotal >= 1000 ? `$${(monthTotal / 1000).toFixed(1)}k` : ""}
                 </text>
               )}
               <text x={x + barWidth / 2} y={H - MB + 18} textAnchor="middle"
-                style={{ fill: isAllProjection ? "#52525b" : "#a1a1aa", fontSize: 10, fontFamily: "'DM Mono', monospace" }}>
+                style={{ fill: isAllProjection ? "#63636e" : "#8b8b96", fontSize: 13.5, fontFamily: FONT }}>
                 {MONTH_LABELS[i]}
               </text>
               <rect x={ML + slot * i} y={MT} width={slot} height={innerH}
@@ -820,16 +842,16 @@ function MonthlyChart({ paystubs, projection, year }) {
 
 function PaystubTable({ paystubs }) {
   return (
-    <div style={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 16, overflow: "hidden" }}>
+    <div style={{ background: "#101014", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, overflow: "hidden" }}>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "'DM Mono', monospace", minWidth: 640 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT, minWidth: 640 }}>
           <thead>
-            <tr style={{ background: "#0c0c0e" }}>
+            <tr style={{ background: "#0a0a0c" }}>
               {[
                 ["#", "left"], ["Date", "left"], ["Employer", "left"],
                 ["Gross", "right"], ["Net", "right"], ["403(b)", "right"],
               ].map(([h, align], i) => (
-                <th key={i} style={{ textAlign: align, padding: "14px 20px", fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", fontWeight: 500, borderBottom: "1px solid #27272a" }}>{h}</th>
+                <th key={i} style={{ textAlign: align, padding: "14px 20px", fontSize: 11.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -837,23 +859,23 @@ function PaystubTable({ paystubs }) {
             {paystubs.map((p, i) => {
               const color = colorFor(p.employer);
               return (
-                <tr key={i} style={{ borderTop: i === 0 ? "none" : "1px solid #1e1e22" }}>
-                  <td style={{ padding: "14px 20px", fontSize: 11, color: "#71717a" }}>{i + 1}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 12, color: "#d4d4d8", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
+                <tr key={i} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
+                  <td style={{ padding: "14px 20px", fontSize: 12.5, color: "#7d7d88" }}>{i + 1}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#d8d8de", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
                   <td style={{ padding: "14px 20px" }}>
                     <span style={{
                       display: "inline-flex", alignItems: "center", gap: 8,
                       padding: "4px 10px", borderRadius: 6,
                       background: `${color}1c`, color: color,
-                      fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                      fontSize: 13.5, letterSpacing: "0",
                     }}>
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
                       {p.employer}
                     </span>
                   </td>
-                  <td style={{ padding: "14px 20px", fontSize: 13, color: "#e4e4e7", textAlign: "right" }}>{fmt(n(p.gross))}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 13, color: "#e4e4e7", textAlign: "right" }}>{fmt(n(p.net))}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 12, color: "#a78bfa", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.gross))}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.net))}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#9b8fd4", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
                 </tr>
               );
             })}
@@ -876,32 +898,32 @@ function PaystubSection({ paystubs, orderedEmployers, loaded }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>All Paystubs</div>
-          <div style={{ display: "flex", gap: 2, background: "#0c0c0e", border: "1px solid #27272a", borderRadius: 8, padding: 2 }}>
+          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96" }}>All Paystubs</div>
+          <div style={{ display: "flex", gap: 2, background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 2 }}>
             {options.map((key) => {
               const active = filter === key;
               const isAll = key === "all";
-              const color = isAll ? "#e4e4e7" : colorFor(key);
+              const color = isAll ? "#ededf0" : colorFor(key);
               return (
                 <button key={key} onClick={() => setFilter(key)} style={{
                   background: active ? color : "transparent",
-                  color: active ? "#09090b" : "#71717a",
+                  color: active ? "#08080a" : "#7d7d88",
                   border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-                  fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
-                  fontFamily: "'DM Mono', monospace", fontWeight: 500,
+                  fontSize: 13.5, letterSpacing: "0",
+                  fontFamily: FONT, fontWeight: 500,
                 }}>{isAll ? "All" : key}</button>
               );
             })}
           </div>
         </div>
-        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#71717a" }}>
+        <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88" }}>
           {filter === "all" ? `${paystubs.length} total` : `${filtered.length} of ${paystubs.length}`}
         </div>
       </div>
       {!loaded ? (
-        <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
+        <p style={{ color: "#63636e", fontFamily: FONT }}>Loading…</p>
       ) : filtered.length === 0 ? (
-        <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>
+        <p style={{ color: "#63636e", fontFamily: FONT }}>
           {paystubs.length === 0 ? "No paystubs yet." : `No ${filter} paystubs.`}
         </p>
       ) : (
@@ -964,34 +986,34 @@ function Dashboard() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
           <div>
-            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
+            <p style={{ fontFamily: FONT, fontSize: 14, color: "#8b8b96", margin: "0 0 6px" }}>
               year to date · {year}
             </p>
-            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
+            <h1 style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>
               Income Dashboard
             </h1>
           </div>
           {lastUpdated && (
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#71717a", fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>Last Updated</div>
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#d4d4d8" }}>{formatPayDate(lastUpdated)}</div>
+              <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", fontFamily: FONT, marginBottom: 4 }}>Last Updated</div>
+              <div style={{ fontFamily: FONT, fontSize: 13.5, color: "#d8d8de" }}>{formatPayDate(lastUpdated)}</div>
             </div>
           )}
         </div>
 
         <div className="dash-stats">
-          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#e4e4e7" />
+          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#ededf0" />
           <StatCard label="Taxes / Other" value={fmt(taxesOther)} sub={totals.gross ? `${((taxesOther / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#f87171" />
-          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#22c55e" />
-          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#a78bfa" />
+          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#5ec98a" />
+          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#9b8fd4" />
         </div>
 
         <div className="dash-pie-grid">
           <div style={{
-            background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
-            border: "1px solid #27272a", borderRadius: 16, padding: 28,
+            background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+            border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28,
           }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 24 }}>Income Split</div>
+            <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", marginBottom: 24 }}>Income Split</div>
             <PieChart data={pieData} size={240} />
           </div>
           <div className="dash-employers">
@@ -1095,16 +1117,19 @@ const benefitStatus = (benefit, year) => {
   };
 };
 
-function PeriodChip({ period, hit, accent, wide, pendingAuto }) {
-  let bg = "transparent", border = "#232326", color = "#3f3f46", weight = 400;
-  if (hit)                            { bg = accent; border = accent; color = "#09090b"; weight = 600; }
-  else if (pendingAuto)               { border = "#166534"; color = "#22c55e"; bg = "rgba(34,197,94,0.07)"; }
-  else if (period.when === "current") { border = "#fbbf24"; color = "#fbbf24"; bg = "rgba(251,191,36,0.1)"; }
+function PeriodChip({ period, hit, wide, pendingAuto, complete }) {
+  // Only the actionable state is loud. Anything already handled stays quiet
+  // so a full row of claimed months doesn't shout over what still needs doing.
+  let bg = "transparent", border = "rgba(255,255,255,0.055)", color = "#4a4a54", weight = 450;
+  if (hit && complete)                { bg = "rgba(34,197,94,0.13)";  border = "transparent"; color = "#5ec98a"; }
+  else if (hit)                       { bg = "rgba(255,255,255,0.08)"; border = "transparent"; color = "#b0b0ba"; }
+  else if (pendingAuto)               { bg = "transparent"; border = "rgba(34,197,94,0.28)"; color = "#3f8f61"; }
+  else if (period.when === "current") { bg = "rgba(240,180,41,0.14)"; border = "#f0b429"; color = "#f0b429"; weight = 550; }
   return (
     <div style={{
       minWidth: wide ? 58 : 27, height: 19, padding: "0 4px",
       borderRadius: 4, background: bg, border: `1px solid ${border}`, color,
-      fontFamily: "'DM Mono', monospace", fontSize: 8.5, fontWeight: weight,
+      fontFamily: FONT, fontSize: 12.5, fontWeight: weight,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     }}>{period.label}</div>
   );
@@ -1113,44 +1138,43 @@ function PeriodChip({ period, hit, accent, wide, pendingAuto }) {
 function BenefitRow({ benefit, year, accent, first }) {
   const st = benefitStatus(benefit, year);
   const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
-  const DONE = "#22c55e";
-  const chipAccent = st.complete ? DONE : accent;
+  const DONE = "#5ec98a";
   return (
     <div className="bene-row" title={benefit.detail} style={{
-      borderTop: first ? "none" : "1px solid #1a1a1d",
+      borderTop: first ? "none" : "1px solid rgba(255,255,255,0.05)",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7, flex: "1 1 165px", minWidth: 0 }}>
         <span style={{
-          fontSize: 11.5, fontFamily: "'DM Mono', monospace",
-          color: st.complete ? DONE : st.open.length > 0 ? "#fbbf24" : "#d4d4d8",
+          fontSize: 13.5, fontFamily: FONT,
+          color: st.complete ? "#6e7d74" : "#d8d8de",
           textDecoration: st.complete ? "line-through" : "none",
-          textDecorationColor: "rgba(34,197,94,0.45)",
+          textDecorationColor: "rgba(110,125,116,0.5)",
           textDecorationThickness: "1px",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{benefit.name}</span>
         {benefit.auto && (
-          <span style={{ fontSize: 7.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#22c55e", border: "1px solid #14532d", borderRadius: 3, padding: "0 4px", fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>Auto</span>
+          <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "#5ec98a", border: "1px solid rgba(94,201,138,0.3)", borderRadius: 3, padding: "0 4px", fontFamily: FONT, flexShrink: 0 }}>Auto</span>
         )}
       </div>
-      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#52525b", flexShrink: 0, minWidth: 34, textAlign: "right" }}>
+      <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e", flexShrink: 0, minWidth: 34, textAlign: "right" }}>
         {fmt0(st.per)}
       </span>
       <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
         {st.periods.map((p) => (
           <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)}
-            accent={chipAccent} wide={wide}
+            wide={wide} complete={st.complete}
             pendingAuto={st.complete && !st.claimedSet.has(p.key)} />
         ))}
       </div>
-      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10.5, color: st.complete ? DONE : "#71717a", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
-        {fmt0(st.captured)}<span style={{ color: st.complete ? "rgba(34,197,94,0.4)" : "#3f3f46" }}> / {fmt0(st.total)}</span>
+      <span style={{ fontFamily: FONT, fontSize: 13.5, color: st.complete ? "#6e7d74" : "#a8a8b2", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
+        {fmt0(st.captured)}<span style={{ color: st.complete ? "rgba(34,197,94,0.4)" : "#4a4a54" }}> / {fmt0(st.total)}</span>
       </span>
     </div>
   );
 }
 
 function CardBlock({ card, year }) {
-  const accent = card.color || "#a3e635";
+  const accent = card.color || "#5ec98a";
   const [showPerks, setShowPerks] = useState(false);
   let captured = 0, total = 0, openN = 0;
   for (const b of card.benefits || []) {
@@ -1172,8 +1196,8 @@ function CardBlock({ card, year }) {
 
   return (
     <div style={{
-      background: "linear-gradient(180deg, #161618 0%, #09090b 100%)",
-      border: "1px solid #27272a", borderLeft: `3px solid ${accent}`,
+      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+      border: "1px solid rgba(255,255,255,0.08)", borderLeft: `3px solid ${accent}`,
       borderRadius: 12, padding: "16px 18px", marginBottom: 12,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
@@ -1182,24 +1206,24 @@ function CardBlock({ card, year }) {
             width: 30, height: 20, borderRadius: 4, flexShrink: 0,
             background: `linear-gradient(135deg, ${accent} 0%, ${accent}88 100%)`,
           }} />
-          <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 19, color: "#fff", lineHeight: 1 }}>{card.name}</span>
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9.5, color: "#52525b" }}>{fmt0(n(card.annual_fee))}/yr</span>
+          <span style={{ fontFamily: FONT, fontSize: 15.5, fontWeight: 600, color: "#fafafa", lineHeight: 1.2 }}>{card.name}</span>
+          <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e" }}>{fmt0(n(card.annual_fee))}/yr</span>
           {openN > 0 && (
-            <span style={{ fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", color: "#fbbf24", border: "1px solid #78350f", background: "rgba(251,191,36,0.1)", borderRadius: 3, padding: "1px 5px", fontFamily: "'DM Mono', monospace" }}>{openN} open</span>
+            <span style={{ fontSize: 10.5, letterSpacing: "0.1em", color: "#f0b429", border: "1px solid rgba(240,180,41,0.35)", background: "rgba(240,180,41,0.12)", borderRadius: 3, padding: "1px 5px", fontFamily: FONT }}>{openN} open</span>
           )}
         </div>
-        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: accent }}>
-          {fmt0(captured)}<span style={{ fontSize: 10, color: "#3f3f46" }}> / {fmt0(total)}</span>
+        <div style={{ fontFamily: FONT, fontSize: 13.5, color: accent }}>
+          {fmt0(captured)}<span style={{ fontSize: 13.5, color: "#4a4a54" }}> / {fmt0(total)}</span>
         </div>
       </div>
 
-      <div style={{ height: 2, borderRadius: 2, background: "#232326", marginBottom: 12, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: accent }} />
+      <div style={{ height: 3, borderRadius: 3, background: "rgba(255,255,255,0.06)", marginBottom: 14, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: accent, opacity: 0.75, borderRadius: 3 }} />
       </div>
 
       {cadences.map((cad) => (
         <div key={cad} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 8, letterSpacing: "0.16em", textTransform: "uppercase", color: "#52525b", marginBottom: 2 }}>
+          <div style={{ fontSize: 10.5, letterSpacing: "0", color: "#63636e", marginBottom: 2 }}>
             {CADENCE_META[cad]?.label || cad}
           </div>
           {groups[cad].map((b, i) => (
@@ -1209,16 +1233,16 @@ function CardBlock({ card, year }) {
       ))}
 
       {card.perks && card.perks.length > 0 && (
-        <div style={{ borderTop: "1px solid #1a1a1d", paddingTop: 8, marginTop: 2 }}>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 8, marginTop: 2 }}>
           <button onClick={() => setShowPerks((v) => !v)} style={{
             background: "transparent", border: "none", padding: 0, cursor: "pointer",
-            fontFamily: "'DM Mono', monospace", fontSize: 8.5, letterSpacing: "0.16em",
-            textTransform: "uppercase", color: "#52525b",
+            fontFamily: FONT, fontSize: 12.5, letterSpacing: "0",
+            color: "#63636e",
           }}>
             {showPerks ? "▾" : "▸"} Ongoing Perks ({card.perks.length})
           </button>
           {showPerks && (
-            <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: "#71717a", fontSize: 10.5, lineHeight: 1.7 }}>
+            <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: "#7d7d88", fontSize: 13.5, lineHeight: 1.7 }}>
               {card.perks.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
           )}
@@ -1232,16 +1256,16 @@ function AttentionPanel({ rows }) {
   const total = rows.reduce((s, r) => s + r.atStake, 0);
   return (
     <div style={{
-      background: "linear-gradient(180deg, #161618 0%, #09090b 100%)",
-      border: "1px solid #27272a",
-      borderLeft: `3px solid ${rows.length ? "#fbbf24" : "#22c55e"}`,
+      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderLeft: `3px solid ${rows.length ? "#f0b429" : "#5ec98a"}`,
       borderRadius: 12, padding: "14px 18px", marginBottom: 16,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10, marginBottom: rows.length ? 8 : 0 }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: rows.length ? "#fbbf24" : "#22c55e" }}>
+        <div style={{ fontSize: 11.5, letterSpacing: "0", color: rows.length ? "#f0b429" : "#5ec98a" }}>
           {rows.length ? "Claim Now" : "All Caught Up"}
         </div>
-        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: rows.length ? "#fbbf24" : "#22c55e" }}>
+        <div style={{ fontFamily: FONT, fontSize: 13.5, color: rows.length ? "#f0b429" : "#5ec98a" }}>
           {rows.length ? `${fmt0(total)} on the table` : "Nothing outstanding"}
         </div>
       </div>
@@ -1250,26 +1274,26 @@ function AttentionPanel({ rows }) {
         // Multi-year credits carry a placeholder far-future end date — show
         // them as open-ended rather than printing a nonsense deadline.
         const openEnded = d == null || d > 3650;
-        const urgent = openEnded ? "#52525b" : d <= 7 ? "#f87171" : d <= 30 ? "#fbbf24" : "#71717a";
+        const urgent = openEnded ? "#63636e" : d <= 7 ? "#f87171" : d <= 30 ? "#f0b429" : "#7d7d88";
         const deadline = openEnded
           ? "No deadline"
           : `${r.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${d}d`;
         return (
           <div key={`${r.card.id}-${r.benefit.id}`} style={{
             display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
-            padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid #1a1a1d",
-            fontFamily: "'DM Mono', monospace", fontSize: 11,
+            padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+            fontFamily: FONT, fontSize: 12.5,
           }}>
             <div style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               <span style={{ color: r.card.color }}>{r.card.name}</span>
-              <span style={{ margin: "0 6px", color: "#3f3f46" }}>·</span>
-              <span style={{ color: "#d4d4d8" }}>{r.benefit.name}</span>
-              <span style={{ marginLeft: 8, color: "#52525b", fontSize: 9.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
+              <span style={{ margin: "0 6px", color: "#4a4a54" }}>·</span>
+              <span style={{ color: "#d8d8de" }}>{r.benefit.name}</span>
+              <span style={{ marginLeft: 8, color: "#63636e", fontSize: 13.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
             </div>
-            <span style={{ color: urgent, fontSize: 9.5, flexShrink: 0, minWidth: 118, textAlign: "right" }}>
+            <span style={{ color: urgent, fontSize: 13.5, flexShrink: 0, minWidth: 118, textAlign: "right" }}>
               {deadline}
             </span>
-            <span style={{ color: "#e4e4e7", flexShrink: 0, minWidth: 46, textAlign: "right" }}>{fmt0(r.atStake)}</span>
+            <span style={{ color: "#ededf0", flexShrink: 0, minWidth: 46, textAlign: "right" }}>{fmt0(r.atStake)}</span>
           </div>
         );
       })}
@@ -1317,12 +1341,12 @@ function Cards() {
       <div style={{ maxWidth: 940, margin: "0 auto" }}>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
-          <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 30, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1 }}>
+          <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>
             Card Benefits
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "#52525b", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
+            <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#63636e", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
           </h1>
           {lastUpdated && (
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#52525b" }}>
+            <div style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e" }}>
               Updated {formatPayDate(lastUpdated)}
             </div>
           )}
@@ -1331,26 +1355,26 @@ function Cards() {
         {loaded && cards.length > 0 && <AttentionPanel rows={attention} />}
 
         {!loaded ? (
-          <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
+          <p style={{ color: "#63636e", fontFamily: FONT }}>Loading…</p>
         ) : cards.length === 0 ? (
-          <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>No cards yet.</p>
+          <p style={{ color: "#63636e", fontFamily: FONT }}>No cards yet.</p>
         ) : (
           cards.map((c) => <CardBlock key={c.id} card={c} year={year} />)
         )}
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
           {[
-            ["Claimed", "#71717a", "#71717a"],
-            ["Complete", "#22c55e", "#22c55e"],
-            ["Open now", "rgba(251,191,36,0.1)", "#fbbf24"],
-            ["Not claimed", "transparent", "#232326"],
+            ["Claimed", "#7d7d88", "#7d7d88"],
+            ["Complete", "#5ec98a", "#5ec98a"],
+            ["Open now", "rgba(240,180,41,0.12)", "#f0b429"],
+            ["Not claimed", "transparent", "rgba(255,255,255,0.07)"],
           ].map(([label, bg, border]) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${border}` }} />
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#52525b" }}>{label}</span>
+              <span style={{ fontFamily: FONT, fontSize: 11.5, letterSpacing: "0.1em", color: "#63636e" }}>{label}</span>
             </div>
           ))}
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: "#3f3f46", marginLeft: "auto" }}>Hover a row for details</span>
+          <span style={{ fontFamily: FONT, fontSize: 11.5, color: "#4a4a54", marginLeft: "auto" }}>Hover a row for details</span>
         </div>
 
       </div>
@@ -1372,7 +1396,7 @@ function App() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#09090b",
+      background: "#08080a",
       color: "#fff",
       paddingTop: "env(safe-area-inset-top)",
       paddingBottom: "env(safe-area-inset-bottom)",
