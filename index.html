@@ -1040,24 +1040,34 @@ const periodsFor = (cadence, year, today) => {
     if (curM < startM) return "future";
     return "current";
   };
+  // Last calendar day of month `m` — day 0 of the next month.
+  const endOf = (m) => new Date(year, m + 1, 0);
   const out = [];
   if (cadence === "monthly") {
     for (let i = 0; i < 12; i++) {
-      out.push({ key: `${year}-${String(i + 1).padStart(2, "0")}`, label: MONTH_LABELS[i], when: rel(i, i) });
+      out.push({ key: `${year}-${String(i + 1).padStart(2, "0")}`, label: MONTH_LABELS[i], when: rel(i, i), end: endOf(i) });
     }
   } else if (cadence === "quarterly") {
     for (let i = 0; i < 4; i++) {
-      out.push({ key: `${year}-Q${i + 1}`, label: `Q${i + 1}`, when: rel(i * 3, i * 3 + 2) });
+      out.push({ key: `${year}-Q${i + 1}`, label: `Q${i + 1}`, when: rel(i * 3, i * 3 + 2), end: endOf(i * 3 + 2) });
     }
   } else if (cadence === "semiannual") {
-    out.push({ key: `${year}-H1`, label: "Jan–Jun", when: rel(0, 5) });
-    out.push({ key: `${year}-H2`, label: "Jul–Dec", when: rel(6, 11) });
+    out.push({ key: `${year}-H1`, label: "Jan–Jun", when: rel(0, 5),  end: endOf(5) });
+    out.push({ key: `${year}-H2`, label: "Jul–Dec", when: rel(6, 11), end: endOf(11) });
   } else if (cadence === "annual") {
-    out.push({ key: `${year}`, label: String(year), when: rel(0, 11) });
+    out.push({ key: `${year}`, label: String(year), when: rel(0, 11), end: endOf(11) });
   } else {
-    out.push({ key: "once", label: "One-time", when: "current" });
+    out.push({ key: "once", label: "One-time", when: "current", end: new Date(year + 50, 0, 1) });
   }
   return out;
+};
+
+const DAY_MS = 86400000;
+const daysUntil = (d, today) => {
+  const now = today || new Date();
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const b = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((b - a) / DAY_MS);
 };
 
 const benefitStatus = (benefit, year) => {
@@ -1070,12 +1080,18 @@ const benefitStatus = (benefit, year) => {
   // everything up to now claimed, since the rest posts on its own.
   const allClaimed = periods.every((p) => cs.has(p.key));
   const autoDone = !!benefit.auto && periods.filter((p) => p.when !== "future").every((p) => cs.has(p.key));
+  // A benefit can override its deadline (e.g. credits that reset on the card
+  // anniversary rather than the calendar year).
+  const override = benefit.expires ? new Date(benefit.expires + "T00:00:00") : null;
+  const expiresAt = open.length ? (override || open[0].end) : null;
   return {
     periods, claimedSet: cs, hits, open, per,
     complete: allClaimed || autoDone,
     captured: hits.length * per,
     total: periods.length * per,
     atStake: open.length * per,
+    expiresAt,
+    daysLeft: expiresAt ? daysUntil(expiresAt) : null,
   };
 };
 
@@ -1229,21 +1245,31 @@ function AttentionPanel({ rows }) {
           {rows.length ? `${fmt0(total)} on the table` : "Nothing outstanding"}
         </div>
       </div>
-      {rows.map((r, i) => (
-        <div key={`${r.card.id}-${r.benefit.id}`} style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
-          padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid #1a1a1d",
-          fontFamily: "'DM Mono', monospace", fontSize: 11,
-        }}>
-          <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <span style={{ color: r.card.color }}>{r.card.name}</span>
-            <span style={{ margin: "0 6px", color: "#3f3f46" }}>·</span>
-            <span style={{ color: "#d4d4d8" }}>{r.benefit.name}</span>
-            <span style={{ marginLeft: 8, color: "#52525b", fontSize: 9.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
+      {rows.map((r, i) => {
+        const d = r.daysLeft;
+        const urgent = d <= 7 ? "#f87171" : d <= 30 ? "#fbbf24" : "#71717a";
+        const deadline = r.expiresAt
+          ? r.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          : "";
+        return (
+          <div key={`${r.card.id}-${r.benefit.id}`} style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+            padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid #1a1a1d",
+            fontFamily: "'DM Mono', monospace", fontSize: 11,
+          }}>
+            <div style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ color: r.card.color }}>{r.card.name}</span>
+              <span style={{ margin: "0 6px", color: "#3f3f46" }}>·</span>
+              <span style={{ color: "#d4d4d8" }}>{r.benefit.name}</span>
+              <span style={{ marginLeft: 8, color: "#52525b", fontSize: 9.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
+            </div>
+            <span style={{ color: urgent, fontSize: 9.5, flexShrink: 0, minWidth: 82, textAlign: "right" }}>
+              {deadline} · {d}d
+            </span>
+            <span style={{ color: "#e4e4e7", flexShrink: 0, minWidth: 46, textAlign: "right" }}>{fmt0(r.atStake)}</span>
           </div>
-          <span style={{ color: "#e4e4e7", flexShrink: 0 }}>{fmt0(r.atStake)}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -1271,10 +1297,16 @@ function Cards() {
     for (const c of cards) {
       for (const b of c.benefits || []) {
         const st = benefitStatus(b, year);
-        if (st.open.length) rows.push({ card: c, benefit: b, open: st.open, atStake: st.atStake });
+        if (st.open.length) {
+          rows.push({
+            card: c, benefit: b, open: st.open, atStake: st.atStake,
+            expiresAt: st.expiresAt, daysLeft: st.daysLeft,
+          });
+        }
       }
     }
-    return rows.sort((a, b) => b.atStake - a.atStake);
+    // Soonest deadline first; larger dollars break ties.
+    return rows.sort((a, b) => (a.daysLeft - b.daysLeft) || (b.atStake - a.atStake));
   }, [cards, year]);
 
   return (
