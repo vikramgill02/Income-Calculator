@@ -1,0 +1,86 @@
+{
+  "last_updated": "2026-09-02",
+  "cards": [
+    {
+      "id": "amex-platinum",
+      "name": "Amex Platinum",
+      "issuer": "American Express",
+      "annual_fee": 895,
+      "color": "#a8b0b8",
+      "opened": null,
+      "benefits": [
+        { "id": "plat-digital",   "name": "Digital Entertainment",   "value": 300, "cadence": "monthly",    "per": 25,  "detail": "Disney+, Hulu, ESPN+, Peacock, NYT, WSJ, Audible, SiriusXM. Enrollment required." },
+        { "id": "plat-uber-cash", "name": "Uber Cash",               "value": 200, "cadence": "monthly",    "per": 15,  "detail": "$15/mo + $20 bonus in December. US Uber rides & Uber Eats." },
+        { "id": "plat-walmart",   "name": "Walmart+ Membership",     "value": 155, "cadence": "monthly",    "per": 12.95, "detail": "Covers monthly Walmart+ membership fee (excl. Plus Up)." },
+        { "id": "plat-uber-one",  "name": "Uber One Membership",     "value": 120, "cadence": "monthly",    "per": 10,  "detail": "Statement credit toward Uber One membership." },
+        { "id": "plat-resy",      "name": "Resy Dining Credit",      "value": 400, "cadence": "quarterly",  "per": 100, "detail": "US Resy restaurants + Resy-booked reservations." },
+        { "id": "plat-lulu",      "name": "Lululemon Credit",        "value": 300, "cadence": "quarterly",  "per": 75,  "detail": "US Lululemon stores and lululemon.com." },
+        { "id": "plat-hotel",     "name": "Hotel Credit",            "value": 600, "cadence": "semiannual", "per": 300, "detail": "Fine Hotels + Resorts or The Hotel Collection, 2+ night stay, prepaid via Amex Travel." },
+        { "id": "plat-equinox",   "name": "Equinox Credit",          "value": 300, "cadence": "semiannual", "per": 150, "detail": "Equinox gym memberships and Equinox+ app." },
+        { "id": "plat-saks",      "name": "Saks Fifth Avenue",       "value": 100, "cadence": "semiannual", "per": 50,  "detail": "$50 Jan–Jun, $50 Jul–Dec. In-store or saks.com." },
+        { "id": "plat-airline",   "name": "Airline Fee Credit",      "value": 200, "cadence": "annual",     "per": 200, "detail": "Incidental fees (bags, seats, lounge day passes) on one pre-selected airline." },
+        { "id": "plat-oura",      "name": "Oura Ring Credit",        "value": 200, "cadence": "annual",     "per": 200, "detail": "Oura Ring hardware and membership." },
+        { "id": "plat-clear",     "name": "CLEAR Plus",              "value": 199, "cadence": "annual",     "per": 199, "detail": "Covers full CLEAR Plus annual membership." },
+        { "id": "plat-globalentry","name": "Global Entry / TSA PreCheck", "value": 120, "cadence": "multiyear", "per": 120, "detail": "$120 Global Entry every 4 yrs, or $85 TSA PreCheck every 4.5 yrs." }
+      ],
+      "perks": [
+        "5x points on flights booked direct or via Amex Travel (first $500k/yr)",
+        "5x points on prepaid hotels booked via Amex Travel",
+        "1x points on everything else",
+        "Centurion Lounge, Priority Pass Select, Escape Lounges, Delta Sky Club (when flying Delta)",
+        "Marriott Bonvoy Gold Elite status",
+        "Hilton Honors Gold status",
+        "Fine Hotels + Resorts perks: room upgrade, daily breakfast for 2, $100 property credit",
+        "Cell phone protection up to $800/claim",
+        "No foreign transaction fees"
+      ]
+    },
+    {
+      "id": "amex-gold",
+      "name": "Amex Gold",
+      "issuer": "American Express",
+      "annual_fee": 325,
+      "color": "#d4a843",
+      "opened": null,
+      "benefits": [
+        { "id": "gold-uber",    "name": "Uber Cash",          "value": 120, "cadence": "monthly",    "per": 10, "detail": "US Uber rides & Uber Eats. Card must be added to Uber account." },
+        { "id": "gold-dining",  "name": "Dining Credit",      "value": 120, "cadence": "monthly",    "per": 10, "detail": "Grubhub, Five Guys, Goldbelly, Wine.com, Milk Bar. Enrollment required." },
+        { "id": "gold-dunkin",  "name": "Dunkin' Credit",     "value": 84,  "cadence": "monthly",    "per": 7,  "detail": "$7/mo at Dunkin' on purchases of $7+. Enrollment required." },
+        { "id": "gold-resy",    "name": "Resy Credit",        "value": 100, "cadence": "semiannual", "per": 50, "detail": "$50 Jan–Jun, $50 Jul–Dec at US Resy restaurants." }
+      ],
+      "perks": [
+        "4x points at restaurants worldwide (first $50k/yr)",
+        "4x points at US supermarkets (first $25k/yr)",
+        "3x points on flights booked direct or via Amex Travel",
+        "1x points on everything else",
+        "The Hotel Collection: $100 property credit on 2+ night stays",
+        "No foreign transaction fees"
+      ]
+    },
+    {
+      "id": "venture-x",
+      "name": "Venture X",
+      "issuer": "Capital One",
+      "annual_fee": 395,
+      "color": "#4f8ff7",
+      "opened": "2026-09-02",
+      "benefits": [
+        { "id": "vx-travel",      "name": "Travel Credit",              "value": 300, "cadence": "annual",    "per": 300, "detail": "Bookings made through Capital One Travel. Resets on card anniversary, not calendar year." },
+        { "id": "vx-anniversary", "name": "Anniversary Bonus Miles",    "value": 100, "cadence": "annual",    "per": 100, "detail": "10,000 miles every account anniversary (~$100 toward travel)." },
+        { "id": "vx-globalentry", "name": "Global Entry / TSA PreCheck","value": 120, "cadence": "multiyear", "per": 120, "detail": "$120 credit every 4 years." }
+      ],
+      "perks": [
+        "10x miles on hotels & rental cars booked via Capital One Travel",
+        "5x miles on flights booked via Capital One Travel",
+        "2x miles on everything else",
+        "Capital One Lounges — unlimited, plus 2 free guests",
+        "Priority Pass Select — unlimited, plus 2 free guests",
+        "Plaza Premium Lounge access",
+        "Up to 4 authorized users free, each with their own lounge access",
+        "Hertz President's Circle status",
+        "Cell phone protection, auto rental CDW, trip cancellation & delay coverage",
+        "No foreign transaction fees"
+      ]
+    }
+  ]
+}

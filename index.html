@@ -111,7 +111,7 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
 function TabBar({ view, setView }) {
   return (
     <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "20px 24px 0" }}>
-      {[["calc", "Pay Calc"], ["dash", "Dashboard"]].map(([key, label]) => {
+      {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"]].map(([key, label]) => {
         const active = view === key;
         return (
           <button key={key} onClick={() => setView(key)} style={{
@@ -1009,6 +1009,252 @@ function Dashboard() {
   );
 }
 
+/* ─── Cards ─── */
+
+const CADENCE_META = {
+  monthly:    { label: "Monthly",     order: 1 },
+  quarterly:  { label: "Quarterly",   order: 2 },
+  semiannual: { label: "Semi-Annual", order: 3 },
+  annual:     { label: "Annual",      order: 4 },
+  multiyear:  { label: "Multi-Year",  order: 5 },
+};
+
+const periodKey = (cadence, d) => {
+  const dt = d || new Date();
+  const y = dt.getFullYear(), m = dt.getMonth();
+  if (cadence === "monthly")    return `${y}-${String(m + 1).padStart(2, "0")}`;
+  if (cadence === "quarterly")  return `${y}-Q${Math.floor(m / 3) + 1}`;
+  if (cadence === "semiannual") return `${y}-H${m < 6 ? 1 : 2}`;
+  if (cadence === "multiyear")  return "once";
+  return `${y}`;
+};
+
+const periodLabel = (cadence, d) => {
+  const dt = d || new Date();
+  const y = dt.getFullYear(), m = dt.getMonth();
+  if (cadence === "monthly")    return `${MONTH_LABELS[m]} ${y}`;
+  if (cadence === "quarterly")  return `Q${Math.floor(m / 3) + 1} ${y}`;
+  if (cadence === "semiannual") return m < 6 ? `Jan–Jun ${y}` : `Jul–Dec ${y}`;
+  if (cadence === "multiyear")  return "One-time";
+  return `${y}`;
+};
+
+function BenefitRow({ benefit, cardId, claimed, onToggle, accent, first }) {
+  const key = `${cardId}:${benefit.id}:${periodKey(benefit.cadence)}`;
+  const isDone = !!claimed[key];
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 12,
+      padding: "11px 0", borderTop: first ? "none" : "1px solid #1e1e22",
+    }}>
+      <button onClick={() => onToggle(key)} style={{
+        width: 18, height: 18, flexShrink: 0, marginTop: 2,
+        borderRadius: 5, cursor: "pointer",
+        background: isDone ? accent : "transparent",
+        border: `1px solid ${isDone ? accent : "#52525b"}`,
+        color: "#09090b", fontSize: 11, lineHeight: 1, fontWeight: 700,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>{isDone ? "✓" : ""}</button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 12, color: isDone ? "#71717a" : "#e4e4e7",
+          textDecoration: isDone ? "line-through" : "none",
+          fontFamily: "'DM Mono', monospace", marginBottom: 3,
+        }}>{benefit.name}</div>
+        <div style={{ fontSize: 10.5, color: "#71717a", lineHeight: 1.5 }}>{benefit.detail}</div>
+      </div>
+      <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "'DM Mono', monospace" }}>
+        <div style={{ fontSize: 13, color: isDone ? "#52525b" : "#e4e4e7" }}>{fmt(n(benefit.per))}</div>
+        {benefit.cadence !== "annual" && benefit.cadence !== "multiyear" && (
+          <div style={{ fontSize: 10, color: "#52525b", marginTop: 2 }}>{fmt0(n(benefit.value))}/yr</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CardBlock({ card, claimed, onToggle }) {
+  const accent = card.color || "#a3e635";
+  const annualBenefits = (card.benefits || []).filter((b) => b.cadence !== "multiyear");
+  const totalCredits = annualBenefits.reduce((s, b) => s + n(b.value), 0);
+  const net = totalCredits - n(card.annual_fee);
+
+  const groups = {};
+  for (const b of card.benefits || []) {
+    if (!groups[b.cadence]) groups[b.cadence] = [];
+    groups[b.cadence].push(b);
+  }
+  const cadences = Object.keys(groups).sort(
+    (a, b) => (CADENCE_META[a]?.order || 99) - (CADENCE_META[b]?.order || 99)
+  );
+
+  const trackable = (card.benefits || []).filter((b) => b.cadence !== "multiyear");
+  const doneCount = trackable.filter(
+    (b) => claimed[`${card.id}:${b.id}:${periodKey(b.cadence)}`]
+  ).length;
+  const pct = trackable.length ? (doneCount / trackable.length) * 100 : 0;
+
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, #18181b 0%, #09090b 100%)",
+      border: "1px solid #27272a", borderLeft: `3px solid ${accent}`,
+      borderRadius: 16, padding: 26, marginBottom: 20,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{
+            width: 46, height: 30, borderRadius: 5, flexShrink: 0,
+            background: `linear-gradient(135deg, ${accent} 0%, ${accent}88 100%)`,
+            display: "flex", alignItems: "flex-end", justifyContent: "flex-start", padding: 4,
+          }}>
+            <div style={{ width: 12, height: 8, borderRadius: 2, background: "rgba(0,0,0,0.25)" }} />
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, color: "#fff", lineHeight: 1 }}>{card.name}</div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, letterSpacing: "0.12em", color: "#71717a", textTransform: "uppercase", marginTop: 5 }}>{card.issuer}</div>
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 4 }}>Annual Fee</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, color: "#f87171" }}>{fmt0(n(card.annual_fee))}</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 14, marginBottom: 22 }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 5 }}>Credits / yr</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color: "#e4e4e7" }}>{fmt0(totalCredits)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 5 }}>Net Value</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color: net >= 0 ? "#22c55e" : "#f87171" }}>
+            {net >= 0 ? "+" : "−"}{fmt0(Math.abs(net))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#71717a", marginBottom: 5 }}>Claimed Now</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 17, color: accent }}>{doneCount}/{trackable.length}</div>
+        </div>
+      </div>
+
+      <div style={{ height: 3, borderRadius: 2, background: "#27272a", marginBottom: 24, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: accent, borderRadius: 2, transition: "width 0.2s" }} />
+      </div>
+
+      {cadences.map((cad) => (
+        <div key={cad} style={{ marginBottom: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa" }}>
+              {CADENCE_META[cad]?.label || cad}
+            </div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: "#52525b" }}>{periodLabel(cad)}</div>
+          </div>
+          {groups[cad].map((b, i) => (
+            <BenefitRow key={b.id} benefit={b} cardId={card.id} claimed={claimed}
+              onToggle={onToggle} accent={accent} first={i === 0} />
+          ))}
+        </div>
+      ))}
+
+      {card.perks && card.perks.length > 0 && (
+        <div style={{ borderTop: "1px solid #27272a", paddingTop: 18 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a1a1aa", marginBottom: 12 }}>Ongoing Perks</div>
+          <ul style={{ margin: 0, paddingLeft: 18, color: "#71717a", fontSize: 11.5, lineHeight: 1.85 }}>
+            {card.perks.map((p, i) => <li key={i}>{p}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Cards() {
+  const [cards, setCards] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [claimed, setClaimed] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem("claimedBenefits") || "{}"); }
+    catch (e) { return {}; }
+  });
+
+  useEffect(() => {
+    fetch("cards.json", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : { cards: [] })
+      .then((data) => {
+        setCards(Array.isArray(data.cards) ? data.cards : []);
+        if (data.last_updated) setLastUpdated(data.last_updated);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  const onToggle = (key) => {
+    setClaimed((prev) => {
+      const next = { ...prev };
+      if (next[key]) delete next[key]; else next[key] = true;
+      try { window.localStorage.setItem("claimedBenefits", JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+  };
+
+  const totals = useMemo(() => {
+    let credits = 0, fees = 0;
+    for (const c of cards) {
+      fees += n(c.annual_fee);
+      for (const b of c.benefits || []) {
+        if (b.cadence !== "multiyear") credits += n(b.value);
+      }
+    }
+    return { credits, fees, net: credits - fees };
+  }, [cards]);
+
+  return (
+    <div style={{ padding: "28px 24px 56px" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", fontSize: 14, color: "#a1a1aa", margin: "0 0 6px" }}>
+              credits &amp; perks
+            </p>
+            <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 48, fontWeight: 400, margin: 0, color: "#fff", lineHeight: 1.05 }}>
+              Card Benefits
+            </h1>
+          </div>
+          {lastUpdated && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#71717a", fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>Last Updated</div>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#d4d4d8" }}>{formatPayDate(lastUpdated)}</div>
+            </div>
+          )}
+        </div>
+
+        {loaded && cards.length > 0 && (
+          <div className="dash-stats">
+            <StatCard label="Total Credits" value={fmt0(totals.credits)} sub={`${cards.length} cards`} accent="#e4e4e7" />
+            <StatCard label="Total Fees" value={fmt0(totals.fees)} sub="per year" accent="#f87171" />
+            <StatCard label="Net Value" value={`${totals.net >= 0 ? "+" : "−"}${fmt0(Math.abs(totals.net))}`} sub="if fully used" accent="#22c55e" />
+          </div>
+        )}
+
+        {!loaded ? (
+          <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>Loading…</p>
+        ) : cards.length === 0 ? (
+          <p style={{ color: "#52525b", fontStyle: "italic", fontFamily: "'Instrument Serif', serif" }}>No cards yet.</p>
+        ) : (
+          cards.map((c) => <CardBlock key={c.id} card={c} claimed={claimed} onToggle={onToggle} />)
+        )}
+
+        <p style={{ fontFamily: "'Instrument Serif', serif", fontStyle: "italic", color: "#52525b", fontSize: 12.5, lineHeight: 1.6, marginTop: 8 }}>
+          Checkboxes are saved in this browser only and reset automatically when each credit's period rolls over.
+          Issuers change benefit terms often — verify current offers in the Amex and Capital One apps before relying on a credit.
+        </p>
+
+      </div>
+    </div>
+  );
+}
+
 /* ─── App shell ─── */
 
 function App() {
@@ -1035,7 +1281,7 @@ function App() {
         input::placeholder { color: #52525b; }
       `}</style>
       <TabBar view={view} setView={changeView} />
-      {view === "dash" ? <Dashboard /> : <Calc />}
+      {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : <Calc />}
     </div>
   );
 }
