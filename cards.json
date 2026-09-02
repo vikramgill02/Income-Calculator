@@ -291,9 +291,11 @@
           "value": 100,
           "cadence": "annual",
           "per": 100,
-          "detail": "10,000 miles on each account anniversary — first one lands Sep 2, 2027.",
-          "claimed": [],
-          "expires": "2027-09-02"
+          "detail": "10,000 miles deposit automatically each account anniversary. Nothing to do — first one lands Sep 2, 2027.",
+          "claimed": [
+            "2026"
+          ],
+          "auto": true
         },
         {
           "id": "vx-globalentry",
