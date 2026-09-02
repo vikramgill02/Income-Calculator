@@ -124,7 +124,8 @@
           "detail": "Membership active. Renews Oct 15 annually.",
           "claimed": [
             "2026"
-          ]
+          ],
+          "auto": true
         },
         {
           "id": "plat-airline",
@@ -157,7 +158,8 @@
           "detail": "Covers full CLEAR Plus annual membership.",
           "claimed": [
             "2026"
-          ]
+          ],
+          "auto": true
         },
         {
           "id": "plat-globalentry",
@@ -168,7 +170,8 @@
           "detail": "Global Entry + TSA PreCheck already active. Renews every 4 years.",
           "claimed": [
             "once"
-          ]
+          ],
+          "auto": true
         }
       ],
       "perks": [

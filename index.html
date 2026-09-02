@@ -1066,17 +1066,23 @@ const benefitStatus = (benefit, year) => {
   const per = n(benefit.per);
   const hits = periods.filter((p) => cs.has(p.key));
   const open = periods.filter((p) => !cs.has(p.key) && p.when === "current");
+  // Done for the year: every period claimed, or — for auto-recurring credits —
+  // everything up to now claimed, since the rest posts on its own.
+  const allClaimed = periods.every((p) => cs.has(p.key));
+  const autoDone = !!benefit.auto && periods.filter((p) => p.when !== "future").every((p) => cs.has(p.key));
   return {
     periods, claimedSet: cs, hits, open, per,
+    complete: allClaimed || autoDone,
     captured: hits.length * per,
     total: periods.length * per,
     atStake: open.length * per,
   };
 };
 
-function PeriodChip({ period, hit, accent, wide }) {
+function PeriodChip({ period, hit, accent, wide, pendingAuto }) {
   let bg = "transparent", border = "#232326", color = "#3f3f46", weight = 400;
   if (hit)                            { bg = accent; border = accent; color = "#09090b"; weight = 600; }
+  else if (pendingAuto)               { border = "#166534"; color = "#22c55e"; bg = "rgba(34,197,94,0.07)"; }
   else if (period.when === "current") { border = "#fbbf24"; color = "#fbbf24"; bg = "rgba(251,191,36,0.1)"; }
   return (
     <div style={{
@@ -1091,7 +1097,8 @@ function PeriodChip({ period, hit, accent, wide }) {
 function BenefitRow({ benefit, year, accent, first }) {
   const st = benefitStatus(benefit, year);
   const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
-  const done = st.open.length === 0 && st.hits.length > 0;
+  const DONE = "#22c55e";
+  const chipAccent = st.complete ? DONE : accent;
   return (
     <div className="bene-row" title={benefit.detail} style={{
       borderTop: first ? "none" : "1px solid #1a1a1d",
@@ -1099,7 +1106,10 @@ function BenefitRow({ benefit, year, accent, first }) {
       <div style={{ display: "flex", alignItems: "center", gap: 7, flex: "1 1 165px", minWidth: 0 }}>
         <span style={{
           fontSize: 11.5, fontFamily: "'DM Mono', monospace",
-          color: st.open.length > 0 ? "#fbbf24" : done ? "#a1a1aa" : "#d4d4d8",
+          color: st.complete ? DONE : st.open.length > 0 ? "#fbbf24" : "#d4d4d8",
+          textDecoration: st.complete ? "line-through" : "none",
+          textDecorationColor: "rgba(34,197,94,0.45)",
+          textDecorationThickness: "1px",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{benefit.name}</span>
         {benefit.auto && (
@@ -1111,11 +1121,13 @@ function BenefitRow({ benefit, year, accent, first }) {
       </span>
       <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
         {st.periods.map((p) => (
-          <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)} accent={accent} wide={wide} />
+          <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)}
+            accent={chipAccent} wide={wide}
+            pendingAuto={st.complete && !st.claimedSet.has(p.key)} />
         ))}
       </div>
-      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10.5, color: "#71717a", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
-        {fmt0(st.captured)}<span style={{ color: "#3f3f46" }}> / {fmt0(st.total)}</span>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10.5, color: st.complete ? DONE : "#71717a", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
+        {fmt0(st.captured)}<span style={{ color: st.complete ? "rgba(34,197,94,0.4)" : "#3f3f46" }}> / {fmt0(st.total)}</span>
       </span>
     </div>
   );
@@ -1294,6 +1306,7 @@ function Cards() {
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
           {[
             ["Claimed", "#71717a", "#71717a"],
+            ["Complete", "#22c55e", "#22c55e"],
             ["Open now", "rgba(251,191,36,0.1)", "#fbbf24"],
             ["Not claimed", "transparent", "#232326"],
           ].map(([label, bg, border]) => (
