@@ -143,7 +143,7 @@ function TabBar({ view, setView }) {
         border: "1px solid rgba(255,255,255,0.06)",
         borderRadius: 10,
       }}>
-        {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"]].map(([key, label]) => {
+        {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"], ["prop", "Property"]].map(([key, label]) => {
           const active = view === key;
           return (
             <button key={key} onClick={() => setView(key)} style={{
@@ -1382,6 +1382,525 @@ function Cards() {
   );
 }
 
+/* ─── Property (real-estate deal analyzer) ─── */
+
+/* Percent state is stored exactly as typed (7.25 means 7.25%), never as a
+   round-tripped fraction, so a rate like 6.875% keeps its precision. */
+const pctVal = (v) => n(v) / 100;
+
+const commas = (v) =>
+  v === "" || v == null || isNaN(Number(v)) ? "" : Number(v).toLocaleString("en-US");
+
+function PropRow({ label, note, children }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+      padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)",
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, color: "#d8d8de" }}>{label}</div>
+        {note && <div style={{ fontSize: 11.5, color: "#63636e", marginTop: 2 }}>{note}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const propInputStyle = {
+  background: "transparent", border: "none", outline: "none", color: "#fafafa",
+  fontFamily: FONT, fontSize: 15, textAlign: "right", width: 96,
+};
+
+function PropInputShell({ children }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
+      borderBottom: "1px solid #52525b", paddingBottom: 4,
+    }}>{children}</div>
+  );
+}
+
+function MoneyInput({ label, note, value, onChange }) {
+  const [text, setText] = useState(commas(value));
+  const [focused, setFocused] = useState(false);
+  useEffect(() => { if (!focused) setText(commas(value)); }, [value, focused]);
+  return (
+    <PropRow label={label} note={note}>
+      <PropInputShell>
+        <span style={{ color: "#7d7d88", fontSize: 14 }}>$</span>
+        <input
+          type="text" inputMode="decimal" value={text} placeholder="—"
+          onFocus={() => { setFocused(true); setText(value === "" || value == null ? "" : String(value)); }}
+          onBlur={() => {
+            setFocused(false);
+            const raw = parseFloat(text.replace(/,/g, ""));
+            if (text.trim() === "" || isNaN(raw)) { onChange(""); setText(""); }
+            else { onChange(raw); setText(commas(raw)); }
+          }}
+          onChange={(e) => {
+            const cleaned = e.target.value.replace(/[^0-9.,]/g, "");
+            setText(cleaned);
+            const num = parseFloat(cleaned.replace(/,/g, ""));
+            if (cleaned.trim() === "") onChange(""); else if (!isNaN(num)) onChange(num);
+          }}
+          style={propInputStyle} />
+      </PropInputShell>
+    </PropRow>
+  );
+}
+
+function RateInput({ label, note, value, onChange }) {
+  return (
+    <PropRow label={label} note={note}>
+      <PropInputShell>
+        <input
+          type="text" inputMode="decimal" value={value} placeholder="—"
+          onChange={(e) => {
+            const cleaned = e.target.value.replace(/[^0-9.]/g, "");
+            const parts = cleaned.split(".");
+            onChange(parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : cleaned);
+          }}
+          style={{ ...propInputStyle, width: 66 }} />
+        <span style={{ color: "#7d7d88", fontSize: 14 }}>%</span>
+      </PropInputShell>
+    </PropRow>
+  );
+}
+
+function PropCard({ title, action, children, style }) {
+  return (
+    <div style={{
+      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12,
+      padding: "14px 18px 16px", marginBottom: 12, ...style,
+    }}>
+      {title && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <span style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7d7d88", fontWeight: 550 }}>{title}</span>
+          {action}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+/* derived (non-editable) figure */
+function DerivedRow({ label, value, note, accent }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 0" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+        <span style={{ fontSize: 12.5, color: "#8b8b96" }}>{label}</span>
+        {note && <span style={{ fontSize: 11.5, color: "#5a5a64" }}>{note}</span>}
+      </div>
+      <span style={{ fontFamily: FONT, fontSize: 14, color: accent || "#ededf0", fontWeight: 450 }}>{value}</span>
+    </div>
+  );
+}
+
+function TotalRow({ label, value, accent = "#fafafa" }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+      paddingTop: 12, marginTop: 6, borderTop: "1px solid #52525b",
+    }}>
+      <span style={{ fontSize: 13, color: "#d8d8de", fontWeight: 550 }}>{label}</span>
+      <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: accent }}>{value}</span>
+    </div>
+  );
+}
+
+function Pills({ options, value, onChange }) {
+  return (
+    <div style={{
+      display: "flex", gap: 2, padding: 3, background: "rgba(255,255,255,0.035)",
+      border: "1px solid rgba(255,255,255,0.06)", borderRadius: 9,
+    }}>
+      {options.map(([key, label]) => {
+        const active = value === key;
+        return (
+          <button key={key} onClick={() => onChange(key)} style={{
+            background: active ? "rgba(255,255,255,0.09)" : "transparent",
+            border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+            fontSize: 12.5, fontWeight: active ? 550 : 450,
+            color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT,
+          }}>{label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+const LOAN_TERM_MONTHS = 360;
+
+/* Pure deal math — everything downstream reads from this. */
+function analyzeDeal(inp) {
+  const sp = n(inp.salePrice), miscV = n(inp.misc), rehabV = n(inp.rehab), rentV = n(inp.rent);
+  const ccPct = pctVal(inp.closingCostPct), ptRate = pctVal(inp.propTaxRate);
+  const ir = pctVal(inp.interestRate), dp = pctVal(inp.downPct);
+  const insV = n(inp.insurance), hoaV = n(inp.hoa), utilV = n(inp.utilities), lawV = n(inp.lawyer);
+  const mgmt = pctVal(inp.mgmtPct), capex = pctVal(inp.capexPct), vac = pctVal(inp.vacancyPct);
+
+  const closingCost = sp * ccPct;
+  const totalCost = sp + miscV + closingCost + rehabV;
+  const annualPropTax = sp * ptRate;
+  const monthlyPropTax = annualPropTax / 12;
+  const mgmtFee = rentV * mgmt, capexAmt = rentV * capex, vacancyLoss = rentV * vac;
+
+  const downAmt = sp * dp;
+  const loanAmt = Math.max(0, sp - downAmt);
+  const r = ir / 12;
+  /* A 0% loan still has to be repaid — amortize it straight-line rather than
+     letting the mortgage silently cost nothing. */
+  const pAndI = loanAmt <= 0 ? 0
+    : ir > 0
+      ? (loanAmt * r * Math.pow(1 + r, LOAN_TERM_MONTHS)) / (Math.pow(1 + r, LOAN_TERM_MONTHS) - 1)
+      : loanAmt / LOAN_TERM_MONTHS;
+
+  const rentBasedExp = mgmtFee + capexAmt + vacancyLoss;
+  const fixedMonthlyExp = monthlyPropTax + insV + hoaV + utilV + lawV;
+  const totalExpNoLoan = fixedMonthlyExp + rentBasedExp;
+  const totalExpWithLoan = totalExpNoLoan + pAndI;
+  const monthlyProfit = rentV - totalExpWithLoan;
+  const annualProfit = monthlyProfit * 12;
+  const cashNeeded = downAmt + closingCost + miscV + rehabV;
+  const cashOnCash = cashNeeded > 0 ? annualProfit / cashNeeded : null;
+  const dscr = pAndI > 0 ? (rentV - totalExpNoLoan) / pAndI : null;
+
+  /* Remaining balance after m payments (closed form, clamped at payoff). */
+  const balanceAfter = (m) => {
+    if (loanAmt <= 0) return 0;
+    const bal = r > 0
+      ? loanAmt * Math.pow(1 + r, m) - (pAndI * (Math.pow(1 + r, m) - 1)) / r
+      : loanAmt - pAndI * m;
+    return Math.max(0, bal);
+  };
+
+  return {
+    sp, miscV, rehabV, rentV, closingCost, totalCost, annualPropTax, monthlyPropTax,
+    mgmtFee, capexAmt, vacancyLoss, insV, hoaV, utilV, lawV, mgmt, capex, vac, ptRate,
+    ccPct, dp, ir, downAmt, loanAmt, pAndI, rentBasedExp, fixedMonthlyExp,
+    totalExpNoLoan, totalExpWithLoan, monthlyProfit, annualProfit, cashNeeded,
+    cashOnCash, dscr, balanceAfter,
+    hasData: sp > 0 && rentV > 0,
+  };
+}
+
+/* Year-by-year cash flow. Rent and the rent-linked expenses grow with rent;
+   tax/insurance/HOA/utilities inflate; the mortgage payment is fixed. */
+function cashFlowYears(d, rentGrowth, expInflation, years) {
+  const rows = [];
+  let cumulative = 0;
+  for (let t = 0; t < years; t++) {
+    const rent = d.rentV * Math.pow(1 + rentGrowth, t);
+    const expenses = d.fixedMonthlyExp * Math.pow(1 + expInflation, t)
+      + d.rentBasedExp * Math.pow(1 + rentGrowth, t)
+      + d.pAndI;
+    const profit = rent - expenses;
+    cumulative += profit * 12;
+    rows.push({
+      year: t + 1, rent, expenses, profit,
+      annual: profit * 12, cumulative,
+      coc: d.cashNeeded > 0 ? (profit * 12) / d.cashNeeded : null,
+    });
+  }
+  return rows;
+}
+
+/* Total return over `years`: rent profit + appreciation + principal paydown. */
+function totalReturn(d, rentGrowth, expInflation, apprRate, years) {
+  const rows = cashFlowYears(d, rentGrowth, expInflation, years);
+  const cumCashFlow = rows.length ? rows[rows.length - 1].cumulative : 0;
+  const apprGain = d.sp * Math.pow(1 + apprRate, years) - d.sp;
+  const paydown = d.loanAmt - d.balanceAfter(years * 12);
+  const totalGain = cumCashFlow + apprGain + paydown;
+  const total = d.cashNeeded > 0 ? totalGain / d.cashNeeded : null;
+  /* CAGR is only defined while the position is still worth something. */
+  const multiple = total == null ? null : 1 + total;
+  const annualized = multiple != null && multiple > 0 ? Math.pow(multiple, 1 / years) - 1 : null;
+  return { rows, cumCashFlow, apprGain, paydown, totalGain, total, annualized };
+}
+
+const pctLabel = (v, dp = 2) => v == null ? "—" : `${(v * 100).toFixed(dp)}%`;
+const gradeCoc = (v) => v == null ? "#7d7d88" : v >= 0.08 ? "#5ec98a" : v >= 0.04 ? "#f0b429" : "#e5484d";
+const gradeDscr = (v) => v >= 1.25 ? "#5ec98a" : v >= 1.0 ? "#f0b429" : "#e5484d";
+
+function DealTab({ v, set }) {
+  const [showRates, setShowRates] = useState(false);
+  const d = analyzeDeal(v);
+
+  return (
+    <>
+      <PropCard title="Income">
+        <MoneyInput label="Monthly Rent" value={v.rent} onChange={set("rent")} />
+      </PropCard>
+
+      <PropCard title="Acquisition">
+        <MoneyInput label="Sale Price" value={v.salePrice} onChange={set("salePrice")} />
+        <MoneyInput label="Misc" note="Furniture, inspection, etc." value={v.misc} onChange={set("misc")} />
+        <MoneyInput label="Out of Pocket Rehab" value={v.rehab} onChange={set("rehab")} />
+        <RateInput label="Closing Cost" value={v.closingCostPct} onChange={set("closingCostPct")} />
+        <div style={{ marginTop: 6 }}>
+          <DerivedRow label="Closing cost" note={`${v.closingCostPct || 0}% of price`} value={fmt(d.closingCost)} />
+          <DerivedRow label="Total cost" value={fmt(d.totalCost)} />
+        </div>
+      </PropCard>
+
+      <PropCard title="Mortgage · 30 yr fixed">
+        <RateInput label="Interest Rate" value={v.interestRate} onChange={set("interestRate")} />
+        <RateInput label="Down Payment" value={v.downPct} onChange={set("downPct")} />
+        <div style={{ marginTop: 6 }}>
+          <DerivedRow label="Down payment" note={`${v.downPct || 0}% of price`} value={fmt(d.downAmt)} />
+          <DerivedRow label="Loan amount" value={fmt(d.loanAmt)} />
+          <DerivedRow label="Principal + interest" note="monthly" value={fmt(d.pAndI)} />
+        </div>
+      </PropCard>
+
+      <PropCard
+        title="Monthly Expenses"
+        action={
+          <button onClick={() => setShowRates(!showRates)} style={{
+            background: showRates ? "rgba(129,140,248,0.14)" : "transparent",
+            border: `1px solid ${showRates ? "rgba(129,140,248,0.35)" : "rgba(255,255,255,0.1)"}`,
+            borderRadius: 6, padding: "3px 9px", cursor: "pointer",
+            fontSize: 11, color: showRates ? "#a5b4fc" : "#7d7d88", fontFamily: FONT,
+          }}>{showRates ? "Done" : "Edit rates"}</button>
+        }>
+        {showRates && (
+          <div style={{
+            background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.16)",
+            borderRadius: 9, padding: "4px 12px 8px", margin: "6px 0 10px",
+          }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "#a5b4fc", padding: "8px 0 2px" }}>% OF RENT</div>
+            <RateInput label="Management fee" value={v.mgmtPct} onChange={set("mgmtPct")} />
+            <RateInput label="Capital expenditures" value={v.capexPct} onChange={set("capexPct")} />
+            <RateInput label="Vacancy" value={v.vacancyPct} onChange={set("vacancyPct")} />
+          </div>
+        )}
+        <RateInput label="County Property Tax" note="annual rate" value={v.propTaxRate} onChange={set("propTaxRate")} />
+        <div style={{ margin: "6px 0 4px" }}>
+          <DerivedRow label="Property tax" note="annual" value={fmt(d.annualPropTax)} accent="#d98b8b" />
+          <DerivedRow label="Property tax" note="monthly" value={fmt(d.monthlyPropTax)} accent="#d98b8b" />
+          <DerivedRow label="Management fee" note={`${v.mgmtPct || 0}% of rent`} value={fmt(d.mgmtFee)} accent="#d98b8b" />
+          <DerivedRow label="Capital expenditures" note={`${v.capexPct || 0}% of rent`} value={fmt(d.capexAmt)} accent="#d98b8b" />
+          <DerivedRow label="Vacancy" note={`${v.vacancyPct || 0}% of rent`} value={fmt(d.vacancyLoss)} accent="#d98b8b" />
+        </div>
+        <MoneyInput label="Insurance" note="monthly" value={v.insurance} onChange={set("insurance")} />
+        <MoneyInput label="HOA" note="monthly" value={v.hoa} onChange={set("hoa")} />
+        <MoneyInput label="Utilities" note="monthly" value={v.utilities} onChange={set("utilities")} />
+        <MoneyInput label="Lawyer" note="monthly" value={v.lawyer} onChange={set("lawyer")} />
+        <div style={{ marginTop: 6 }}>
+          <DerivedRow label="Principal + interest" value={fmt(d.pAndI)} />
+        </div>
+        <TotalRow label="Total monthly expenses" value={fmt(d.totalExpWithLoan)} accent="#e5877f" />
+      </PropCard>
+
+      {d.hasData && (
+        <>
+          <PropCard title="Results · with loan">
+            <DerivedRow label="Monthly revenue" value={fmt(d.rentV)} />
+            <DerivedRow label="Monthly expenses" value={fmt(d.totalExpWithLoan)} />
+            <TotalRow label="Monthly profit" value={fmt(d.monthlyProfit)}
+              accent={d.monthlyProfit >= 0 ? "#5ec98a" : "#e5484d"} />
+            <div style={{ marginTop: 8 }}>
+              <DerivedRow label="Annual cash flow" value={fmt(d.annualProfit)}
+                accent={d.annualProfit >= 0 ? "#5ec98a" : "#e5484d"} />
+            </div>
+          </PropCard>
+
+          <PropCard title="Cash Needed">
+            <DerivedRow label="Down payment" value={fmt(d.downAmt)} />
+            <DerivedRow label="Closing cost" value={fmt(d.closingCost)} />
+            <DerivedRow label="Misc" value={fmt(d.miscV)} />
+            <DerivedRow label="Rehab" value={fmt(d.rehabV)} />
+            <TotalRow label="Total cash needed" value={fmt(d.cashNeeded)} />
+          </PropCard>
+
+          <PropCard>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7d7d88", fontWeight: 550 }}>Cash-on-cash ROI</div>
+                <div style={{ fontSize: 12, color: "#5a5a64", marginTop: 3 }}>Annual cash flow ÷ cash invested</div>
+              </div>
+              <div style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, color: gradeCoc(d.cashOnCash), whiteSpace: "nowrap" }}>
+                {pctLabel(d.cashOnCash)}
+              </div>
+            </div>
+            {d.dscr != null && (
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)",
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7d7d88", fontWeight: 550 }}>DSCR</div>
+                  <div style={{ fontSize: 12, color: gradeDscr(d.dscr), marginTop: 3 }}>
+                    {d.dscr >= 1.25 ? "Strong — on a conservative basis" : d.dscr >= 1.0 ? "Borderline" : "Below 1.0 — negative coverage"}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 3, maxWidth: 250 }}>
+                    NOI ÷ P&amp;I, counting capex and vacancy — stricter than the rent ÷ PITIA most DSCR lenders underwrite on.
+                  </div>
+                </div>
+                <div style={{ fontFamily: FONT, fontSize: 26, fontWeight: 600, color: gradeDscr(d.dscr), whiteSpace: "nowrap" }}>
+                  {d.dscr.toFixed(2)}
+                </div>
+              </div>
+            )}
+          </PropCard>
+        </>
+      )}
+    </>
+  );
+}
+
+const HORIZONS = [["3", "3 yr"], ["5", "5 yr"], ["10", "10 yr"]];
+const SCENARIOS = [["Poor", 1], ["Average", 2], ["Great", 4]];
+
+function ProjectionsTab({ v, set }) {
+  const [horizon, setHorizon] = useState("5");
+  const d = analyzeDeal(v);
+  const years = parseInt(horizon, 10);
+  const rg = pctVal(v.rentGrowthPct);
+  const infl = pctVal(v.expInflationPct);
+  const appr = pctVal(v.apprPct);
+
+  if (!d.hasData || d.cashNeeded <= 0) {
+    return (
+      <PropCard>
+        <div style={{ textAlign: "center", padding: "18px 0", fontSize: 13.5, color: "#7d7d88" }}>
+          Enter a sale price and rent on the Deal tab first.
+        </div>
+      </PropCard>
+    );
+  }
+
+  const r = totalReturn(d, rg, infl, appr, years);
+  const cell = { fontFamily: FONT, fontSize: 12.5, textAlign: "right", color: "#ededf0" };
+  const head = { fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#63636e", fontWeight: 550 };
+
+  return (
+    <>
+      <PropCard title="Assumptions">
+        <RateInput label="Rent Growth" note="per year, compounding" value={v.rentGrowthPct} onChange={set("rentGrowthPct")} />
+        <RateInput label="Expense Inflation" note="tax, insurance, HOA, utilities" value={v.expInflationPct} onChange={set("expInflationPct")} />
+        <RateInput label="Appreciation" note="per year, compounding" value={v.apprPct} onChange={set("apprPct")} />
+      </PropCard>
+
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+        <Pills options={HORIZONS} value={horizon} onChange={setHorizon} />
+      </div>
+
+      <PropCard title={`${years}-year total return`}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap", margin: "8px 0 4px" }}>
+          <div>
+            <div style={{ fontFamily: FONT, fontSize: 34, fontWeight: 600, color: r.total >= 0 ? "#5ec98a" : "#e5484d", lineHeight: 1 }}>
+              {pctLabel(r.total)}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 5 }}>cumulative on cash invested</div>
+          </div>
+          <div style={{ marginLeft: "auto", textAlign: "right" }}>
+            <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 600, color: "#ededf0", lineHeight: 1 }}>
+              {r.annualized == null ? "—" : pctLabel(r.annualized)}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 5 }}>annualized</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 12, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <DerivedRow label="Rent profit" note={`${years} yr cumulative`} value={fmt0(r.cumCashFlow)}
+            accent={r.cumCashFlow >= 0 ? "#5ec98a" : "#e5484d"} />
+          <DerivedRow label="Appreciation" note={`${v.apprPct || 0}%/yr compounding`} value={fmt0(r.apprGain)} />
+          <DerivedRow label="Principal paydown" value={fmt0(r.paydown)} />
+          <TotalRow label="Total gain" value={fmt0(r.totalGain)} accent={r.totalGain >= 0 ? "#5ec98a" : "#e5484d"} />
+          <div style={{ marginTop: 8 }}>
+            <DerivedRow label="Cash invested" value={fmt0(d.cashNeeded)} />
+          </div>
+        </div>
+      </PropCard>
+
+      <PropCard title="Year by year">
+        <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 58px", gap: 8, padding: "6px 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={head}>Yr</div>
+          <div style={{ ...head, textAlign: "right" }}>Rent/mo</div>
+          <div style={{ ...head, textAlign: "right" }}>Profit/mo</div>
+          <div style={{ ...head, textAlign: "right" }}>Cumul.</div>
+          <div style={{ ...head, textAlign: "right" }}>CoC</div>
+        </div>
+        {r.rows.map((row) => (
+          <div key={row.year} style={{
+            display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 58px", gap: 8,
+            padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "baseline",
+          }}>
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88" }}>{row.year}</div>
+            <div style={cell}>{fmt0(row.rent)}</div>
+            <div style={{ ...cell, color: row.profit >= 0 ? "#5ec98a" : "#e5484d" }}>{fmt0(row.profit)}</div>
+            <div style={{ ...cell, color: row.cumulative >= 0 ? "#d8d8de" : "#e5877f" }}>{fmt0(row.cumulative)}</div>
+            <div style={{ ...cell, color: gradeCoc(row.coc), fontWeight: 550 }}>{pctLabel(row.coc, 1)}</div>
+          </div>
+        ))}
+        <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 10, lineHeight: 1.55 }}>
+          Rent and the rent-linked costs grow {v.rentGrowthPct || 0}%/yr; tax, insurance, HOA and utilities
+          inflate {v.expInflationPct || 0}%/yr. The mortgage payment is fixed.
+        </div>
+      </PropCard>
+
+      <PropCard title={`Appreciation scenarios · ${years} yr`}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 1fr 1fr 1fr", gap: 8, padding: "6px 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={head}>Case</div>
+          <div style={{ ...head, textAlign: "right" }}>Rate</div>
+          <div style={{ ...head, textAlign: "right" }}>Equity</div>
+          <div style={{ ...head, textAlign: "right" }}>Total</div>
+          <div style={{ ...head, textAlign: "right" }}>Ann.</div>
+        </div>
+        {SCENARIOS.map(([label, rate]) => {
+          const s = totalReturn(d, rg, infl, rate / 100, years);
+          return (
+            <div key={label} style={{
+              display: "grid", gridTemplateColumns: "1fr 44px 1fr 1fr 1fr", gap: 8,
+              padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "baseline",
+            }}>
+              <div style={{ fontSize: 12.5, color: "#d8d8de", fontWeight: 550 }}>{label}</div>
+              <div style={{ ...cell, color: "#7d7d88" }}>{rate}%</div>
+              <div style={{ ...cell, color: "#8ab4f8" }}>{fmt0(s.apprGain + s.paydown)}</div>
+              <div style={{ ...cell, color: s.total >= 0 ? "#5ec98a" : "#e5484d", fontWeight: 550 }}>{pctLabel(s.total, 1)}</div>
+              <div style={{ ...cell, color: "#d8d8de" }}>{s.annualized == null ? "—" : pctLabel(s.annualized, 1)}</div>
+            </div>
+          );
+        })}
+        <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 10, lineHeight: 1.55 }}>
+          Equity = appreciation + principal paid down. Total return also includes cumulative rent
+          profit. Gains are before selling costs and taxes.
+        </div>
+      </PropCard>
+    </>
+  );
+}
+
+function Property() {
+  const [v, setV] = useState({
+    salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
+    rent: 1800, propTaxRate: "0.96", interestRate: "7.25", downPct: "25",
+    insurance: 49.58, hoa: "", utilities: "", lawyer: "",
+    mgmtPct: "8", capexPct: "4", vacancyPct: "5",
+    rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
+  });
+  const set = useCallback((key) => (val) => setV((prev) => ({ ...prev, [key]: val })), []);
+  const [sub, setSub] = useState("deal");
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
+      <div style={{ width: "100%", maxWidth: 460 }}>
+        <div style={{ marginBottom: 22 }}>
+          <p style={{ fontFamily: FONT, fontSize: 13.5, color: "#8b8b96", margin: "0 0 4px" }}>rental deal analyzer</p>
+          <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Property</h1>
+        </div>
+        <div style={{ display: "flex", marginBottom: 18 }}>
+          <Pills options={[["deal", "Deal"], ["proj", "Projections"]]} value={sub} onChange={setSub} />
+        </div>
+        {sub === "deal" ? <DealTab v={v} set={set} /> : <ProjectionsTab v={v} set={set} />}
+      </div>
+    </div>
+  );
+}
+
 /* ─── App shell ─── */
 
 function App() {
@@ -1408,7 +1927,7 @@ function App() {
         input::placeholder { color: #52525b; }
       `}</style>
       <TabBar view={view} setView={changeView} />
-      {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : <Calc />}
+      {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : <Calc />}
     </div>
   );
 }
