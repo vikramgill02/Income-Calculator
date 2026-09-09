@@ -15,6 +15,7 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <style>
 :root {
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1874,16 +1875,222 @@ function ProjectionsTab({ v, set }) {
   );
 }
 
+/* ─── Property cloud sync ───
+   Paste the two values from Supabase → Project Settings → Data API.
+   Left blank, the Property tab still works; only cloud saving is off. */
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
+
+const PROP_DEFAULTS = {
+  salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
+  rent: 1800, propTaxRate: "0.96", interestRate: "7.25", downPct: "25",
+  insurance: 49.58, hoa: "", utilities: "", lawyer: "",
+  mgmtPct: "8", capexPct: "4", vacancyPct: "5",
+  rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
+};
+
+const DRAFT_KEY = "property-draft";
+const syncConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+/* Built once, and only if the library actually loaded — a blocked CDN or a
+   blank config must leave the rest of the tab working. */
+let _sb;
+function getSb() {
+  if (_sb !== undefined) return _sb;
+  try {
+    _sb = syncConfigured() && window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+  } catch (e) { _sb = null; }
+  return _sb;
+}
+
+/* Deals live in the cloud; the in-progress draft is cached per browser so
+   switching tabs mid-deal doesn't discard it. */
+function useDeals(v, setAll) {
+  const [session, setSession] = useState(null);
+  const [ready, setReady] = useState(!syncConfigured());
+  const [deals, setDeals] = useState([]);
+  const [currentId, setCurrentId] = useState(null);
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    const sb = getSb();
+    if (!sb) { setReady(true); return; }
+    let alive = true;
+    sb.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSession(data.session || null);
+      setReady(true);
+    }).catch(() => alive && setReady(true));
+    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => {
+      if (alive) setSession(s || null);
+    });
+    return () => { alive = false; sub?.subscription?.unsubscribe(); };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    const sb = getSb();
+    if (!sb || !session) return;
+    const { data, error } = await sb.from("deals")
+      .select("id,name,data,updated_at").order("updated_at", { ascending: false });
+    if (!error) setDeals(data || []);
+  }, [session]);
+
+  useEffect(() => { if (session) refresh(); else setDeals([]); }, [session, refresh]);
+
+  const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus((s) => s === msg ? "" : s), 2500); };
+
+  const save = async (asNew) => {
+    const sb = getSb();
+    if (!sb || !session) return;
+    const label = (name || "").trim() || "Untitled deal";
+    setStatus("Saving…");
+    const payload = { name: label, data: v, user_id: session.user.id, updated_at: new Date().toISOString() };
+    const q = (!asNew && currentId)
+      ? sb.from("deals").update(payload).eq("id", currentId).select("id").single()
+      : sb.from("deals").insert(payload).select("id").single();
+    const { data, error } = await q;
+    if (error) { flash("Couldn't save — " + error.message); return; }
+    setCurrentId(data.id); setName(label); flash("Saved");
+    refresh();
+  };
+
+  const load = (id) => {
+    const d = deals.find((x) => x.id === id);
+    if (!d) return;
+    setAll({ ...PROP_DEFAULTS, ...(d.data || {}) });
+    setCurrentId(d.id); setName(d.name || ""); flash("Loaded");
+  };
+
+  const remove = async () => {
+    const sb = getSb();
+    if (!sb || !currentId) return;
+    const { error } = await sb.from("deals").delete().eq("id", currentId);
+    if (error) { flash("Couldn't delete — " + error.message); return; }
+    setCurrentId(null); setName(""); flash("Deleted"); refresh();
+  };
+
+  const startNew = () => { setAll({ ...PROP_DEFAULTS }); setCurrentId(null); setName(""); };
+
+  return { session, ready, deals, currentId, name, setName, status, save, load, remove, startNew, refresh };
+}
+
+function SignIn() {
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [mode, setMode] = useState("in");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const go = async () => {
+    const sb = getSb();
+    if (!sb) return;
+    setBusy(true); setMsg("");
+    const fn = mode === "in" ? "signInWithPassword" : "signUp";
+    const { data, error } = await sb.auth[fn]({ email: email.trim(), password: pw });
+    setBusy(false);
+    if (error) { setMsg(error.message); return; }
+    if (mode === "up" && !data.session) setMsg("Check your email to confirm, then sign in.");
+  };
+
+  const field = {
+    background: "transparent", border: "none", outline: "none", color: "#fafafa",
+    fontFamily: FONT, fontSize: 14, width: "100%",
+  };
+  const wrap = { borderBottom: "1px solid #52525b", paddingBottom: 6, marginTop: 12 };
+
+  return (
+    <PropCard title={mode === "in" ? "Sign in to sync deals" : "Create your account"}>
+      <div style={{ fontSize: 12.5, color: "#7d7d88", marginTop: 4, lineHeight: 1.5 }}>
+        Signing in saves your deals to the cloud so they follow you between your PC, Mac and phone.
+      </div>
+      <div style={wrap}>
+        <input type="email" placeholder="you@example.com" value={email} autoComplete="username"
+          onChange={(e) => setEmail(e.target.value)} style={field} />
+      </div>
+      <div style={wrap}>
+        <input type="password" placeholder="password" value={pw}
+          autoComplete={mode === "in" ? "current-password" : "new-password"}
+          onChange={(e) => setPw(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") go(); }} style={field} />
+      </div>
+      {msg && <div style={{ fontSize: 12.5, color: "#f0b429", marginTop: 12 }}>{msg}</div>}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
+        <button onClick={go} disabled={busy || !email || !pw} style={{
+          background: busy || !email || !pw ? "rgba(255,255,255,0.06)" : "#5ec98a",
+          color: busy || !email || !pw ? "#63636e" : "#08080a",
+          border: "none", borderRadius: 8, padding: "8px 18px", fontFamily: FONT,
+          fontSize: 13, fontWeight: 600, cursor: busy || !email || !pw ? "not-allowed" : "pointer",
+        }}>{busy ? "…" : mode === "in" ? "Sign in" : "Create account"}</button>
+        <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(""); }} style={{
+          background: "transparent", border: "none", color: "#7d7d88",
+          fontFamily: FONT, fontSize: 12.5, cursor: "pointer", textDecoration: "underline",
+        }}>{mode === "in" ? "Create an account" : "I already have one"}</button>
+      </div>
+    </PropCard>
+  );
+}
+
+function DealsBar({ d }) {
+  const btn = (primary) => ({
+    background: primary ? "rgba(94,201,138,0.14)" : "transparent",
+    border: `1px solid ${primary ? "rgba(94,201,138,0.35)" : "rgba(255,255,255,0.1)"}`,
+    borderRadius: 7, padding: "5px 11px", cursor: "pointer",
+    fontFamily: FONT, fontSize: 12, color: primary ? "#5ec98a" : "#8b8b96",
+  });
+  return (
+    <PropCard title="Saved deals" action={
+      <button onClick={() => getSb()?.auth.signOut()} style={{
+        background: "transparent", border: "none", color: "#63636e",
+        fontFamily: FONT, fontSize: 11.5, cursor: "pointer",
+      }}>Sign out</button>
+    }>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+        <select value={d.currentId || ""} onChange={(e) => e.target.value ? d.load(e.target.value) : d.startNew()}
+          style={{
+            background: "#101014", color: "#ededf0", border: "1px solid #3f3f46",
+            borderRadius: 7, padding: "6px 8px", fontFamily: FONT, fontSize: 12.5,
+            flex: "1 1 150px", minWidth: 0, outline: "none",
+          }}>
+          <option value="">— New deal —</option>
+          {d.deals.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+        <input value={d.name} onChange={(e) => d.setName(e.target.value)} placeholder="Name this deal"
+          style={{
+            background: "transparent", border: "none", borderBottom: "1px solid #52525b",
+            color: "#fafafa", fontFamily: FONT, fontSize: 13, padding: "4px 2px",
+            flex: "1 1 130px", minWidth: 0, outline: "none",
+          }} />
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+        <button onClick={() => d.save(false)} style={btn(true)}>{d.currentId ? "Save" : "Save deal"}</button>
+        {d.currentId && <button onClick={() => d.save(true)} style={btn(false)}>Save as new</button>}
+        {d.currentId && <button onClick={d.remove} style={btn(false)}>Delete</button>}
+        <button onClick={d.startNew} style={btn(false)}>New</button>
+        {d.status && <span style={{ fontSize: 12, color: "#7d7d88", marginLeft: "auto" }}>{d.status}</span>}
+      </div>
+    </PropCard>
+  );
+}
+
 function Property() {
-  const [v, setV] = useState({
-    salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
-    rent: 1800, propTaxRate: "0.96", interestRate: "7.25", downPct: "25",
-    insurance: 49.58, hoa: "", utilities: "", lawyer: "",
-    mgmtPct: "8", capexPct: "4", vacancyPct: "5",
-    rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
+  const [v, setV] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(DRAFT_KEY);
+      if (saved) return { ...PROP_DEFAULTS, ...JSON.parse(saved) };
+    } catch (e) {}
+    return { ...PROP_DEFAULTS };
   });
   const set = useCallback((key) => (val) => setV((prev) => ({ ...prev, [key]: val })), []);
   const [sub, setSub] = useState("deal");
+  const deals = useDeals(v, setV);
+
+  /* Keep the in-progress deal across tab switches and reloads. */
+  useEffect(() => {
+    try { window.localStorage.setItem(DRAFT_KEY, JSON.stringify(v)); } catch (e) {}
+  }, [v]);
 
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
@@ -1892,6 +2099,9 @@ function Property() {
           <p style={{ fontFamily: FONT, fontSize: 13.5, color: "#8b8b96", margin: "0 0 4px" }}>rental deal analyzer</p>
           <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Property</h1>
         </div>
+
+        {syncConfigured() && deals.ready && (deals.session ? <DealsBar d={deals} /> : <SignIn />)}
+
         <div style={{ display: "flex", marginBottom: 18 }}>
           <Pills options={[["deal", "Deal"], ["proj", "Projections"]]} value={sub} onChange={setSub} />
         </div>

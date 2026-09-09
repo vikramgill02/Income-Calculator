@@ -5,7 +5,7 @@ Single-page app deployed at <https://vikramgill02.github.io/Income-Calculator/>.
 - **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. OT applies per week (first 40 hrs at base, anything over at 1.5×). Toggle for the blended night + weekend differential rate.
 - **Dashboard** — year-to-date income. Gross / net / 403(b) / taxes, pie chart by employer, per-employer cards with logos, monthly bar chart with projections, and a filterable paystub table. Data lives in [`paystubs.json`](./paystubs.json).
 - **Cards** — credit card credits & perks checklist for Amex Platinum, Amex Gold, and Capital One Venture X. Data lives in [`cards.json`](./cards.json).
-- **Property** — rental deal analyzer. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR); *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years. No data file — everything is typed in.
+- **Property** — rental deal analyzer. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR); *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years. Deals sync across devices once Supabase is configured — see below.
 
 ## Data files
 
@@ -73,3 +73,27 @@ Appreciation compounds on the purchase price (not on after-repair value), and
 gains are **before selling costs and taxes** — so the total return is a
 hold-value figure, not a net-of-sale one. Annualized return shows `—` when a
 deal loses more than the cash put in, since a compound rate is undefined there.
+
+## Property tab — saved deals
+
+The in-progress deal is cached in the browser (`localStorage`), so switching
+tabs or reloading never loses it. Named deals sync across devices through
+Supabase, which is off until two values are filled in near the top of the
+`Property cloud sync` block in [`index.html`](./index.html):
+
+```js
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
+```
+
+Left blank, the tab works exactly as before with no sign-in prompt and no
+cloud saving. To turn syncing on:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Run [`supabase-setup.sql`](./supabase-setup.sql) in **SQL Editor → New query**.
+3. Copy the **Project URL** and the **anon / public** key from
+   **Project Settings → API** into the two constants above.
+
+The anon key is designed to be published; Row Level Security is what confines
+each account to its own rows. Never paste the `service_role` key here — it
+bypasses those policies.
