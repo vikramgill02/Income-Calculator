@@ -1878,8 +1878,8 @@ function ProjectionsTab({ v, set }) {
 /* ─── Property cloud sync ───
    Paste the two values from Supabase → Project Settings → Data API.
    Left blank, the Property tab still works; only cloud saving is off. */
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://czysubahmllgjhfgehni.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eXN1YmFobWxsZ2poZmdlaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5ODg5NDcsImV4cCI6MjEwNDU2NDk0N30.ZeeO8bdIn3kCZ584SBQMbzNPCPwqqjvjXY1D3wWK4fg";
 
 const PROP_DEFAULTS = {
   salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
@@ -1991,7 +1991,12 @@ function SignIn() {
     const fn = mode === "in" ? "signInWithPassword" : "signUp";
     const { data, error } = await sb.auth[fn]({ email: email.trim(), password: pw });
     setBusy(false);
-    if (error) { setMsg(error.message); return; }
+    if (error) {
+      setMsg(/failed to fetch|networkerror/i.test(error.message)
+        ? "Couldn't reach the database — check your internet connection."
+        : error.message);
+      return;
+    }
     if (mode === "up" && !data.session) setMsg("Check your email to confirm, then sign in.");
   };
 
