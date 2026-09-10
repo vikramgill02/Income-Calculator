@@ -5,7 +5,7 @@ Single-page app deployed at <https://vikramgill02.github.io/Income-Calculator/>.
 - **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. OT applies per week (first 40 hrs at base, anything over at 1.5×). Toggle for the blended night + weekend differential rate.
 - **Dashboard** — year-to-date income. Gross / net / 403(b) / taxes, pie chart by employer, per-employer cards with logos, monthly bar chart with projections, and a filterable paystub table. Data lives in [`paystubs.json`](./paystubs.json).
 - **Cards** — credit card credits & perks checklist for Amex Platinum, Amex Gold, and Capital One Venture X. Data lives in [`cards.json`](./cards.json).
-- **Property** — rental deal analyzer. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR); *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years. Deals sync across devices once Supabase is configured — see below.
+- **Property** — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
 ## Data files
 
@@ -97,3 +97,35 @@ cloud saving. To turn syncing on:
 The anon key is designed to be published; Row Level Security is what confines
 each account to its own rows. Never paste the `service_role` key here — it
 bypasses those policies.
+
+## Property tab — reading the charts
+
+**Where the rent goes** and **Cash to close** are donuts; hovering a slice breaks
+it into its component lines. Slices drop out when a cost is zero, so the hues are
+validated with `--pairs all` (order-independent) rather than only as drawn —
+worst CVD ΔE 6.9 sits in the 6–8 floor band, which is why every slice also carries
+a legend entry, a dollar value and a percentage. Colour is never the only encoding.
+
+**Where the return comes from** stacks each year's cumulative gain by source —
+rent profit, appreciation, principal paydown — above a second panel showing the
+annualized return you'd have realised selling at the end of that year. They are
+two panels sharing one x-axis rather than one chart with two y-scales, so the
+dollar and percentage series are never visually compared against each other.
+
+The split matters when judging a deal: rent profit is cash already banked, while
+appreciation and paydown are equity locked in the property until sale or
+refinance. A return leaning mostly on appreciation is a forecast, not income.
+
+### Which number should clear 10%?
+
+Cash-on-cash and annualized total return measure different things and don't share
+a benchmark. **Cash-on-cash** counts only cash reaching your account. The
+**annualized total return** adds appreciation and principal paydown, so ~10% is the
+natural bar there — it's roughly what a broad stock index returns, which is the real
+opportunity cost of the down payment.
+
+A 4–6% cash-on-cash on a stabilized, capex-complete property is defensible: less
+execution risk earns a lower premium. But that range is close to what cash pays
+risk-free, so it only holds up if appreciation and paydown carry the rest — the
+least predictable part of the return. Note also that "capex is already done"
+argues for a later replacement date, not a zero capex line.
