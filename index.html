@@ -1575,12 +1575,14 @@ function analyzeDeal(inp) {
   const ir = pctVal(inp.interestRate), dp = pctVal(inp.downPct);
   const insV = n(inp.insurance), hoaV = n(inp.hoa), utilV = n(inp.utilities), lawV = n(inp.lawyer);
   const mgmt = pctVal(inp.mgmtPct), capex = pctVal(inp.capexPct), vac = pctVal(inp.vacancyPct);
+  const repairs = pctVal(inp.repairsPct);
 
   const closingCost = sp * ccPct;
   const totalCost = sp + miscV + closingCost + rehabV;
   const annualPropTax = sp * ptRate;
   const monthlyPropTax = annualPropTax / 12;
   const mgmtFee = rentV * mgmt, capexAmt = rentV * capex, vacancyLoss = rentV * vac;
+  const repairAmt = rentV * repairs;
 
   const downAmt = sp * dp;
   const loanAmt = Math.max(0, sp - downAmt);
@@ -1592,7 +1594,7 @@ function analyzeDeal(inp) {
       ? (loanAmt * r * Math.pow(1 + r, LOAN_TERM_MONTHS)) / (Math.pow(1 + r, LOAN_TERM_MONTHS) - 1)
       : loanAmt / LOAN_TERM_MONTHS;
 
-  const rentBasedExp = mgmtFee + capexAmt + vacancyLoss;
+  const rentBasedExp = mgmtFee + repairAmt + capexAmt + vacancyLoss;
   const fixedMonthlyExp = monthlyPropTax + insV + hoaV + utilV + lawV;
   const totalExpNoLoan = fixedMonthlyExp + rentBasedExp;
   const totalExpWithLoan = totalExpNoLoan + pAndI;
@@ -1613,7 +1615,8 @@ function analyzeDeal(inp) {
 
   return {
     sp, miscV, rehabV, rentV, closingCost, totalCost, annualPropTax, monthlyPropTax,
-    mgmtFee, capexAmt, vacancyLoss, insV, hoaV, utilV, lawV, mgmt, capex, vac, ptRate,
+    mgmtFee, repairAmt, capexAmt, vacancyLoss, insV, hoaV, utilV, lawV,
+    mgmt, repairs, capex, vac, ptRate,
     ccPct, dp, ir, downAmt, loanAmt, pAndI, rentBasedExp, fixedMonthlyExp,
     totalExpNoLoan, totalExpWithLoan, monthlyProfit, annualProfit, cashNeeded,
     cashOnCash, dscr, balanceAfter,
@@ -1679,7 +1682,8 @@ function monthlyBuckets(d) {
       items: [["Property tax", d.monthlyPropTax], ["Insurance", d.insV],
               ["HOA", d.hoaV], ["Utilities", d.utilV], ["Lawyer", d.lawV]] },
     { label: "Management & reserves", color: C_OPS, value: d.rentBasedExp,
-      items: [["Management", d.mgmtFee], ["Capital expenditures", d.capexAmt], ["Vacancy", d.vacancyLoss]] },
+      items: [["Management", d.mgmtFee], ["Repairs & maintenance", d.repairAmt],
+              ["Capital expenditures", d.capexAmt], ["Vacancy", d.vacancyLoss]] },
     { label: "Profit", color: C_PROFIT, value: Math.max(0, d.monthlyProfit), items: [] },
   ].filter((b) => b.value > 0.005);
 }
@@ -2036,7 +2040,6 @@ const HORIZONS = [["3", "3 yr"], ["5", "5 yr"], ["10", "10 yr"]];
 const SCENARIOS = [["Poor", 1], ["Average", 2], ["Great", 4]];
 
 function DealTab({ v, set }) {
-  const [showRates, setShowRates] = useState(false);
   const d = analyzeDeal(v);
 
   return (
@@ -2082,30 +2085,26 @@ function DealTab({ v, set }) {
             </div>
           </PropCard>
 
-          <PropCard title="Monthly Expenses" action={
-            <button onClick={() => setShowRates(!showRates)} style={{
-              background: showRates ? "rgba(129,140,248,0.14)" : "transparent",
-              border: `1px solid ${showRates ? "rgba(129,140,248,0.35)" : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 6, padding: "3px 9px", cursor: "pointer",
-              fontSize: 11, color: showRates ? "#a5b4fc" : "#7d7d88", fontFamily: FONT,
-            }}>{showRates ? "Done" : "Edit rates"}</button>
-          }>
-            {showRates && (
-              <div style={{ background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.16)",
-                borderRadius: 9, padding: "4px 12px 8px", margin: "6px 0 10px" }}>
-                <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "#a5b4fc", padding: "8px 0 2px" }}>% OF RENT</div>
-                <RateInput label="Management fee" value={v.mgmtPct} onChange={set("mgmtPct")} />
-                <RateInput label="Capital expenditures" value={v.capexPct} onChange={set("capexPct")} />
-                <RateInput label="Vacancy" value={v.vacancyPct} onChange={set("vacancyPct")} />
-              </div>
-            )}
-            <RateInput label="County Property Tax" note="annual rate" value={v.propTaxRate} onChange={set("propTaxRate")} />
-            <div style={{ margin: "6px 0 4px" }}>
-              <DerivedRow label="Property tax" note="annual" value={fmt(d.annualPropTax)} accent="#d98b8b" />
-              <DerivedRow label="Property tax" note="monthly" value={fmt(d.monthlyPropTax)} accent="#d98b8b" />
+          <PropCard title="Monthly Expenses">
+            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#5a5a64", padding: "8px 0 2px" }}>% OF RENT</div>
+            <RateInput label="Management fee" value={v.mgmtPct} onChange={set("mgmtPct")} />
+            <RateInput label="Repairs & maintenance" note="ongoing fixes, not big replacements"
+              value={v.repairsPct} onChange={set("repairsPct")} />
+            <RateInput label="Capital expenditures" note="reserve for roof, HVAC, etc."
+              value={v.capexPct} onChange={set("capexPct")} />
+            <RateInput label="Vacancy" note="months empty, spread over the year"
+              value={v.vacancyPct} onChange={set("vacancyPct")} />
+            <div style={{ margin: "6px 0 10px" }}>
               <DerivedRow label="Management fee" note={`${v.mgmtPct || 0}% of rent`} value={fmt(d.mgmtFee)} accent="#d98b8b" />
+              <DerivedRow label="Repairs & maintenance" note={`${v.repairsPct || 0}% of rent`} value={fmt(d.repairAmt)} accent="#d98b8b" />
               <DerivedRow label="Capital expenditures" note={`${v.capexPct || 0}% of rent`} value={fmt(d.capexAmt)} accent="#d98b8b" />
               <DerivedRow label="Vacancy" note={`${v.vacancyPct || 0}% of rent`} value={fmt(d.vacancyLoss)} accent="#d98b8b" />
+            </div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#5a5a64", padding: "4px 0 2px" }}>FIXED COSTS</div>
+            <RateInput label="County Property Tax" note="annual rate" value={v.propTaxRate} onChange={set("propTaxRate")} />
+            <div style={{ margin: "6px 0 10px" }}>
+              <DerivedRow label="Property tax" note="annual" value={fmt(d.annualPropTax)} accent="#d98b8b" />
+              <DerivedRow label="Property tax" note="monthly" value={fmt(d.monthlyPropTax)} accent="#d98b8b" />
             </div>
             <MoneyInput label="Insurance" note="monthly" value={v.insurance} onChange={set("insurance")} />
             <MoneyInput label="HOA" note="monthly" value={v.hoa} onChange={set("hoa")} />
@@ -2311,7 +2310,7 @@ const PROP_DEFAULTS = {
   salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
   rent: 1800, propTaxRate: "0.96", interestRate: "7.25", downPct: "25",
   insurance: 49.58, hoa: "", utilities: "", lawyer: "",
-  mgmtPct: "8", capexPct: "4", vacancyPct: "5",
+  mgmtPct: "8", repairsPct: "0", capexPct: "4", vacancyPct: "5",
   rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
 };
 

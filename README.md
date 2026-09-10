@@ -48,9 +48,17 @@ Inputs only; nothing is stored, so a deal resets when you leave the tab.
 monthly rate. A 0% loan amortizes straight-line (`L / 360`) rather than costing
 nothing. PMI is not modelled — below 20% down the payment is understated.
 
-**Monthly expenses.** Property tax (county rate × price ÷ 12), insurance, HOA,
-utilities and lawyer are flat dollar amounts; management fee, capital
-expenditures and vacancy are percentages of rent, editable under *Edit rates*.
+**Monthly expenses.** Split into two groups. Management fee, repairs &
+maintenance, capital expenditures and vacancy are percentages of rent, entered
+directly at the top of the card with the resulting dollar figures beneath.
+Property tax (county rate × price ÷ 12), insurance, HOA, utilities and lawyer
+are flat dollar amounts.
+
+Repairs & maintenance and capital expenditures are deliberately separate lines:
+R&M is ongoing small work, capex is the reserve for big replacements. R&M
+defaults to 0% so it never silently changes a saved deal — set it yourself.
+A recently renovated property justifies a later replacement date, not a zero
+capex line.
 
 **Cash-on-cash ROI** = annual cash flow ÷ (down payment + closing + misc + rehab).
 
