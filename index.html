@@ -1988,8 +1988,12 @@ function SignIn() {
     const sb = getSb();
     if (!sb) return;
     setBusy(true); setMsg("");
+    /* Point confirmation links back at this page. Without it Supabase falls
+       back to the project's Site URL, which defaults to localhost. */
+    const creds = { email: email.trim(), password: pw };
+    if (mode === "up") creds.options = { emailRedirectTo: window.location.origin + window.location.pathname };
     const fn = mode === "in" ? "signInWithPassword" : "signUp";
-    const { data, error } = await sb.auth[fn]({ email: email.trim(), password: pw });
+    const { data, error } = await sb.auth[fn](creds);
     setBusy(false);
     if (error) {
       setMsg(/failed to fetch|networkerror/i.test(error.message)
