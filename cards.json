@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-13",
+  "last_updated": "2026-09-18",
   "year": 2026,
   "cards": [
     {
@@ -258,7 +258,8 @@
           "per": 50,
           "detail": "US Resy restaurants. $50 Jan–Jun, $50 Jul–Dec.",
           "claimed": [
-            "2026-H1"
+            "2026-H1",
+            "2026-H2"
           ]
         }
       ],
