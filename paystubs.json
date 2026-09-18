@@ -1,42 +1,223 @@
 {
   "year": 2026,
-  "last_updated": "2026-08-31",
+  "last_updated": "2026-09-18",
   "projection": {
-    "notes": "Sutter biweekly @ $5,947.20 ($82.60 × 72 hrs). NorthBay: quit as of 8/21/2026. Missing 9/4 Sutter check (traveling abroad).",
+    "notes": "Sutter biweekly @ $5,947.20 ($82.60 x 72 hrs). NorthBay: quit as of 8/21/2026. Sept actuals came in light - 9/4 check covered only 7.3 worked hours (travel).",
     "monthly": {
-      "2026-09": { "Sutter": 5947.20 },
-      "2026-10": { "Sutter": 17841.60 },
-      "2026-11": { "Sutter": 11894.40 },
-      "2026-12": { "Sutter": 11894.40 }
+      "2026-10": {
+        "Sutter": 17841.6
+      },
+      "2026-11": {
+        "Sutter": 11894.4
+      },
+      "2026-12": {
+        "Sutter": 11894.4
+      }
     }
   },
   "paystubs": [
-    { "employer": "CCMC",     "pay_date": "2026-01-15", "gross": 4304.98, "net": 2710.81, "retirement_403b": 344.40 },
-    { "employer": "CCMC",     "pay_date": "2026-01-29", "gross": 3889.70, "net": 2579.14, "retirement_403b": 311.18 },
-    { "employer": "CCMC",     "pay_date": "2026-02-12", "gross": 4549.88, "net": 2835.10, "retirement_403b": 364.00 },
-    { "employer": "CCMC",     "pay_date": "2026-02-26", "gross": 5617.14, "net": 3697.62, "retirement_403b": 674.06 },
-    { "employer": "CCMC",     "pay_date": "2026-03-12", "gross": 4594.48, "net": 3089.18, "retirement_403b": 551.34 },
-    { "employer": "CCMC",     "pay_date": "2026-03-26", "gross": 4813.69, "net": 3290.35, "retirement_403b": 577.65 },
-    { "employer": "CCMC",     "pay_date": "2026-04-09", "gross": 4634.10, "net": 3109.25, "retirement_403b": 556.10 },
-    { "employer": "CCMC",     "pay_date": "2026-04-23", "gross": 4435.09, "net": 3097.92, "retirement_403b": 532.22 },
-    { "employer": "CCMC",     "pay_date": "2026-05-07", "gross": 4971.08, "net": 2909.46, "retirement_403b": 1143.35 },
-    { "employer": "NorthBay", "pay_date": "2026-05-15", "gross": 2785.63, "net": 1717.42, "retirement_403b": 0 },
-    { "employer": "CCMC",     "pay_date": "2026-05-21", "gross": 5806.47, "net": 3360.71, "retirement_403b": 1335.49 },
-    { "employer": "CCMC",     "pay_date": "2026-05-22", "gross": 6343.43, "net": 3637.00, "retirement_403b": 1458.99 },
-    { "employer": "NorthBay", "pay_date": "2026-05-22", "gross": 2877.87, "net": 1759.68, "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-06-05", "gross": 2100.26, "net": 1387.85, "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-06-12", "gross": 2748.49, "net": 1700.39, "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-06-26", "gross": 703.29,  "net": 557.87,  "retirement_403b": 0 },
-    { "employer": "Sutter",   "pay_date": "2026-06-26", "gross": 5866.12, "net": 2809.37, "retirement_403b": 1349.21 },
-    { "employer": "NorthBay", "pay_date": "2026-07-02", "gross": 699.36,  "net": 582.28,  "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-07-10", "gross": 701.98,  "net": 584.24,  "retirement_403b": 0 },
-    { "employer": "Sutter",   "pay_date": "2026-07-10", "gross": 4896.58, "net": 2470.42, "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-07-17", "gross": 2180.69, "net": 1539.06, "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-07-24", "gross": 716.40,  "net": 595.00,  "retirement_403b": 0 },
-    { "employer": "Sutter",   "pay_date": "2026-07-24", "gross": 5356.91, "net": 2929.39, "retirement_403b": 696.40 },
-    { "employer": "Sutter",   "pay_date": "2026-08-07", "gross": 10429.00, "net": 4741.58, "retirement_403b": 1355.77 },
-    { "employer": "NorthBay", "pay_date": "2026-08-14", "gross": 701.98,   "net": 584.24,   "retirement_403b": 0 },
-    { "employer": "NorthBay", "pay_date": "2026-08-21", "gross": 1389.98,  "net": 1072.26,  "retirement_403b": 0 },
-    { "employer": "Sutter",   "pay_date": "2026-08-21", "gross": 6674.79,  "net": 3456.77,  "retirement_403b": 867.73 }
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-01-15",
+      "gross": 4304.98,
+      "net": 2710.81,
+      "retirement_403b": 344.4
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-01-29",
+      "gross": 3889.7,
+      "net": 2579.14,
+      "retirement_403b": 311.18
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-02-12",
+      "gross": 4549.88,
+      "net": 2835.1,
+      "retirement_403b": 364.0
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-02-26",
+      "gross": 5617.14,
+      "net": 3697.62,
+      "retirement_403b": 674.06
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-03-12",
+      "gross": 4594.48,
+      "net": 3089.18,
+      "retirement_403b": 551.34
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-03-26",
+      "gross": 4813.69,
+      "net": 3290.35,
+      "retirement_403b": 577.65
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-04-09",
+      "gross": 4634.1,
+      "net": 3109.25,
+      "retirement_403b": 556.1
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-04-23",
+      "gross": 4435.09,
+      "net": 3097.92,
+      "retirement_403b": 532.22
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-05-07",
+      "gross": 4971.08,
+      "net": 2909.46,
+      "retirement_403b": 1143.35
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-05-15",
+      "gross": 2785.63,
+      "net": 1717.42,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-05-21",
+      "gross": 5806.47,
+      "net": 3360.71,
+      "retirement_403b": 1335.49
+    },
+    {
+      "employer": "CCMC",
+      "pay_date": "2026-05-22",
+      "gross": 6343.43,
+      "net": 3637.0,
+      "retirement_403b": 1458.99
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-05-22",
+      "gross": 2877.87,
+      "net": 1759.68,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-06-05",
+      "gross": 2100.26,
+      "net": 1387.85,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-06-12",
+      "gross": 2748.49,
+      "net": 1700.39,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-06-26",
+      "gross": 703.29,
+      "net": 557.87,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-06-26",
+      "gross": 5866.12,
+      "net": 2809.37,
+      "retirement_403b": 1349.21
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-07-02",
+      "gross": 699.36,
+      "net": 582.28,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-07-10",
+      "gross": 701.98,
+      "net": 584.24,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-07-10",
+      "gross": 4896.58,
+      "net": 2470.42,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-07-17",
+      "gross": 2180.69,
+      "net": 1539.06,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-07-24",
+      "gross": 716.4,
+      "net": 595.0,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-07-24",
+      "gross": 5356.91,
+      "net": 2929.39,
+      "retirement_403b": 696.4
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-08-07",
+      "gross": 10429.0,
+      "net": 4741.58,
+      "retirement_403b": 1355.77
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-08-14",
+      "gross": 701.98,
+      "net": 584.24,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "NorthBay",
+      "pay_date": "2026-08-21",
+      "gross": 1389.98,
+      "net": 1072.26,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-08-21",
+      "gross": 6674.79,
+      "net": 3456.77,
+      "retirement_403b": 867.73
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-09-04",
+      "gross": 641.62,
+      "net": 323.09,
+      "retirement_403b": 83.42
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-09-18",
+      "gross": 5969.78,
+      "net": 3989.74,
+      "retirement_403b": 0
+    }
   ]
 }
