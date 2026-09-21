@@ -2,8 +2,8 @@
 
 Single-page app deployed at <https://vikramgill02.github.io/Income-Calculator/>. Four tabs:
 
-- **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. OT applies per week (first 40 hrs at base, anything over at 1.5×). Toggle for the blended night + weekend differential rate.
-- **Dashboard** — year-to-date income. Gross / net / 403(b) / taxes, pie chart by employer, per-employer cards with logos, monthly bar chart with projections, and a filterable paystub table. Data lives in [`paystubs.json`](./paystubs.json).
+- **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $76.40/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× ($114.60/hr).
+- **Dashboard** — the landing tab. Year-to-date income. Gross / net / 403(b) / taxes, pie chart by employer, per-employer cards with logos, monthly bar chart with projections, and a filterable paystub table. Data lives in [`paystubs.json`](./paystubs.json).
 - **Cards** — credit card credits & perks checklist for Amex Platinum, Amex Gold, and Capital One Venture X. Data lives in [`cards.json`](./cards.json).
 - **Property** — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
