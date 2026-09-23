@@ -1188,12 +1188,11 @@ const benefitStatus = (benefit, year) => {
   };
 };
 
-function PeriodChip({ period, hit, wide, pendingAuto, complete }) {
-  // Only the actionable state is loud. Anything already handled stays quiet
-  // so a full row of claimed months doesn't shout over what still needs doing.
+function PeriodChip({ period, hit, wide, pendingAuto }) {
+  // Captured is captured: every claimed period reads green, whether or not the
+  // rest of the year is done. What still needs doing stays amber.
   let bg = "transparent", border = "rgba(255,255,255,0.055)", color = "#4a4a54", weight = 450;
-  if (hit && complete)                { bg = "rgba(34,197,94,0.13)";  border = "transparent"; color = "#5ec98a"; }
-  else if (hit)                       { bg = "rgba(255,255,255,0.08)"; border = "transparent"; color = "#b0b0ba"; }
+  if (hit)                            { bg = "rgba(34,197,94,0.13)";  border = "transparent"; color = "#5ec98a"; }
   else if (pendingAuto)               { bg = "transparent"; border = "rgba(34,197,94,0.28)"; color = "#3f8f61"; }
   else if (period.when === "current") { bg = "rgba(240,180,41,0.14)"; border = "#f0b429"; color = "#f0b429"; weight = 550; }
   return (
@@ -1201,7 +1200,7 @@ function PeriodChip({ period, hit, wide, pendingAuto, complete }) {
       minWidth: wide ? 58 : 27, height: 19, padding: "0 4px", flexShrink: 0,
       borderRadius: 4, background: bg, border: `1px solid ${border}`, color,
       fontFamily: FONT, fontSize: 12.5, fontWeight: weight,
-      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center",
     }}>{period.label}</div>
   );
 }
@@ -1233,7 +1232,7 @@ function BenefitRow({ benefit, year, accent, first }) {
       <div className="chip-strip">
         {st.periods.map((p) => (
           <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)}
-            wide={wide} complete={st.complete}
+            wide={wide}
             pendingAuto={st.complete && !st.claimedSet.has(p.key)} />
         ))}
       </div>
@@ -1467,8 +1466,8 @@ function Cards() {
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
           {[
-            ["Claimed", "#7d7d88", "#7d7d88"],
-            ["Complete", "#5ec98a", "#5ec98a"],
+            ["Captured", "rgba(34,197,94,0.13)", "#5ec98a"],
+            ["Posts on its own", "transparent", "rgba(34,197,94,0.28)"],
             ["Open now", "rgba(240,180,41,0.12)", "#f0b429"],
             ["Not claimed", "transparent", "rgba(255,255,255,0.07)"],
           ].map(([label, bg, border]) => (
