@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-20",
+  "last_updated": "2026-09-23",
   "year": 2026,
   "cards": [
     {
@@ -287,7 +287,9 @@
           "cadence": "annual",
           "per": 300,
           "detail": "Capital One Travel bookings. Resets on card anniversary (Sep 2), not calendar year.",
-          "claimed": [],
+          "claimed": [
+            "2026"
+          ],
           "expires": "2027-09-01"
         },
         {
