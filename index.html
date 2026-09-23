@@ -64,6 +64,47 @@ input { font-family: var(--font); }
 @media (max-width: 640px) {
   .bene-row { gap: 6px; }
 }
+/* Twelve month chips are wider than a phone. Let them scroll within their own
+   row rather than dragging the whole page sideways. */
+.chip-strip {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.chip-strip::-webkit-scrollbar { display: none; }
+/* Anything tappable clears Apple's 44px minimum without the padding showing. */
+.tap {
+  position: relative;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.tap-sm { min-height: 44px; display: inline-flex; align-items: center; }
+/* Six columns of paystub don't fit a phone. Stack each row into a labelled
+   block instead of making a 640px table scroll sideways. */
+@media (max-width: 640px) {
+  .stub-table, .stub-table tbody, .stub-table tr, .stub-table td { display: block; width: auto; }
+  .stub-table { min-width: 0 !important; }
+  .stub-table thead { display: none; }
+  .stub-table tr { padding: 14px 16px; }
+  .stub-table td { padding: 0 !important; text-align: left !important; }
+  .stub-table td.stub-n { display: none; }
+  .stub-table td.stub-emp { margin: 6px 0 8px; }
+  .stub-table td[data-l] {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 4px 0 !important;
+  }
+  .stub-table td[data-l]::before {
+    content: attr(data-l);
+    color: #8b8b96; font-size: 11.5px; font-weight: 500;
+  }
+}
 .prop-wrap { max-width: 1200px; margin: 0 auto; padding: 28px 24px 56px; }
 .prop-kpis {
   display: grid;
@@ -259,7 +300,8 @@ function Calc() {
             ].map(({ fn, can, d }, i) => (
               <button key={i} onClick={fn} disabled={!can} style={{
                 background: "transparent", border: `1px solid ${can ? "#63636e" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 8, padding: "7px 10px", cursor: can ? "pointer" : "not-allowed",
+                borderRadius: 8, padding: "0 14px", minWidth: 44, minHeight: 44,
+                cursor: can ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor(can)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -738,7 +780,8 @@ function MonthlyChart({ paystubs, projection, year }) {
                 <button key={key} onClick={() => setMetric(key)} style={{
                   background: active ? (key === "net" ? "#5ec98a" : "#ededf0") : "transparent",
                   color: active ? "#08080a" : "#7d7d88",
-                  border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                  border: "none", borderRadius: 6, padding: "0 14px", cursor: "pointer",
+                  minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
                   fontSize: 13.5, letterSpacing: "0",
                   fontFamily: FONT, fontWeight: 500,
                 }}>{label}</button>
@@ -749,7 +792,7 @@ function MonthlyChart({ paystubs, projection, year }) {
             display: "flex", alignItems: "center", gap: 7,
             background: showProjected ? "rgba(240,180,41,0.12)" : "transparent",
             border: `1px solid ${showProjected ? "#f0b429" : "#4a4a54"}`,
-            borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+            borderRadius: 8, padding: "0 14px", minHeight: 44, cursor: "pointer",
             fontSize: 13.5, letterSpacing: "0",
             color: showProjected ? "#f0b429" : "#7d7d88", fontFamily: FONT,
           }}>
@@ -864,7 +907,7 @@ function PaystubTable({ paystubs }) {
   return (
     <div style={{ background: "#101014", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, overflow: "hidden" }}>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT, minWidth: 640 }}>
+        <table className="stub-table" style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT, minWidth: 640 }}>
           <thead>
             <tr style={{ background: "#0a0a0c" }}>
               {[
@@ -880,9 +923,9 @@ function PaystubTable({ paystubs }) {
               const color = colorFor(p.employer);
               return (
                 <tr key={i} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
-                  <td style={{ padding: "14px 20px", fontSize: 12.5, color: "#7d7d88" }}>{i + 1}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#d8d8de", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
-                  <td style={{ padding: "14px 20px" }}>
+                  <td className="stub-n" style={{ padding: "14px 20px", fontSize: 12.5, color: "#7d7d88" }}>{i + 1}</td>
+                  <td className="stub-date" style={{ padding: "14px 20px", fontSize: 13.5, color: "#d8d8de", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
+                  <td className="stub-emp" style={{ padding: "14px 20px" }}>
                     <span style={{
                       display: "inline-flex", alignItems: "center", gap: 8,
                       padding: "4px 10px", borderRadius: 6,
@@ -893,9 +936,9 @@ function PaystubTable({ paystubs }) {
                       {p.employer}
                     </span>
                   </td>
-                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.gross))}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.net))}</td>
-                  <td style={{ padding: "14px 20px", fontSize: 13.5, color: "#9b8fd4", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
+                  <td data-l="Gross" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.gross))}</td>
+                  <td data-l="Net" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.net))}</td>
+                  <td data-l="403(b)" style={{ padding: "14px 20px", fontSize: 13.5, color: "#9b8fd4", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
                 </tr>
               );
             })}
@@ -928,7 +971,8 @@ function PaystubSection({ paystubs, orderedEmployers, loaded }) {
                 <button key={key} onClick={() => setFilter(key)} style={{
                   background: active ? color : "transparent",
                   color: active ? "#08080a" : "#7d7d88",
-                  border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                  border: "none", borderRadius: 6, padding: "0 14px", cursor: "pointer",
+                  minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
                   fontSize: 13.5, letterSpacing: "0",
                   fontFamily: FONT, fontWeight: 500,
                 }}>{isAll ? "All" : key}</button>
@@ -1154,7 +1198,7 @@ function PeriodChip({ period, hit, wide, pendingAuto, complete }) {
   else if (period.when === "current") { bg = "rgba(240,180,41,0.14)"; border = "#f0b429"; color = "#f0b429"; weight = 550; }
   return (
     <div style={{
-      minWidth: wide ? 58 : 27, height: 19, padding: "0 4px",
+      minWidth: wide ? 58 : 27, height: 19, padding: "0 4px", flexShrink: 0,
       borderRadius: 4, background: bg, border: `1px solid ${border}`, color,
       fontFamily: FONT, fontSize: 12.5, fontWeight: weight,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
@@ -1186,7 +1230,7 @@ function BenefitRow({ benefit, year, accent, first }) {
       <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e", flexShrink: 0, minWidth: 34, textAlign: "right" }}>
         {fmt0(st.per)}
       </span>
-      <div style={{ display: "flex", gap: 3, flexWrap: "wrap", flexShrink: 0 }}>
+      <div className="chip-strip">
         {st.periods.map((p) => (
           <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)}
             wide={wide} complete={st.complete}
@@ -1262,9 +1306,9 @@ function CardBlock({ card, year }) {
       {card.perks && card.perks.length > 0 && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 8, marginTop: 2 }}>
           <button onClick={() => setShowPerks((v) => !v)} style={{
-            background: "transparent", border: "none", padding: 0, cursor: "pointer",
+            background: "transparent", border: "none", padding: "14px 0", cursor: "pointer",
             fontFamily: FONT, fontSize: 12.5, letterSpacing: "0",
-            color: "#63636e",
+            color: "#63636e", minHeight: 44, display: "inline-flex", alignItems: "center",
           }}>
             {showPerks ? "▾" : "▸"} Ongoing Perks ({card.perks.length})
           </button>
@@ -1580,7 +1624,8 @@ function Pills({ options, value, onChange }) {
         return (
           <button key={key} onClick={() => onChange(key)} style={{
             background: active ? "rgba(255,255,255,0.09)" : "transparent",
-            border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+            border: "none", borderRadius: 6, padding: "0 14px", cursor: "pointer",
+            minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
             fontSize: 12.5, fontWeight: active ? 550 : 450,
             color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT,
           }}>{label}</button>
@@ -2479,11 +2524,13 @@ function SignIn() {
         <button onClick={go} disabled={busy || !email || !pw} style={{
           background: busy || !email || !pw ? "rgba(255,255,255,0.06)" : "#5ec98a",
           color: busy || !email || !pw ? "#63636e" : "#08080a",
-          border: "none", borderRadius: 8, padding: "8px 18px", fontFamily: FONT,
+          border: "none", borderRadius: 8, padding: "0 20px", minHeight: 44,
+          display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: FONT,
           fontSize: 13, fontWeight: 600, cursor: busy || !email || !pw ? "not-allowed" : "pointer",
         }}>{busy ? "…" : mode === "in" ? "Sign in" : "Create account"}</button>
         <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(""); }} style={{
-          background: "transparent", border: "none", color: "#7d7d88",
+          background: "transparent", border: "none", color: "#7d7d88", minHeight: 44,
+          display: "inline-flex", alignItems: "center", padding: "0 2px",
           fontFamily: FONT, fontSize: 12.5, cursor: "pointer", textDecoration: "underline",
         }}>{mode === "in" ? "Create an account" : "I already have one"}</button>
       </div>
