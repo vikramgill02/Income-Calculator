@@ -1114,12 +1114,19 @@ const daysUntil = (d, today) => {
 
 const benefitStatus = (benefit, year) => {
   const periods = periodsFor(benefit.cadence, year);
-  const cs = new Set(benefit.claimed || []);
   const per = n(benefit.per);
+  // An `auto` credit reimburses a charge the card already pays on its own
+  // (Disney+, Walmart+), so every period that has come round is captured
+  // whether or not anyone ticked it off. Counting those implicitly keeps them
+  // out of the to-do list in perpetuity — no monthly upkeep in cards.json.
+  const cs = new Set(benefit.claimed || []);
+  if (benefit.auto) {
+    for (const p of periods) if (p.when !== "future") cs.add(p.key);
+  }
   const hits = periods.filter((p) => cs.has(p.key));
   const open = periods.filter((p) => !cs.has(p.key) && p.when === "current");
   // Done for the year: every period claimed, or — for auto-recurring credits —
-  // everything up to now claimed, since the rest posts on its own.
+  // everything up to now, since the rest posts on its own.
   const allClaimed = periods.every((p) => cs.has(p.key));
   const autoDone = !!benefit.auto && periods.filter((p) => p.when !== "future").every((p) => cs.has(p.key));
   // A benefit can override its deadline (e.g. credits that reset on the card
