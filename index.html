@@ -1324,6 +1324,7 @@ function AttentionPanel({ rows }) {
 function Cards() {
   const [cards, setCards] = useState([]);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [firstYear, setFirstYear] = useState(new Date().getFullYear());
   const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
 
@@ -1332,12 +1333,30 @@ function Cards() {
       .then((r) => r.ok ? r.json() : { cards: [] })
       .then((data) => {
         setCards(Array.isArray(data.cards) ? data.cards : []);
-        if (data.year) setYear(data.year);
+        // `data.year` is the first year tracked, not the year to show. The view
+        // always opens on the current calendar year so Jan 1 rolls over on its
+        // own; earlier years stay reachable through the picker.
+        if (data.year) setFirstYear(data.year);
         if (data.last_updated) setLastUpdated(data.last_updated);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
   }, []);
+
+  // Claim keys already carry their year ("2026-03", "2026-Q1", "2026"), so a
+  // new year needs no migration — its periods simply start out unclaimed.
+  const years = useMemo(() => {
+    const seen = new Set([new Date().getFullYear(), firstYear]);
+    for (const c of cards) {
+      for (const b of c.benefits || []) {
+        for (const k of b.claimed || []) {
+          const y = parseInt(String(k).slice(0, 4), 10);
+          if (!isNaN(y)) seen.add(y);
+        }
+      }
+    }
+    return [...seen].sort((a, b) => b - a);
+  }, [cards, firstYear]);
 
   const attention = useMemo(() => {
     const rows = [];
@@ -1363,7 +1382,20 @@ function Cards() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
           <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>
             Card Benefits
-            <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#63636e", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
+            {years.length > 1 ? (
+              <span style={{ display: "inline-flex", gap: 4, marginLeft: 12, verticalAlign: "middle" }}>
+                {years.map((y) => (
+                  <button key={y} onClick={() => setYear(y)} style={{
+                    fontFamily: FONT, fontSize: 12.5, letterSpacing: "0.1em", cursor: "pointer",
+                    padding: "2px 7px", borderRadius: 5, background: y === year ? "rgba(255,255,255,0.08)" : "transparent",
+                    border: "1px solid " + (y === year ? "rgba(255,255,255,0.14)" : "transparent"),
+                    color: y === year ? "#d8d8de" : "#63636e",
+                  }}>{y}</button>
+                ))}
+              </span>
+            ) : (
+              <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#63636e", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
+            )}
           </h1>
           {lastUpdated && (
             <div style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e" }}>
