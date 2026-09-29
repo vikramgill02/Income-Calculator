@@ -256,8 +256,8 @@ function useHistory(initial) {
 const CALC_INIT = { w1: "", w2: "", deductions: 35 };
 // Straight day-shift rate only. Evening/night/weekend differentials are
 // deliberately excluded so the estimate reflects pay you can count on.
-const SUTTER_BASE   = 76.40;
-const SUTTER_OT     = 114.60;  // 1.5 × base
+const SUTTER_BASE   = 78.31;
+const SUTTER_OT     = SUTTER_BASE * 1.5;  // 117.465
 const WEEKLY_OT_THRESHOLD = 40;
 const weekPay = (hrs) => {
   const h = parseFloat(hrs) || 0;
