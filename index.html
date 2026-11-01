@@ -164,6 +164,8 @@ input { font-family: var(--font); }
 }
 @media (max-width: 480px) {
   .nw-page { padding: 22px 16px 48px !important; }
+  .nw-subtabs > div { width: 100%; }
+  .nw-subtabs button { flex: 1; padding: 0 6px !important; }
 }
 </style>
 </head>
@@ -2641,18 +2643,18 @@ function Property() {
 /* ─── App shell ─── */
 
 /* ─── Net Worth ───
-   Data comes from /api/networth (worker.js): Fidelity holdings from
-   networth.json priced live, cash and credit cards from YNAB, loans from
-   networth.json, and one saved snapshot per day for the history chart. */
+   Data comes from worker.js: /api/networth (Fidelity holdings from
+   networth.json priced live, cash and credit cards from YNAB, loans, and one
+   saved snapshot per day) and /api/performance (a year of daily closes). */
 
 const NW_COLORS = {
   liquid: "#5ec98a",
   netWorth: "#ededf0",
-  invest: "#9b8fd4",
   debt: "#f87171",
   milestone: "#f0b429",
 };
 const ACCOUNT_COLORS = ["#5ec98a", "#38bdf8", "#f0b429", "#c084fc", "#2dd4bf", "#fb7185"];
+const accountColor = (i) => ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length];
 
 const parseDay = (iso) => {
   const [y, m, d] = iso.split("-").map(Number);
@@ -2660,22 +2662,22 @@ const parseDay = (iso) => {
 };
 const shortDate = (iso) =>
   parseDay(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-const signed = (v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v));
+const signed = (v, f = fmt) => (v >= 0 ? "+" : "−") + f(Math.abs(v));
 const kfmt = (v) => {
   const a = Math.abs(v);
   const s = a >= 1000 ? `$${(a / 1000).toFixed(a >= 100000 ? 0 : 1).replace(/\.0$/, "")}k` : `$${a.toFixed(0)}`;
   return v < 0 ? `−${s}` : s;
 };
-const todayIso = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+const isoOf = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const todayIso = () => isoOf(new Date());
 
 const panel = {
   background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
   border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
 };
 const panelTitle = { fontSize: 13.5, color: "#8b8b96", marginBottom: 18, fontFamily: FONT };
+const rowLine = { display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT };
 
 function useWidth() {
   const ref = useRef(null);
@@ -2689,78 +2691,45 @@ function useWidth() {
   return [ref, w];
 }
 
-function GoalCard({ goal, liquid, ynabOk }) {
-  const by = parseDay(goal.by);
-  const now = new Date();
-  const monthsLeft = Math.max(0, (by - now) / (1000 * 60 * 60 * 24 * 30.44));
-  const toLow = Math.max(0, goal.low - liquid);
-  const perMonth = monthsLeft > 0 ? toLow / monthsLeft : toLow;
-  const pct = Math.min(100, (liquid / goal.high) * 100);
-  const lowPct = (goal.low / goal.high) * 100;
-  const hit = liquid >= goal.low;
+// Gridlines at 1, 2, 2.5 or 5 × a power of ten.
+function niceTicks(lo, hi, count = 4) {
+  const rough = Math.max(1e-6, (hi - lo) / count);
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((v) => v >= rough);
+  const min = Math.floor(lo / step) * step, max = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = min; v <= max + step / 1e6; v += step) ticks.push(v);
+  return { min, max, ticks };
+}
 
+function Tooltip({ x, W, children }) {
   return (
-    <div style={panel}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div style={{ ...panelTitle, marginBottom: 0 }}>
-          Liquid goal · {kfmt(goal.low)}–{kfmt(goal.high)} by {shortDate(goal.by)}
-        </div>
-        <div style={{ fontSize: 12.5, color: "#7d7d88", fontFamily: FONT }}>
-          {monthsLeft > 0 ? `${monthsLeft.toFixed(1)} months left` : "Deadline reached"}
-        </div>
-      </div>
-      <div style={{ fontSize: 30, fontWeight: 600, color: NW_COLORS.liquid, fontFamily: FONT, marginBottom: 16 }}>
-        {fmt0(liquid)}
-      </div>
-      <div style={{ position: "relative", height: 12, borderRadius: 6, background: "rgba(255,255,255,0.06)", marginBottom: 8 }}>
-        <div style={{ position: "absolute", inset: 0, width: `${pct}%`, borderRadius: 6, background: NW_COLORS.liquid }} />
-        <div style={{ position: "absolute", left: `${lowPct}%`, top: -4, bottom: -4, width: 2, background: "#fafafa", opacity: 0.6 }} />
-      </div>
-      <div style={{ position: "relative", height: 16, fontSize: 11.5, color: "#7d7d88", fontFamily: FONT }}>
-        <span style={{ position: "absolute", left: 0 }}>$0</span>
-        <span style={{ position: "absolute", left: `${lowPct}%`, transform: "translateX(-50%)" }}>{kfmt(goal.low)}</span>
-        <span style={{ position: "absolute", right: 0 }}>{kfmt(goal.high)}</span>
-      </div>
-      <div style={{ marginTop: 16, fontSize: 13.5, color: "#d8d8de", fontFamily: FONT, lineHeight: 1.5 }}>
-        {hit
-          ? <>You're in the goal range. {liquid < goal.high && <>{fmt0(goal.high - liquid)} more reaches the top of it.</>}</>
-          : <>Save about <b style={{ color: "#fafafa" }}>{fmt0(perMonth)}/month</b> to reach {kfmt(goal.low)} — {fmt0(toLow)} to go.</>}
-      </div>
-      <div style={{ marginTop: 6, fontSize: 12, color: "#63636e", fontFamily: FONT }}>
-        Liquid = YNAB checking, savings &amp; cash + CRNA Fund + Taxable Brokerage.
-        {!ynabOk && <span style={{ color: NW_COLORS.milestone }}> YNAB isn't connected, so cash is missing from this number.</span>}
-      </div>
-    </div>
+    <div style={{
+      position: "absolute", top: 8, left: Math.min(Math.max(x - 90, 0), W - 180), width: 180,
+      background: "#18181b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 12px",
+      fontFamily: FONT, fontSize: 12.5, color: "#d8d8de", pointerEvents: "none",
+    }}>{children}</div>
   );
 }
 
-function HistoryChart({ history, goal, milestones }) {
+function HistoryChart({ history, milestones }) {
   const [ref, width] = useWidth();
   const [hover, setHover] = useState(null);
   const narrow = width < 560;
-  const W = Math.max(width, 300), H = narrow ? 280 : 320;
+  const W = Math.max(width, 300), H = narrow ? 280 : 340;
   const ML = 52, MR = 14, MT = narrow ? 50 : 34, MB = 30;
   const innerW = W - ML - MR, innerH = H - MT - MB;
 
-  const today = todayIso();
-  const startIso = history.length ? history[0].date : today;
-  const lastMilestone = milestones.reduce((m, x) => (x.date > m ? x.date : m), goal.by);
-  const start = parseDay(startIso);
+  const start = parseDay(history.length ? history[0].date : todayIso());
+  const lastMilestone = milestones.reduce((m, x) => (x.date > m ? x.date : m), todayIso());
   const endD = parseDay(lastMilestone);
   const end = new Date(endD.getFullYear(), endD.getMonth() + 1, 1);
   const span = end - start || 1;
   const xOf = (iso) => ML + ((parseDay(iso) - start) / span) * innerW;
 
-  const vals = history.flatMap((p) => [p.liquid, p.netWorth]).concat([0, goal.high]);
-  const rawMin = Math.min(...vals), rawMax = Math.max(...vals) * 1.08;
-  // Round the gridline spacing to 1, 2, 2.5 or 5 × a power of ten.
-  const rough = (rawMax - rawMin) / 4;
-  const mag = Math.pow(10, Math.floor(Math.log10(Math.max(1, rough))));
-  const tickStep = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((v) => v >= rough);
-  const yMin = Math.floor(rawMin / tickStep) * tickStep, yMax = Math.ceil(rawMax / tickStep) * tickStep;
-  const yOf = (v) => MT + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
-  const ticks = [];
-  for (let v = yMin; v <= yMax + 1e-6; v += tickStep) ticks.push(v);
+  const vals = history.flatMap((p) => [p.liquid, p.netWorth]).concat([0]);
+  const { min: yMin, max: yMax, ticks } = niceTicks(Math.min(...vals), Math.max(...vals) * 1.1);
+  const yOf = (v) => MT + innerH - ((v - yMin) / (yMax - yMin || 1)) * innerH;
 
   const months = [];
   for (let d = new Date(start.getFullYear(), start.getMonth() + 1, 1); d < end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(d);
@@ -2782,15 +2751,13 @@ function HistoryChart({ history, goal, milestones }) {
     <div style={panel}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
         <div style={{ ...panelTitle, marginBottom: 0 }}>History</div>
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: "#d8d8de", fontFamily: FONT }}>
-          {[["Liquid", NW_COLORS.liquid], ["Net worth", NW_COLORS.netWorth]].map(([l, c]) => (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5, color: "#d8d8de", fontFamily: FONT }}>
+          {[["Liquid", "liquid", NW_COLORS.liquid], ["Net worth", "netWorth", NW_COLORS.netWorth]].map(([l, k, c]) => (
             <span key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 14, height: 3, borderRadius: 2, background: c }} />{l}
+              {last && <b style={{ color: c, fontWeight: 600 }}>{fmt0(last[k])}</b>}
             </span>
           ))}
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(94,201,138,0.14)", border: "1px dashed rgba(94,201,138,0.6)" }} />Goal
-          </span>
         </div>
       </div>
       <div ref={ref} style={{ position: "relative" }}>
@@ -2799,20 +2766,12 @@ function HistoryChart({ history, goal, milestones }) {
             onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}>
             {ticks.map((t, i) => (
               <g key={i}>
-                <line x1={ML} x2={W - MR} y1={yOf(t)} y2={yOf(t)} stroke="rgba(255,255,255,0.08)"
+                <line x1={ML} x2={W - MR} y1={yOf(t)} y2={yOf(t)}
+                  stroke={Math.abs(t) < 1e-6 ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.08)"}
                   strokeDasharray={Math.abs(t) < 1e-6 ? "" : "2,4"} />
                 <text x={ML - 8} y={yOf(t) + 4} textAnchor="end" style={{ fill: "#63636e", fontSize: 11.5, fontFamily: FONT }}>{kfmt(t)}</text>
               </g>
             ))}
-            {yMin < 0 && <line x1={ML} x2={W - MR} y1={yOf(0)} y2={yOf(0)} stroke="rgba(255,255,255,0.22)" />}
-
-            <rect x={ML} y={yOf(goal.high)} width={Math.max(0, xOf(goal.by) - ML)} height={yOf(goal.low) - yOf(goal.high)}
-              fill="rgba(94,201,138,0.10)" stroke="rgba(94,201,138,0.45)" strokeDasharray="4,4" />
-
-            {last && last.date < goal.by && last.liquid < goal.low && (
-              <line x1={xOf(last.date)} y1={yOf(last.liquid)} x2={xOf(goal.by)} y2={yOf(goal.low)}
-                stroke={NW_COLORS.liquid} strokeWidth="1.5" strokeDasharray="5,5" opacity="0.55" />
-            )}
 
             {milestones.map((m, i) => {
               const x = xOf(m.date);
@@ -2850,15 +2809,11 @@ function HistoryChart({ history, goal, milestones }) {
           </svg>
         )}
         {hover && (
-          <div style={{
-            position: "absolute", top: 8, left: Math.min(Math.max(xOf(hover.date) - 90, 0), W - 180), width: 180,
-            background: "#18181b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 12px",
-            fontFamily: FONT, fontSize: 12.5, color: "#d8d8de", pointerEvents: "none",
-          }}>
+          <Tooltip x={xOf(hover.date)} W={W}>
             <div style={{ color: "#8b8b96", marginBottom: 6 }}>{shortDate(hover.date)}{hover.live ? " · now" : ""}</div>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>Liquid</span><span style={{ color: NW_COLORS.liquid }}>{fmt0(hover.liquid)}</span></div>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net worth</span><span style={{ color: "#fafafa" }}>{fmt0(hover.netWorth)}</span></div>
-          </div>
+          </Tooltip>
         )}
       </div>
       {history.length <= 1 && (
@@ -2870,46 +2825,165 @@ function HistoryChart({ history, goal, milestones }) {
   );
 }
 
+const PERF_RANGES = [["1m", "1M", 1], ["3m", "3M", 3], ["6m", "6M", 6], ["1y", "1Y", 12]];
+
+function PerfChart({ perf }) {
+  const [range, setRange] = useState("3m");
+  const [ref, width] = useWidth();
+  const [hover, setHover] = useState(null);
+
+  const months = PERF_RANGES.find((r) => r[0] === range)[2];
+  const cutoffD = new Date(); cutoffD.setMonth(cutoffD.getMonth() - months);
+  const cutoff = isoOf(cutoffD);
+  const i0 = Math.max(0, perf.dates.findIndex((d) => d >= cutoff));
+  const dates = perf.dates.slice(i0);
+  const total = perf.total.slice(i0);
+  const first = total[0], lastV = total[total.length - 1];
+  const change = lastV - first, pct = first ? (change / first) * 100 : 0;
+  const up = change >= 0;
+  const color = up ? NW_COLORS.liquid : NW_COLORS.debt;
+
+  const narrow = width < 560;
+  const W = Math.max(width, 300), H = narrow ? 240 : 300;
+  const ML = 52, MR = 14, MT = 12, MB = 30;
+  const innerW = W - ML - MR, innerH = H - MT - MB;
+  const { min: yMin, max: yMax, ticks } = niceTicks(Math.min(...total) * 0.995, Math.max(...total) * 1.005);
+  const xOf = (i) => ML + (dates.length > 1 ? (i / (dates.length - 1)) * innerW : innerW / 2);
+  const yOf = (v) => MT + innerH - ((v - yMin) / (yMax - yMin || 1)) * innerH;
+  const line = total.map((v, i) => `${i ? "L" : "M"} ${xOf(i)} ${yOf(v)}`).join(" ");
+  const area = `${line} L ${xOf(total.length - 1)} ${MT + innerH} L ${xOf(0)} ${MT + innerH} Z`;
+
+  const labelEvery = Math.max(1, Math.ceil((dates.length * 64) / innerW));
+  const xLabel = (iso) => parseDay(iso).toLocaleDateString("en-US", months <= 1 ? { month: "short", day: "numeric" } : { month: "short" });
+  // Label month starts for longer ranges, evenly spaced days for 1M.
+  const xTicks = months <= 1
+    ? dates.map((d, i) => i).filter((i) => i % labelEvery === 0)
+    : dates.map((d, i) => i).filter((i) => i > 0 && dates[i].slice(5, 7) !== dates[i - 1].slice(5, 7))
+        .filter((_, k, arr) => k % Math.max(1, Math.ceil((arr.length * 48) / innerW)) === 0);
+
+  const onMove = (e) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    const i = Math.round(((px - ML) / innerW) * (dates.length - 1));
+    setHover(Math.min(dates.length - 1, Math.max(0, i)));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={panel}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
+          <div>
+            <div style={{ ...panelTitle, marginBottom: 6 }}>Investments</div>
+            <div style={{ fontSize: 28, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{fmt0(lastV)}</div>
+            <div style={{ fontSize: 13.5, color, fontFamily: FONT, marginTop: 4 }}>
+              {signed(change, fmt0)} ({signed(pct, (v) => v.toFixed(2) + "%")}) · past {PERF_RANGES.find((r) => r[0] === range)[1]}
+            </div>
+          </div>
+          <Pills options={PERF_RANGES.map(([k, l]) => [k, l])} value={range} onChange={(k) => { setRange(k); setHover(null); }} />
+        </div>
+        <div ref={ref} style={{ position: "relative" }}>
+          {width > 0 && (
+            <svg width={W} height={H} style={{ display: "block", touchAction: "pan-y" }}
+              onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}>
+              <defs>
+                <linearGradient id="perfFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+                  <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {ticks.map((t, i) => (
+                <g key={i}>
+                  <line x1={ML} x2={W - MR} y1={yOf(t)} y2={yOf(t)} stroke="rgba(255,255,255,0.08)" strokeDasharray="2,4" />
+                  <text x={ML - 8} y={yOf(t) + 4} textAnchor="end" style={{ fill: "#63636e", fontSize: 11.5, fontFamily: FONT }}>{kfmt(t)}</text>
+                </g>
+              ))}
+              <line x1={ML} x2={W - MR} y1={yOf(first)} y2={yOf(first)} stroke="rgba(255,255,255,0.25)" strokeDasharray="1,3" />
+              <path d={area} fill="url(#perfFill)" />
+              <path d={line} fill="none" stroke={color} strokeWidth="2.25" strokeLinejoin="round" />
+              {xTicks.map((i) => (
+                <text key={i} x={xOf(i)} y={H - 8} textAnchor="middle" style={{ fill: "#8b8b96", fontSize: 11.5, fontFamily: FONT }}>{xLabel(dates[i])}</text>
+              ))}
+              {hover != null && (
+                <g>
+                  <line x1={xOf(hover)} x2={xOf(hover)} y1={MT} y2={MT + innerH} stroke="rgba(255,255,255,0.25)" />
+                  <circle cx={xOf(hover)} cy={yOf(total[hover])} r="4.5" fill={color} />
+                </g>
+              )}
+            </svg>
+          )}
+          {hover != null && (
+            <Tooltip x={xOf(hover)} W={W}>
+              <div style={{ color: "#8b8b96", marginBottom: 6 }}>{shortDate(dates[hover])}</div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Value</span><span style={{ color: "#fafafa" }}>{fmt0(total[hover])}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Since start</span>
+                <span style={{ color: total[hover] >= first ? NW_COLORS.liquid : NW_COLORS.debt }}>{signed((total[hover] / first - 1) * 100, (v) => v.toFixed(2) + "%")}</span>
+              </div>
+            </Tooltip>
+          )}
+        </div>
+        <div style={{ marginTop: 10, fontSize: 12, color: "#63636e", fontFamily: FONT }}>
+          Your current shares at each day's closing price — deposits and cash aren't counted as gains.
+        </div>
+      </div>
+
+      <div className="nw-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+        {perf.accounts.map((a, idx) => {
+          const v = a.values.slice(i0);
+          const s = v[0], e = v[v.length - 1];
+          const d = e - s, p = s ? (d / s) * 100 : 0;
+          const c = d >= 0 ? NW_COLORS.liquid : NW_COLORS.debt;
+          return (
+            <div key={a.name} style={{ ...panel, padding: "16px 18px", borderLeft: `3px solid ${accountColor(idx)}` }}>
+              <div style={{ fontSize: 12.5, color: "#8b8b96", fontFamily: FONT, marginBottom: 6 }}>{a.name}</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: c, fontFamily: FONT }}>{signed(p, (x) => x.toFixed(2) + "%")}</div>
+              <div style={{ fontSize: 12.5, color: "#7d7d88", fontFamily: FONT, marginTop: 2 }}>{signed(d, fmt0)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function HoldingRow({ h, asOf }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+    <div style={rowLine}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, color: "#ededf0", fontFamily: FONT, fontWeight: 550 }}>{h.symbol}</div>
-        <div style={{ fontSize: 11.5, color: "#7d7d88", fontFamily: FONT, marginTop: 2 }}>
+        <div style={{ color: "#ededf0", fontWeight: 550 }}>{h.symbol}</div>
+        <div style={{ fontSize: 11.5, color: "#7d7d88", marginTop: 2 }}>
           {h.shares.toLocaleString("en-US", { maximumFractionDigits: 3 })} × {fmt(h.price)}
           <span style={{ marginLeft: 6, color: h.live ? NW_COLORS.liquid : "#63636e" }}>
             {h.live ? "● live" : `price from ${shortDate(asOf)}`}
           </span>
         </div>
       </div>
-      <div style={{ fontSize: 13.5, color: "#ededf0", fontFamily: FONT, whiteSpace: "nowrap" }}>{fmt(h.value)}</div>
+      <div style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(h.value)}</div>
     </div>
   );
 }
 
 function AccountCard({ account, color, asOf }) {
   return (
-    <div style={{ ...panel, borderLeft: `3px solid ${color}` }}>
+    <div style={{ ...panel, padding: 20, borderLeft: `3px solid ${color}` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{account.name}</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{account.name}</div>
         <span style={{
           fontSize: 11, padding: "3px 8px", borderRadius: 999, fontFamily: FONT, whiteSpace: "nowrap",
-          color: account.kind === "liquid" ? NW_COLORS.liquid : NW_COLORS.invest,
+          color: account.kind === "liquid" ? NW_COLORS.liquid : "#9b8fd4",
           background: account.kind === "liquid" ? "rgba(94,201,138,0.1)" : "rgba(155,143,212,0.12)",
         }}>{account.kind === "liquid" ? "Liquid" : "Retirement"}</span>
       </div>
-      <div style={{ fontSize: 24, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{fmt(account.value)}</div>
-      <div style={{ fontSize: 12.5, fontFamily: FONT, marginTop: 4, marginBottom: 12, color: account.gain >= 0 ? NW_COLORS.liquid : NW_COLORS.debt }}>
+      <div style={{ fontSize: 22, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{fmt(account.value)}</div>
+      <div style={{ fontSize: 12.5, fontFamily: FONT, marginTop: 4, marginBottom: 10, color: account.gain >= 0 ? NW_COLORS.liquid : NW_COLORS.debt }}>
         {signed(account.gain)} total gain
       </div>
       {account.holdings.map((h) => <HoldingRow key={h.symbol} h={h} asOf={asOf} />)}
       {account.cash > 0.005 && (
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT }}>
-          <span style={{ color: "#8b8b96" }}>Cash</span><span style={{ color: "#ededf0" }}>{fmt(account.cash)}</span>
-        </div>
+        <div style={rowLine}><span style={{ color: "#8b8b96" }}>Cash</span><span style={{ color: "#ededf0" }}>{fmt(account.cash)}</span></div>
       )}
       {account.pending && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT }}>
+        <div style={rowLine}>
           <span style={{ color: NW_COLORS.milestone }}>Pending · {account.pending.note}</span>
           <span style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(account.pending.amount)}</span>
         </div>
@@ -2919,38 +2993,22 @@ function AccountCard({ account, color, asOf }) {
   );
 }
 
-function BalanceList({ rows, negate }) {
-  return rows.map((a) => (
-    <div key={a.name} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT }}>
-      <span style={{ color: "#d8d8de", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
-      <span style={{ color: negate ? (a.balance < 0 ? NW_COLORS.debt : "#ededf0") : "#ededf0", whiteSpace: "nowrap" }}>
-        {fmt(negate ? Math.abs(a.balance) : a.balance)}
-      </span>
-    </div>
-  ));
-}
-
-function YnabCard({ ynab, totals }) {
+function CashCardsStrip({ ynab, totals }) {
+  if (!ynab.ok) {
+    return (
+      <div style={{ ...panel, padding: "16px 20px", fontSize: 13.5, color: "#d8d8de", fontFamily: FONT }}>
+        YNAB not connected ({ynab.error}). Add your YNAB token as <code>YNABKEY</code> in the Worker's Settings → Variables and Secrets.
+      </div>
+    );
+  }
   return (
-    <div style={panel}>
-      <div style={panelTitle}>Cash &amp; credit cards · from YNAB</div>
-      {!ynab.ok ? (
-        <div style={{ fontSize: 13.5, color: "#d8d8de", fontFamily: FONT, lineHeight: 1.5 }}>
-          Not connected ({ynab.error}). Add your YNAB personal access token as <code>YNABKEY</code> in the
-          Worker's Settings → Variables and Secrets.
+    <div className="nw-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+      {[["Cash · YNAB", totals.cash, NW_COLORS.liquid], ["Credit cards owed · YNAB", totals.cards, NW_COLORS.debt]].map(([l, v, c]) => (
+        <div key={l} style={{ ...panel, padding: "16px 20px" }}>
+          <div style={{ fontSize: 12.5, color: "#8b8b96", fontFamily: FONT, marginBottom: 6 }}>{l}</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: c, fontFamily: FONT }}>{fmt(v)}</div>
         </div>
-      ) : (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, fontFamily: FONT, marginBottom: 2 }}>
-            <span style={{ color: "#8b8b96" }}>Cash</span><span style={{ color: NW_COLORS.liquid, fontWeight: 600 }}>{fmt(totals.cash)}</span>
-          </div>
-          <BalanceList rows={ynab.cash} />
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, fontFamily: FONT, marginTop: 18, marginBottom: 2 }}>
-            <span style={{ color: "#8b8b96" }}>Credit cards owed</span><span style={{ color: NW_COLORS.debt, fontWeight: 600 }}>{fmt(totals.cards)}</span>
-          </div>
-          <BalanceList rows={ynab.cards} negate />
-        </>
-      )}
+      ))}
     </div>
   );
 }
@@ -2991,20 +3049,33 @@ function LoansCard({ loans, asOf }) {
   );
 }
 
+const NW_TABS = [["overview", "Overview"], ["perf", "Performance"], ["accounts", "Accounts"], ["loans", "Loans"]];
+
 function NetWorth() {
+  const [tab, setTab] = useState("overview");
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [perf, setPerf] = useState(null);
+  const [perfError, setPerfError] = useState("");
+
+  const getJson = (url) => fetch(url, { cache: "no-store" })
+    .then((r) => r.json().then((j) => (r.ok ? j : Promise.reject(new Error(j.error || r.status)))));
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch("api/networth", { cache: "no-store" })
-      .then((r) => r.json().then((j) => (r.ok ? j : Promise.reject(new Error(j.error || r.status)))))
+    getJson("api/networth")
       .then((j) => { setData(j); setError(""); })
       .catch((e) => setError(String(e.message || e)))
       .finally(() => setLoading(false));
   }, []);
   useEffect(load, [load]);
+
+  // Price history is only fetched the first time Performance is opened.
+  useEffect(() => {
+    if (tab !== "perf" || perf || perfError) return;
+    getJson("api/performance").then(setPerf).catch((e) => setPerfError(String(e.message || e)));
+  }, [tab, perf, perfError]);
 
   // Saved history plus a live point for right now.
   const history = useMemo(() => {
@@ -3016,77 +3087,68 @@ function NetWorth() {
 
   const pieData = useMemo(() => {
     if (!data) return [];
-    const parts = data.accounts.map((a, i) => ({ label: a.name, value: a.value, color: ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length] }));
+    const parts = data.accounts.map((a, i) => ({ label: a.name, value: a.value, color: accountColor(i) }));
     if (data.ynab.ok && data.totals.cash > 0) parts.unshift({ label: "Cash (YNAB)", value: data.totals.cash, color: ACCOUNT_COLORS[0] });
     return parts.filter((p) => p.value > 0);
   }, [data]);
 
-  if (error && !data) {
-    return (
-      <div className="nw-page" style={{ padding: "28px 24px 56px", maxWidth: 720, margin: "0 auto", color: "#d8d8de", fontFamily: FONT }}>
-        <h1 style={{ fontSize: 30, fontWeight: 600, color: "#fafafa", margin: "0 0 12px" }}>Net Worth</h1>
-        Couldn't load balances ({error}). <button onClick={load} style={{ marginLeft: 8, background: "#27272a", color: "#fafafa", border: 0, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Try again</button>
+  const msg = (text, retry) => (
+    <div style={{ ...panel, color: "#d8d8de", fontFamily: FONT, fontSize: 13.5 }}>
+      {text}
+      {retry && <button onClick={retry} style={{ marginLeft: 10, background: "#27272a", color: "#fafafa", border: 0, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Try again</button>}
+    </div>
+  );
+
+  let body;
+  if (!data) {
+    body = error ? msg(`Couldn't load balances (${error}).`, load) : msg("Loading balances…");
+  } else if (tab === "overview") {
+    body = (
+      <div className="nw-split" style={{ marginBottom: 0 }}>
+        <div style={panel}>
+          <div style={panelTitle}>Where it sits</div>
+          <PieChart data={pieData} size={220} centerLabel="ASSETS" />
+        </div>
+        <HistoryChart history={history} milestones={data.milestones} />
       </div>
     );
+  } else if (tab === "perf") {
+    body = perf ? <PerfChart perf={perf} />
+      : perfError ? msg(`Couldn't load price history (${perfError}).`, () => setPerfError(""))
+      : msg("Loading price history…");
+  } else if (tab === "accounts") {
+    body = (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <CashCardsStrip ynab={data.ynab} totals={data.totals} />
+        <div style={{ ...panelTitle, marginBottom: 0 }}>Fidelity · holdings from {shortDate(data.asOf)}</div>
+        <div className="nw-grid">
+          {data.accounts.map((a, i) => <AccountCard key={a.name} account={a} color={accountColor(i)} asOf={data.asOf} />)}
+        </div>
+      </div>
+    );
+  } else {
+    body = <LoansCard loans={data.loans} asOf={data.loansAsOf} />;
   }
-  if (!data) {
-    return <div style={{ padding: 48, textAlign: "center", color: "#7d7d88", fontFamily: FONT }}>Loading balances…</div>;
-  }
-
-  const t = data.totals;
-  const accountColor = (i) => ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length];
 
   return (
     <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
-          <div>
-            <p style={{ fontFamily: FONT, fontSize: 14, color: "#8b8b96", margin: "0 0 6px" }}>everything you own, minus what you owe</p>
-            <h1 style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Net Worth</h1>
-          </div>
-          <div style={{ textAlign: "right", fontFamily: FONT }}>
-            <div style={{ fontSize: 11.5, color: "#7d7d88", marginBottom: 4 }}>Updated</div>
-            <div style={{ fontSize: 13.5, color: "#d8d8de" }}>
-              {new Date(data.generatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+          <h1 style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Net Worth</h1>
+          {data && (
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", display: "flex", alignItems: "center", gap: 10 }}>
+              Updated {new Date(data.generatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
               <button onClick={load} disabled={loading} style={{
-                marginLeft: 10, background: "rgba(255,255,255,0.06)", color: "#d8d8de", border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(255,255,255,0.06)", color: "#d8d8de", border: "1px solid rgba(255,255,255,0.08)",
                 borderRadius: 7, padding: "4px 10px", fontSize: 12.5, cursor: "pointer",
               }}>{loading ? "…" : "Refresh"}</button>
             </div>
-          </div>
+          )}
         </div>
-
-        <div className="dash-stats">
-          <StatCard label="Net worth" value={fmt0(t.netWorth)} sub="Cash + investments − cards − loans" accent={NW_COLORS.netWorth} />
-          <StatCard label="Liquid" value={fmt0(t.liquid)} sub={`Goal ${kfmt(data.goal.low)}–${kfmt(data.goal.high)}`} accent={NW_COLORS.liquid} />
-          <StatCard label="Investments" value={fmt0(t.investments)} sub={`${data.accounts.length} Fidelity accounts`} accent={NW_COLORS.invest} />
-          <StatCard label="Debt" value={fmt0(t.loans + t.cards)} sub={`Loans ${fmt0(t.loans)} · Cards ${fmt0(t.cards)}`} accent={NW_COLORS.debt} />
+        <div className="nw-subtabs" style={{ marginBottom: 20 }}>
+          <Pills options={NW_TABS} value={tab} onChange={setTab} />
         </div>
-
-        <div style={{ marginBottom: 32 }}>
-          <GoalCard goal={data.goal} liquid={t.liquid} ynabOk={data.ynab.ok} />
-        </div>
-
-        <div style={{ marginBottom: 32 }}>
-          <HistoryChart history={history} goal={data.goal} milestones={data.milestones} />
-        </div>
-
-        <div className="nw-split">
-          <div style={panel}>
-            <div style={panelTitle}>Where it sits</div>
-            <PieChart data={pieData} size={240} centerLabel="ASSETS" />
-          </div>
-          <YnabCard ynab={data.ynab} totals={t} />
-        </div>
-
-        <div style={{ ...panelTitle, fontSize: 15, color: "#d8d8de" }}>
-          Fidelity · holdings from {shortDate(data.asOf)}
-        </div>
-        <div className="nw-grid" style={{ marginBottom: 32 }}>
-          {data.accounts.map((a, i) => <AccountCard key={a.name} account={a} color={accountColor(i)} asOf={data.asOf} />)}
-        </div>
-
-        <LoansCard loans={data.loans} asOf={data.loansAsOf} />
+        {body}
       </div>
     </div>
   );

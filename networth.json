@@ -1,10 +1,18 @@
 {
   "as_of": "2026-11-01",
-  "goal": { "label": "Liquid", "low": 40000, "high": 50000, "by": "2027-03-01" },
   "milestones": [
-    { "date": "2027-03-01", "label": "CRNA decision" },
-    { "date": "2027-06-01", "label": "Start if accepted" },
-    { "date": "2028-01-01", "label": "Start if not" }
+    {
+      "date": "2027-03-01",
+      "label": "CRNA decision"
+    },
+    {
+      "date": "2027-06-01",
+      "label": "Start if accepted"
+    },
+    {
+      "date": "2028-01-01",
+      "label": "Start if not"
+    }
   ],
   "accounts": [
     {
@@ -12,7 +20,13 @@
       "kind": "liquid",
       "cash": 0.08,
       "holdings": [
-        { "symbol": "SGOV", "name": "iShares 0-3 Month Treasury", "shares": 25.822, "price": 100.73, "cost": 2600.87 }
+        {
+          "symbol": "SGOV",
+          "name": "iShares 0-3 Month Treasury",
+          "shares": 25.822,
+          "price": 100.73,
+          "cost": 2600.87
+        }
       ]
     },
     {
@@ -20,16 +34,31 @@
       "kind": "liquid",
       "cash": 0.28,
       "holdings": [
-        { "symbol": "VTI", "name": "Vanguard Total Stock Market", "shares": 0.567, "price": 371.57, "cost": 208.45 }
+        {
+          "symbol": "VTI",
+          "name": "Vanguard Total Stock Market",
+          "shares": 0.567,
+          "price": 371.57,
+          "cost": 208.45
+        }
       ]
     },
     {
       "name": "Roth IRA",
       "kind": "retirement",
       "cash": 60.45,
-      "pending": { "amount": 9486.18, "note": "Moving to a Traditional IRA" },
+      "pending": {
+        "amount": 9486.18,
+        "note": "Moving to a Traditional IRA"
+      },
       "holdings": [
-        { "symbol": "VTI", "name": "Vanguard Total Stock Market", "shares": 63.056, "price": 371.57, "cost": 22953.04 }
+        {
+          "symbol": "VTI",
+          "name": "Vanguard Total Stock Market",
+          "shares": 63.056,
+          "price": 371.57,
+          "cost": 22953.04
+        }
       ]
     },
     {
@@ -38,24 +67,78 @@
       "note": "Includes the CCMC 403(b) rolled over from Transamerica",
       "cash": 0,
       "holdings": [
-        { "symbol": "FXAIX", "name": "Fidelity 500 Index", "shares": 53.028, "price": 263.50, "cost": 13699.79 },
-        { "symbol": "FSGGX", "name": "Fidelity Global ex US Index", "shares": 113.446, "price": 20.66, "cost": 2405.88 }
+        {
+          "symbol": "FXAIX",
+          "name": "Fidelity 500 Index",
+          "shares": 53.028,
+          "price": 263.5,
+          "cost": 13699.79
+        },
+        {
+          "symbol": "FSGGX",
+          "name": "Fidelity Global ex US Index",
+          "shares": 113.446,
+          "price": 20.66,
+          "cost": 2405.88
+        }
       ]
     }
   ],
   "loans_as_of": "2026-11-01",
   "loans": [
-    { "name": "1-01 Direct Subsidized",   "balance": 5458.90,  "rate": 2.73 },
-    { "name": "1-02 Direct Unsubsidized", "balance": 2189.82,  "rate": 2.73 },
-    { "name": "1-03 Direct Unsubsidized", "balance": 8475.30,  "rate": 3.99 },
-    { "name": "1-04 Direct Unsubsidized", "balance": 0,        "rate": 5.50 },
-    { "name": "1-05 Direct Unsubsidized", "balance": 21635.66, "rate": 7.08 },
-    { "name": "1-06 Direct Unsubsidized", "balance": 1027.04,  "rate": 7.08 },
-    { "name": "1-07 Direct Grad PLUS",    "balance": 15808.82, "rate": 8.08 },
-    { "name": "1-08 Direct Unsubsidized", "balance": 10870.25, "rate": 6.94 }
+    {
+      "name": "1-01 Direct Subsidized",
+      "balance": 5458.9,
+      "rate": 2.73
+    },
+    {
+      "name": "1-02 Direct Unsubsidized",
+      "balance": 2189.82,
+      "rate": 2.73
+    },
+    {
+      "name": "1-03 Direct Unsubsidized",
+      "balance": 8475.3,
+      "rate": 3.99
+    },
+    {
+      "name": "1-04 Direct Unsubsidized",
+      "balance": 0,
+      "rate": 5.5
+    },
+    {
+      "name": "1-05 Direct Unsubsidized",
+      "balance": 21635.66,
+      "rate": 7.08
+    },
+    {
+      "name": "1-06 Direct Unsubsidized",
+      "balance": 1027.04,
+      "rate": 7.08
+    },
+    {
+      "name": "1-07 Direct Grad PLUS",
+      "balance": 15808.82,
+      "rate": 8.08
+    },
+    {
+      "name": "1-08 Direct Unsubsidized",
+      "balance": 10870.25,
+      "rate": 6.94
+    }
   ],
   "ynab": {
-    "cash_types": ["checking", "savings", "cash"],
-    "card_types": ["creditCard", "lineOfCredit"]
+    "cash_types": [
+      "checking",
+      "savings",
+      "cash"
+    ],
+    "card_types": [
+      "creditCard",
+      "lineOfCredit"
+    ],
+    "exclude_names": [
+      "Fidelity CMA"
+    ]
   }
 }

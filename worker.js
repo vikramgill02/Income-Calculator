@@ -129,8 +129,10 @@ async function buildNetWorth(env, origin) {
     return { ...a, holdings, value: invested + (a.cash || 0) + pending, gain: invested - cost };
   });
 
+  // Skip YNAB accounts already counted from Fidelity (the CMA is the CRNA Fund).
   const types = plan.ynab || {};
-  const ynabAccounts = ynab.ok ? ynab.accounts : [];
+  const skip = new Set(types.exclude_names || []);
+  const ynabAccounts = ynab.ok ? ynab.accounts.filter((a) => !skip.has(a.name)) : [];
   const cashAccounts = ynabAccounts.filter((a) => (types.cash_types || []).includes(a.type));
   const cardAccounts = ynabAccounts.filter((a) => (types.card_types || []).includes(a.type));
 
@@ -153,14 +155,64 @@ async function buildNetWorth(env, origin) {
   return {
     generatedAt: Date.now(),
     asOf: plan.as_of,
-    goal: plan.goal,
     milestones: plan.milestones || [],
     accounts,
     loans: plan.loans || [],
     loansAsOf: plan.loans_as_of,
-    ynab: { ok: ynab.ok, error: ynab.error || null, cash: cashAccounts, cards: cardAccounts },
+    ynab: { ok: ynab.ok, error: ynab.error || null },
     totals,
   };
+}
+
+/* ─── Performance ───
+   Today's shares × each day's closing price over the past year, so the line
+   shows how the current holdings performed. Deposits and cash don't move it. */
+
+async function fetchCloses(sym) {
+  const res = await fetch(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1y&interval=1d`,
+    { headers: { "User-Agent": "Mozilla/5.0 (income-calculator)" }, cf: { cacheTtl: 3600 } },
+  );
+  if (!res.ok) throw new Error(`No price history for ${sym}`);
+  const r = (await res.json())?.chart?.result?.[0];
+  const closes = r?.indicators?.quote?.[0]?.close || [];
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" });
+  const out = {};
+  (r?.timestamp || []).forEach((t, i) => {
+    if (Number.isFinite(closes[i])) out[day.format(new Date(t * 1000))] = closes[i];
+  });
+  if (!Object.keys(out).length) throw new Error(`No price history for ${sym}`);
+  return out;
+}
+
+async function performanceResponse(request, env) {
+  const plan = await loadPlan(env, new URL(request.url).origin);
+  const symbols = [...new Set(plan.accounts.flatMap((a) => a.holdings.map((h) => h.symbol)))];
+  const closes = Object.fromEntries(await Promise.all(symbols.map(async (s) => [s, await fetchCloses(s)])));
+  const dates = [...new Set(Object.values(closes).flatMap(Object.keys))].sort();
+
+  // Carry each symbol's last close forward over days it didn't trade.
+  const last = {};
+  const accounts = plan.accounts.map((a) => ({ name: a.name, kind: a.kind, values: [] }));
+  const total = [];
+  for (const d of dates) {
+    for (const s of symbols) if (closes[s][d] != null) last[s] = closes[s][d];
+    let sum = 0;
+    plan.accounts.forEach((a, i) => {
+      const v = a.holdings.reduce((t, h) => t + h.shares * (last[h.symbol] ?? 0), 0);
+      accounts[i].values.push(Math.round(v * 100) / 100);
+      sum += v;
+    });
+    total.push(Math.round(sum * 100) / 100);
+  }
+  // Drop leading days before every symbol has a price.
+  const first = dates.findIndex((_, i) => symbols.every((s) => Object.keys(closes[s])[0] <= dates[i]));
+  const cut = (xs) => xs.slice(Math.max(0, first));
+  return new Response(JSON.stringify({
+    dates: cut(dates),
+    total: cut(total),
+    accounts: accounts.map((a) => ({ ...a, values: cut(a.values) })),
+  }), { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 }
 
 async function readHistory(env) {
@@ -241,6 +293,16 @@ export default {
 
     if (readCookie(request, COOKIE) !== expected) {
       return html(loginPage(""), 401);
+    }
+
+    if (url.pathname === "/api/performance") {
+      try {
+        return await performanceResponse(request, env);
+      } catch (e) {
+        return new Response(JSON.stringify({ error: String(e.message || e) }), {
+          status: 502, headers: { "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (url.pathname === "/api/networth") {
