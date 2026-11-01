@@ -6,7 +6,7 @@ Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill1
 - **Dashboard** — the landing tab. Year-to-date income. Gross / net / 403(b) / taxes, pie chart by employer, per-employer cards with logos, monthly bar chart with projections, and a filterable paystub table. Data lives in [`paystubs.json`](./paystubs.json).
 - **Cards** — credit card credits & perks checklist for Amex Platinum, Amex Gold, and Capital One Venture X. Data lives in [`cards.json`](./cards.json).
 - **Property** — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
-- **Net Worth** — four sub-tabs. *Overview*: where your money sits and a net worth / liquid history chart marked with the CRNA decision and start dates. *Performance*: investments over 1M / 3M / 6M / 1Y with each account's return. *Accounts*: YNAB cash and credit-card totals plus each Fidelity account's holdings, priced live. *Loans*: student loans by interest rate.
+- **Net Worth** — three sub-tabs. *Overview*: where your money sits and a net worth / liquid history chart marked with the CRNA decision and start dates. *Accounts*: YNAB cash and credit-card totals plus each Fidelity account's holdings, priced live. *Loans*: student loans by interest rate.
 
 ## Hosting & password
 
@@ -22,7 +22,6 @@ Cloudflare builds and deploys the site on every push to `main`. `worker.js` sits
 
 - **Fidelity** — shares in `networth.json` × the latest price from Yahoo Finance. A symbol whose price can't be fetched falls back to the price from the last Fidelity CSV export.
 - **YNAB** — reads account balances with the `YNABKEY` Worker variable (a YNAB personal access token). Only checking/savings/cash and credit-card accounts are used, and accounts listed in `ynab.exclude_names` (the Fidelity CMA, which is the CRNA Fund) are skipped so nothing is counted twice. The key never reaches the browser.
-- **Performance** — `/api/performance` multiplies today's shares by a year of daily closes from Yahoo Finance, so deposits don't show up as gains.
 - **History** — a nightly cron (07:00 UTC) saves one point per day to the `HISTORY` KV namespace, which Cloudflare creates automatically on first deploy.
 
 To update holdings after a trade or deposit, export *Positions* from Fidelity as CSV and update the `accounts` in `networth.json`. Update `loans` from the loan servicer's balances.
