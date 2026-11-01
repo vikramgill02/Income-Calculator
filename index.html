@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Income Dashboard</title>
+<title>Ledger</title>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Income" />
-<meta name="theme-color" content="#08080a" />
+<meta name="theme-color" content="#0c0b0a" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
@@ -19,10 +19,22 @@
 <style>
 :root {
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --serif: 'Cormorant Garamond', 'Iowan Old Style', Georgia, serif;
+  --bg: #0c0b0a;
+  --surface: #141311;
+  --line: rgba(240,228,208,0.08);
+  --text: #f6f1e7;
+  --muted: #9b9386;
+  --gold: #c9a96e;
+  --nav-h: 64px;
 }
 html, body {
   margin: 0; padding: 0;
-  background: #08080a;
+  background:
+    radial-gradient(1100px 520px at 50% -220px, rgba(201,169,110,0.10), transparent 70%),
+    #0c0b0a;
+  background-attachment: fixed;
+  color: var(--text);
   font-family: var(--font);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
@@ -30,12 +42,20 @@ html, body {
   letter-spacing: -0.006em;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-h1 { letter-spacing: -0.025em; }
+/* Headings are set in the serif; numbers and UI stay in Inter. */
+h1 {
+  font-family: var(--serif) !important;
+  font-weight: 500 !important;
+  font-size: clamp(32px, 4.2vw, 42px) !important;
+  letter-spacing: -0.01em;
+  color: var(--text) !important;
+}
+::selection { background: rgba(201,169,110,0.35); }
 button { font-family: var(--font); transition: background 0.13s ease, border-color 0.13s ease, color 0.13s ease; }
 input { font-family: var(--font); }
 ::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-track { background: #101014; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+::-webkit-scrollbar-track { background: #141311; }
+::-webkit-scrollbar-thumb { background: #3d3933; border-radius: 4px; }
 
 .dash-stats {
   display: grid;
@@ -102,7 +122,7 @@ input { font-family: var(--font); }
   }
   .stub-table td[data-l]::before {
     content: attr(data-l);
-    color: #8b8b96; font-size: 11.5px; font-weight: 500;
+    color: #9b9386; font-size: 11.5px; font-weight: 500;
   }
 }
 .prop-wrap { max-width: 1200px; margin: 0 auto; padding: 28px 24px 56px; }
@@ -128,25 +148,108 @@ input { font-family: var(--font); }
 }
 .prop-range {
   -webkit-appearance: none; appearance: none;
-  height: 4px; border-radius: 3px; background: #3f3f46; outline: none;
+  height: 4px; border-radius: 3px; background: #3d3933; outline: none;
 }
 .prop-range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 18px; height: 18px; border-radius: 50%;
-  background: #fafafa; border: none; cursor: pointer;
+  background: #f6f1e7; border: none; cursor: pointer;
 }
 .prop-range::-moz-range-thumb {
   width: 18px; height: 18px; border-radius: 50%;
-  background: #fafafa; border: none; cursor: pointer;
+  background: #f6f1e7; border: none; cursor: pointer;
 }
 @media (max-width: 820px) {
   .dash-pie-grid { grid-template-columns: 1fr; }
 }
-/* Five tabs are wider than a phone at desktop padding. */
-.tabbar::-webkit-scrollbar { display: none; }
-@media (max-width: 480px) {
-  .tabbar-wrap { padding: 18px 16px 0 !important; }
-  .tabbar-btn { padding: 7px 9px !important; font-size: 12.5px !important; }
+/* ─── section tabs ─── */
+.subtabs {
+  display: flex; gap: 4px; margin: 0 0 24px; overflow-x: auto; scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+}
+.subtabs::-webkit-scrollbar { display: none; }
+.subtabs button {
+  position: relative; flex-shrink: 0; background: none; border: none; cursor: pointer;
+  min-height: 44px; padding: 0 14px; font-size: 13.5px; font-weight: 450; color: var(--muted);
+}
+.subtabs button:first-child { padding-left: 2px; }
+.subtabs button:hover { color: var(--text); }
+.subtabs button.active { color: var(--text); }
+.subtabs button.active::after {
+  content: ""; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 1.5px; background: var(--gold);
+}
+.subtabs button:first-child.active::after { left: 2px; }
+.page-head {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.eyebrow {
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin: 0 0 8px; font-weight: 500;
+}
+@media (max-width: 560px) {
+  .dash-stats { grid-template-columns: 1fr 1fr !important; gap: 10px !important; margin-bottom: 20px !important; }
+  .stat-card { padding: 16px !important; }
+  .stat-value { font-size: 19px !important; }
+  .claim-row { flex-wrap: wrap; row-gap: 2px !important; padding: 8px 0 !important; }
+  .claim-row > div:first-child { flex: 1 1 100% !important; white-space: normal !important; }
+  .claim-row > span:nth-of-type(1) { text-align: left !important; min-width: 0 !important; margin-right: auto; }
+}
+details.fine summary { cursor: pointer; color: var(--muted); font-size: 12.5px; list-style: none; }
+details.fine summary::-webkit-details-marker { display: none; }
+details.fine summary::before { content: "+ "; color: var(--gold); }
+details.fine[open] summary::before { content: "− "; }
+
+/* ─── navigation ─── */
+.topnav {
+  position: sticky; top: 0; z-index: 20;
+  padding-top: env(safe-area-inset-top);
+  background: rgba(12,11,10,0.78);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.topnav-inner {
+  max-width: 1280px; margin: 0 auto; height: var(--nav-h);
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 0 24px;
+}
+.wordmark {
+  font-family: var(--serif); font-size: 26px; font-weight: 600; color: var(--text);
+  letter-spacing: 0.01em;
+}
+.wordmark span { color: var(--gold); }
+.topnav-tabs { display: flex; gap: 6px; }
+.topnav-tabs button {
+  position: relative; background: none; border: none; cursor: pointer;
+  padding: 10px 14px; font-size: 13.5px; font-weight: 450; letter-spacing: 0.01em;
+  color: var(--muted);
+}
+.topnav-tabs button:hover { color: var(--text); }
+.topnav-tabs button.active { color: var(--text); }
+.topnav-tabs button.active::after {
+  content: ""; position: absolute; left: 14px; right: 14px; bottom: 2px;
+  height: 1.5px; border-radius: 1px; background: var(--gold);
+}
+.bottomnav { display: none; }
+@media (max-width: 720px) {
+  .topnav-inner { justify-content: center; height: 52px; }
+  .wordmark { font-size: 23px; }
+  .topnav-tabs { display: none; }
+  .bottomnav {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: rgba(16,15,13,0.88);
+    -webkit-backdrop-filter: saturate(140%) blur(16px);
+    backdrop-filter: saturate(140%) blur(16px);
+    border-top: 1px solid var(--line);
+  }
+  .bottomnav button {
+    background: none; border: none; cursor: pointer; min-height: 52px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    color: #716a5f; font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em;
+  }
+  .bottomnav button.active { color: var(--gold); }
+  .app-main { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
 .nw-grid {
   display: grid;
@@ -187,12 +290,12 @@ const n = (v) => parseFloat(v) || 0;
 const EMPLOYERS = ["CCMC", "NorthBay", "Sutter"];
 
 const EMPLOYER_META = {
-  CCMC:     { color: "#7a2230", logo: "logos/ccmc.png",     full: "Community Medical Centers" },
-  NorthBay: { color: "#00873e", logo: "logos/northbay.jpg", full: "NorthBay Healthcare" },
-  Sutter:   { color: "#1aa39b", logo: "logos/sutter.png",   full: "Sutter Health" },
+  CCMC:     { color: "#a4545f", logo: "logos/ccmc.png",     full: "Community Medical Centers" },
+  NorthBay: { color: "#6f9e80", logo: "logos/northbay.jpg", full: "NorthBay Healthcare" },
+  Sutter:   { color: "#6fa8a2", logo: "logos/sutter.png",   full: "Sutter Health" },
 };
 
-const colorFor = (emp) => EMPLOYER_META[emp]?.color || "#5ec98a";
+const colorFor = (emp) => EMPLOYER_META[emp]?.color || "#93c4a2";
 
 const formatPayDate = (iso) => {
   if (!iso) return "—";
@@ -207,11 +310,11 @@ const formatPayDate = (iso) => {
 function Field({ label, value, onChange, suffix = "", placeholder = "—" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96" }}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #52525b", paddingBottom: 8 }}>
+      <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#9b9386" }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #5a554c", paddingBottom: 8 }}>
         <input type="number" step="0.01" value={value} placeholder={placeholder} onChange={onChange}
-          style={{ background: "transparent", border: "none", outline: "none", color: "#ffffff", fontFamily: FONT, fontSize: 18, width: "100%" }} />
-        {suffix && <span style={{ color: "#8b8b96", fontSize: 13.5, marginLeft: 4 }}>{suffix}</span>}
+          style={{ background: "transparent", border: "none", outline: "none", color: "#f6f1e7", fontFamily: FONT, fontSize: 18, width: "100%" }} />
+        {suffix && <span style={{ color: "#9b9386", fontSize: 13.5, marginLeft: 4 }}>{suffix}</span>}
       </div>
     </div>
   );
@@ -222,40 +325,67 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
     <div style={{
       display: "flex", justifyContent: "space-between", alignItems: "baseline",
       padding: large ? "18px 0 0" : "9px 0",
-      borderTop: large ? "1px solid #52525b" : "none",
+      borderTop: large ? "1px solid #5a554c" : "none",
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontSize: 12.5, letterSpacing: "0", color: muted ? "#7d7d88" : "#d8d8de" }}>{label}</span>
-        {note && <span style={{ fontSize: 13.5, color: "#7d7d88", fontFamily: FONT }}>{note}</span>}
+        <span style={{ fontSize: 12.5, letterSpacing: "0", color: muted ? "#8b8477" : "#ddd4c5" }}>{label}</span>
+        {note && <span style={{ fontSize: 13.5, color: "#8b8477", fontFamily: FONT }}>{note}</span>}
       </div>
-      <span style={{ fontFamily: FONT, fontSize: large ? 23 : 14, fontWeight: large ? 600 : 450, color: highlight ? "#5ec98a" : muted ? "#7d7d88" : "#ededf0" }}>{value}</span>
+      <span style={{ fontFamily: FONT, fontSize: large ? 23 : 14, fontWeight: large ? 600 : 450, color: highlight ? "#93c4a2" : muted ? "#8b8477" : "#ece5d8" }}>{value}</span>
     </div>
   );
 }
 
 /* ─── tab bar ─── */
 
+const NAV = [
+  ["worth", "Net Worth", <path d="M3 17l5-5 4 4 8-9M15 7h5v5" />],
+  ["dash", "Dashboard", <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />],
+  ["calc", "Pay Calc", <g><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></g>],
+  ["cards", "Cards", <g><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19M6.5 15h4" /></g>],
+  ["prop", "Property", <path d="M3 11l9-7 9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5" />],
+];
+
+const NavIcon = ({ children }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+);
+
+/* Desktop: a slim header with the wordmark and text tabs. Phone: the header
+   keeps only the wordmark and the tabs move to a bar along the bottom. */
 function TabBar({ view, setView }) {
   return (
-    <div className="tabbar-wrap" style={{ display: "flex", justifyContent: "center", padding: "22px 24px 0" }}>
-      <div className="tabbar" style={{
-        display: "flex", gap: 2, padding: 3, maxWidth: "100%", overflowX: "auto", scrollbarWidth: "none",
-        background: "rgba(255,255,255,0.035)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        borderRadius: 10,
-      }}>
-        {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"], ["prop", "Property"], ["worth", "Net Worth"]].map(([key, label]) => {
-          const active = view === key;
-          return (
-            <button key={key} className="tabbar-btn" onClick={() => setView(key)} style={{
-              background: active ? "rgba(255,255,255,0.09)" : "transparent",
-              border: "none", borderRadius: 7, padding: "7px 16px", cursor: "pointer",
-              fontSize: 13, fontWeight: active ? 550 : 450,
-              color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT, whiteSpace: "nowrap", flexShrink: 0,
-            }}>{label}</button>
-          );
-        })}
-      </div>
+    <>
+      <header className="topnav">
+        <div className="topnav-inner">
+          <div className="wordmark">Ledger<span>.</span></div>
+          <nav className="topnav-tabs">
+            {NAV.map(([key, label]) => (
+              <button key={key} onClick={() => setView(key)} className={view === key ? "active" : ""}>{label}</button>
+            ))}
+          </nav>
+        </div>
+      </header>
+      <nav className="bottomnav">
+        {NAV.map(([key, label, icon]) => (
+          <button key={key} onClick={() => setView(key)} className={view === key ? "active" : ""} aria-label={label}>
+            <NavIcon>{icon}</NavIcon>
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+    </>
+  );
+}
+
+/* Section tabs inside a page: text with a gold underline. */
+function SubTabs({ options, value, onChange }) {
+  return (
+    <div className="subtabs" role="tablist">
+      {options.map(([key, label]) => (
+        <button key={key} role="tab" aria-selected={value === key} onClick={() => onChange(key)}
+          className={value === key ? "active" : ""}>{label}</button>
+      ))}
     </div>
   );
 }
@@ -307,7 +437,7 @@ function Calc() {
   const dedAmt    = totalGross * (dedPct / 100);
   const totalNet  = totalGross - dedAmt;
   const hasData   = totalGross > 0;
-  const iconColor = (active) => active ? "#d8d8de" : "#63636e";
+  const iconColor = (active) => active ? "#ddd4c5" : "#716a5f";
 
   return (
     <div style={{ display: "flex", justifyContent: "center", padding: "28px 24px 48px" }}>
@@ -315,8 +445,8 @@ function Calc() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
           <div>
-            <p style={{ fontFamily: FONT, fontSize: 13.5, color: "#8b8b96", letterSpacing: "0", margin: "0 0 4px" }}>biweekly</p>
-            <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Pay Calculator</h1>
+            <p className="eyebrow">Sutter · biweekly</p>
+            <h1 style={{ margin: 0, lineHeight: 1.05 }}>Pay Calculator</h1>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             {[
@@ -324,7 +454,7 @@ function Calc() {
               { fn: redo, can: canRedo, d: "M21 7v6h-6 M21 13C19 7 14 3 8 3a9 9 0 0 0 0 18h13" },
             ].map(({ fn, can, d }, i) => (
               <button key={i} onClick={fn} disabled={!can} style={{
-                background: "transparent", border: `1px solid ${can ? "#63636e" : "rgba(255,255,255,0.08)"}`,
+                background: "transparent", border: `1px solid ${can ? "#716a5f" : "rgba(240,228,208,0.08)"}`,
                 borderRadius: 8, padding: "0 14px", minWidth: 44, minHeight: 44,
                 cursor: can ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -340,22 +470,22 @@ function Calc() {
         <div style={{ marginBottom: 40 }}>
           <div style={{ marginBottom: 24 }}>
             <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, margin: 0 }}>Sutter · Biweekly Paycheck</p>
+              <p style={{ fontSize: 13.5, letterSpacing: "0", color: "#9b9386", fontWeight: 500, margin: 0 }}>Sutter · Biweekly Paycheck</p>
             </div>
-            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", lineHeight: 1.9 }}>
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477", lineHeight: 1.9 }}>
               <div>
-                <span style={{ color: "#ededf0" }}>Base</span>
-                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
-                <span style={{ color: "#8b8b96" }}>{fmt(SUTTER_BASE)}/hr</span>
-                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
-                <span style={{ color: "#8b8b96" }}>first 40 hrs/week</span>
+                <span style={{ color: "#ece5d8" }}>Base</span>
+                <span style={{ margin: "0 8px", color: "#4a453e" }}>·</span>
+                <span style={{ color: "#9b9386" }}>{fmt(SUTTER_BASE)}/hr</span>
+                <span style={{ margin: "0 8px", color: "#4a453e" }}>·</span>
+                <span style={{ color: "#9b9386" }}>first 40 hrs/week</span>
               </div>
               <div>
-                <span style={{ color: "#fb923c" }}>OT</span>
-                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
-                <span style={{ color: "#8b8b96" }}>{fmt(SUTTER_OT)}/hr</span>
-                <span style={{ margin: "0 8px", color: "#4a4a54" }}>·</span>
-                <span style={{ color: "#8b8b96" }}>hours over 40/week</span>
+                <span style={{ color: "#d4a373" }}>OT</span>
+                <span style={{ margin: "0 8px", color: "#4a453e" }}>·</span>
+                <span style={{ color: "#9b9386" }}>{fmt(SUTTER_OT)}/hr</span>
+                <span style={{ margin: "0 8px", color: "#4a453e" }}>·</span>
+                <span style={{ color: "#9b9386" }}>hours over 40/week</span>
               </div>
             </div>
           </div>
@@ -365,25 +495,25 @@ function Calc() {
           </div>
         </div>
 
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", marginBottom: 40 }} />
+        <div style={{ borderTop: "1px solid rgba(240,228,208,0.08)", marginBottom: 40 }} />
 
         <div style={{ marginBottom: 52 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
-            <p style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, margin: 0 }}>Deductions</p>
-            <span style={{ fontFamily: FONT, fontSize: 18, color: "#fff" }}>{deductions}%</span>
+            <p style={{ fontSize: 13.5, letterSpacing: "0", color: "#9b9386", fontWeight: 500, margin: 0 }}>Deductions</p>
+            <span style={{ fontFamily: FONT, fontSize: 18, color: "#f6f1e7" }}>{deductions}%</span>
           </div>
           <style>{`
             input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-            input[type=range]::-webkit-slider-runnable-track { height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; }
-            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; margin-top: -8px; cursor: pointer; }
-            input[type=range]::-moz-range-track { height: 2px; background: rgba(255,255,255,0.08); border-radius: 2px; }
-            input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
+            input[type=range]::-webkit-slider-runnable-track { height: 2px; background: rgba(240,228,208,0.08); border-radius: 2px; }
+            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #f6f1e7; margin-top: -8px; cursor: pointer; }
+            input[type=range]::-moz-range-track { height: 2px; background: rgba(240,228,208,0.08); border-radius: 2px; }
+            input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #f6f1e7; border: none; cursor: pointer; }
           `}</style>
           <input type="range" min="25" max="50" step="1" value={deductions}
             onChange={(e) => set((s) => ({ ...s, deductions: Number(e.target.value) }))} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-            <span style={{ fontSize: 13.5, color: "#63636e", fontFamily: FONT }}>25%</span>
-            <span style={{ fontSize: 13.5, color: "#63636e", fontFamily: FONT }}>50%</span>
+            <span style={{ fontSize: 13.5, color: "#716a5f", fontFamily: FONT }}>25%</span>
+            <span style={{ fontSize: 13.5, color: "#716a5f", fontFamily: FONT }}>50%</span>
           </div>
         </div>
 
@@ -410,7 +540,7 @@ function Calc() {
             <Line label="Take Home" value={fmt(totalNet)} highlight large />
           </div>
         ) : (
-          <p style={{ fontFamily: FONT, color: "#63636e", fontSize: 15, margin: 0 }}>
+          <p style={{ fontFamily: FONT, color: "#716a5f", fontSize: 15, margin: 0 }}>
             Enter your hours above to see totals.
           </p>
         )}
@@ -428,7 +558,7 @@ function Logo({ employer, size = 40 }) {
     return (
       <div style={{
         width: size, height: size, borderRadius: 10,
-        background: colorFor(employer), color: "#fff",
+        background: colorFor(employer), color: "#f6f1e7",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontFamily: FONT, fontSize: size * 0.36, fontWeight: 600, flexShrink: 0,
       }}>{employer.slice(0, 1)}</div>
@@ -437,7 +567,7 @@ function Logo({ employer, size = 40 }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: 10, overflow: "hidden",
-      background: "#fff", flexShrink: 0,
+      background: "#f6f1e7", flexShrink: 0,
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <img src={meta.logo} alt={meta.full}
@@ -449,15 +579,14 @@ function Logo({ employer, size = 40 }) {
 
 function StatCard({ label, value, sub, accent }) {
   return (
-    <div style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "22px 24px",
+    <div className="stat-card" style={{
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)", borderRadius: 16, padding: "22px 24px",
       position: "relative", overflow: "hidden",
     }}>
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: accent }} />
-      <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, marginBottom: 12 }}>{label}</div>
-      <div style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, color: accent, lineHeight: 1.05, letterSpacing: "-0.01em" }}>{value}</div>
-      {sub && <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", marginTop: 10 }}>{sub}</div>}
+      <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9386", fontWeight: 500, marginBottom: 14 }}>{label}</div>
+      <div className="stat-value" style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, color: accent, lineHeight: 1.05, letterSpacing: "-0.01em" }}>{value}</div>
+      {sub && <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477", marginTop: 10 }}>{sub}</div>}
     </div>
   );
 }
@@ -466,7 +595,7 @@ function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
-      <div style={{ textAlign: "center", color: "#63636e", fontFamily: FONT, padding: "40px 0" }}>
+      <div style={{ textAlign: "center", color: "#716a5f", fontFamily: FONT, padding: "40px 0" }}>
         No data
       </div>
     );
@@ -490,21 +619,21 @@ function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <svg width={size} height={size}>
         {slices.map((s, i) => (
-          <path key={i} d={s.path} fill={s.color} stroke="#08080a" strokeWidth="2" />
+          <path key={i} d={s.path} fill={s.color} stroke="#0c0b0a" strokeWidth="2" />
         ))}
-        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#8b8b96", fontSize: 11.5, letterSpacing: "0", fontFamily: FONT }}>{centerLabel}</text>
-        <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#fff", fontSize: 19, fontFamily: FONT, fontWeight: 600 }}>{fmt0(total)}</text>
+        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#9b9386", fontSize: 11.5, letterSpacing: "0", fontFamily: FONT }}>{centerLabel}</text>
+        <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#f6f1e7", fontSize: 19, fontFamily: FONT, fontWeight: 600 }}>{fmt0(total)}</text>
       </svg>
       <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
         {slices.map((s, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
-              <span style={{ fontSize: 12.5, letterSpacing: "0", color: "#d8d8de", fontFamily: FONT }}>{s.label}</span>
+              <span style={{ fontSize: 12.5, letterSpacing: "0", color: "#ddd4c5", fontFamily: FONT }}>{s.label}</span>
             </div>
             <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
-              <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#ededf0" }}>{fmt0(s.value)}</span>
-              <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", minWidth: 44, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
+              <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#ece5d8" }}>{fmt0(s.value)}</span>
+              <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477", minWidth: 44, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
             </div>
           </div>
         ))}
@@ -515,37 +644,37 @@ function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
 
 function EmployerCard({ employer, stats }) {
   const meta = EMPLOYER_META[employer] || {};
-  const color = meta.color || "#5ec98a";
+  const color = meta.color || "#93c4a2";
   return (
     <div style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)",
       borderLeft: `3px solid ${color}`,
       borderRadius: 16, padding: 22,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
         <Logo employer={employer} size={44} />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: "#fafafa", lineHeight: 1.2 }}>{employer}</div>
-          <div style={{ fontFamily: FONT, fontSize: 13.5, letterSpacing: "0.1em", color: "#7d7d88", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta.full || employer}</div>
+          <div style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: "#f6f1e7", lineHeight: 1.2 }}>{employer}</div>
+          <div style={{ fontFamily: FONT, fontSize: 13.5, letterSpacing: "0.1em", color: "#8b8477", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta.full || employer}</div>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, rowGap: 16 }}>
         <div>
-          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>Gross</div>
-          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(stats.gross)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#8b8477", marginBottom: 4 }}>Gross</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ece5d8" }}>{fmt(stats.gross)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>Net</div>
-          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(stats.net)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#8b8477", marginBottom: 4 }}>Net</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ece5d8" }}>{fmt(stats.net)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>403(b)</div>
-          <div style={{ fontFamily: FONT, fontSize: 14, color: "#9b8fd4" }}>{fmt(stats.r403b)}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#8b8477", marginBottom: 4 }}>403(b)</div>
+          <div style={{ fontFamily: FONT, fontSize: 14, color: "#ab9fcf" }}>{fmt(stats.r403b)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 4 }}>Paystubs</div>
-          <div style={{ fontFamily: FONT, fontSize: 14, color: "#ededf0" }}>{stats.count}</div>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#8b8477", marginBottom: 4 }}>Paystubs</div>
+          <div style={{ fontFamily: FONT, fontSize: 14, color: "#ece5d8" }}>{stats.count}</div>
         </div>
       </div>
     </div>
@@ -579,32 +708,33 @@ function ProjectionCard({ ytdGross, projection, paystubs }) {
   ];
   return (
     <div style={{
-      background: "linear-gradient(135deg, #101014 0%, #0a0a0c 100%)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28,
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)", borderRadius: 16, padding: 28,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", marginBottom: 10 }}>2026 Year-End Projection</div>
-          <div style={{ fontFamily: FONT, fontSize: 34, color: "#5ec98a", fontWeight: 600, lineHeight: 1, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
-          <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", marginTop: 10 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9386", marginBottom: 12 }}>2026 Year-End Projection</div>
+          <div style={{ fontFamily: FONT, fontSize: 34, color: "#93c4a2", fontWeight: 600, lineHeight: 1, letterSpacing: "-0.01em" }}>{fmt(total)}</div>
+          <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477", marginTop: 10 }}>
             {fmt(ytdGross)} earned + {fmt(remaining)} projected
           </div>
         </div>
         {projection.notes && (
-          <div style={{ fontFamily: FONT, color: "#8b8b96", fontSize: 13.5, maxWidth: 360, textAlign: "right", lineHeight: 1.5 }}>
-            {projection.notes}
-          </div>
+          <details className="fine" style={{ maxWidth: 360, fontFamily: FONT }}>
+            <summary>How this is projected</summary>
+            <div style={{ color: "#9b9386", fontSize: 12.5, lineHeight: 1.55, marginTop: 8 }}>{projection.notes}</div>
+          </details>
         )}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
-        <div style={{ borderLeft: "2px solid #52525b", paddingLeft: 14 }}>
-          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 6 }}>YTD Earned</div>
-          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(ytdGross)}</div>
+        <div style={{ borderLeft: "2px solid #5a554c", paddingLeft: 14 }}>
+          <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#8b8477", marginBottom: 6 }}>YTD Earned</div>
+          <div style={{ fontFamily: FONT, fontSize: 18, color: "#ece5d8" }}>{fmt(ytdGross)}</div>
         </div>
         {empKeys.map((emp) => (
           <div key={emp} style={{ borderLeft: `2px solid ${colorFor(emp)}`, paddingLeft: 14 }}>
-            <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", marginBottom: 6 }}>Projected {emp}</div>
-            <div style={{ fontFamily: FONT, fontSize: 18, color: "#ededf0" }}>{fmt(byEmployer[emp])}</div>
+            <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#8b8477", marginBottom: 6 }}>Projected {emp}</div>
+            <div style={{ fontFamily: FONT, fontSize: 18, color: "#ece5d8" }}>{fmt(byEmployer[emp])}</div>
           </div>
         ))}
       </div>
@@ -632,7 +762,7 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
     totalNet += n(projByEmp[emp].netProxy);
   }
   const totalShown = metric === "net" ? totalNet : totalGross;
-  const totalColor = metric === "net" ? "#5ec98a" : "#ededf0";
+  const totalColor = metric === "net" ? "#93c4a2" : "#ece5d8";
 
   const tipW = 280;
   let left = x + 16;
@@ -644,14 +774,14 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
   return (
     <div style={{
       position: "absolute", left, top, width: tipW,
-      background: "rgba(9,9,11,0.97)", border: "1px solid #3f3f46",
+      background: "rgba(12,11,10,0.97)", border: "1px solid #3d3933",
       borderRadius: 10, padding: "12px 14px",
       pointerEvents: "none", zIndex: 10,
       boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10, gap: 8 }}>
-        <div style={{ fontSize: 12.5, letterSpacing: "0", color: "#ededf0", fontFamily: FONT }}>{monthName}</div>
-        {label && <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#f0b429", fontFamily: FONT }}>{label}</div>}
+        <div style={{ fontSize: 12.5, letterSpacing: "0", color: "#ece5d8", fontFamily: FONT }}>{monthName}</div>
+        {label && <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#c9a96e", fontFamily: FONT }}>{label}</div>}
       </div>
 
       {hasActual && (
@@ -659,14 +789,14 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
           {stubs.map((p, i) => (
             <div key={i} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "6px 0", borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+              padding: "6px 0", borderTop: i === 0 ? "none" : "1px solid rgba(240,228,208,0.05)",
               fontSize: 12.5, fontFamily: FONT, gap: 12,
             }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ color: colorFor(p.employer), fontSize: 13.5, letterSpacing: "0.1em" }}>{p.employer}</div>
-                <div style={{ color: "#7d7d88", fontSize: 13.5, marginTop: 2 }}>{formatPayDate(p.pay_date)}</div>
+                <div style={{ color: "#8b8477", fontSize: 13.5, marginTop: 2 }}>{formatPayDate(p.pay_date)}</div>
               </div>
-              <div style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(metric === "net" ? n(p.net) : n(p.gross))}</div>
+              <div style={{ color: "#ece5d8", whiteSpace: "nowrap" }}>{fmt(metric === "net" ? n(p.net) : n(p.gross))}</div>
             </div>
           ))}
         </div>
@@ -674,13 +804,13 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
 
       {hasProj && (
         <div>
-          {hasActual && <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#f0b429", fontFamily: FONT, marginBottom: 6 }}>Still Projected</div>}
+          {hasActual && <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#c9a96e", fontFamily: FONT, marginBottom: 6 }}>Still Projected</div>}
           {Object.keys(projByEmp).map((emp) => {
             const v = metric === "net" ? n(projByEmp[emp].netProxy) : n(projByEmp[emp].gross);
             return (
               <div key={emp} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 12.5, fontFamily: FONT }}>
                 <span style={{ color: colorFor(emp), fontSize: 13.5, letterSpacing: "0.1em" }}>{emp}</span>
-                <span style={{ color: "#ededf0", opacity: 0.75 }}>{fmt(v)}</span>
+                <span style={{ color: "#ece5d8", opacity: 0.75 }}>{fmt(v)}</span>
               </div>
             );
           })}
@@ -688,11 +818,11 @@ function ChartTooltip({ ym, data, metric, showProjected = true, x, y, containerW
       )}
 
       {!hasActual && !hasProj && (
-        <div style={{ fontFamily: FONT, color: "#7d7d88", fontSize: 13.5 }}>No paychecks this month.</div>
+        <div style={{ fontFamily: FONT, color: "#8b8477", fontSize: 13.5 }}>No paychecks this month.</div>
       )}
 
-      <div style={{ borderTop: "1px solid #3f3f46", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: FONT }}>
-        <span style={{ color: "#8b8b96", letterSpacing: "0", fontSize: 13.5 }}>Total {metric}</span>
+      <div style={{ borderTop: "1px solid #3d3933", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontFamily: FONT }}>
+        <span style={{ color: "#9b9386", letterSpacing: "0", fontSize: 13.5 }}>Total {metric}</span>
         <span style={{ color: totalColor, fontSize: 13.5, fontWeight: 500 }}>{fmt(totalShown)}</span>
       </div>
     </div>
@@ -789,22 +919,22 @@ function MonthlyChart({ paystubs, projection, year }) {
 
   return (
     <div ref={containerRef} style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)", borderRadius: 16, padding: 24,
       position: "relative",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96" }}>
+          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#9b9386" }}>
             Monthly {metric === "net" ? "Net" : "Gross"} · {year}
           </div>
-          <div style={{ display: "flex", gap: 2, background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 2 }}>
+          <div style={{ display: "flex", gap: 2, background: "#0e0d0c", border: "1px solid rgba(240,228,208,0.08)", borderRadius: 8, padding: 2 }}>
             {[["gross", "Gross"], ["net", "Net"]].map(([key, label]) => {
               const active = metric === key;
               return (
                 <button key={key} onClick={() => setMetric(key)} style={{
-                  background: active ? (key === "net" ? "#5ec98a" : "#ededf0") : "transparent",
-                  color: active ? "#08080a" : "#7d7d88",
+                  background: active ? (key === "net" ? "#93c4a2" : "#ece5d8") : "transparent",
+                  color: active ? "#0c0b0a" : "#8b8477",
                   border: "none", borderRadius: 6, padding: "0 14px", cursor: "pointer",
                   minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
                   fontSize: 13.5, letterSpacing: "0",
@@ -815,16 +945,16 @@ function MonthlyChart({ paystubs, projection, year }) {
           </div>
           <button onClick={() => setShowProjected((v) => !v)} style={{
             display: "flex", alignItems: "center", gap: 7,
-            background: showProjected ? "rgba(240,180,41,0.12)" : "transparent",
-            border: `1px solid ${showProjected ? "#f0b429" : "#4a4a54"}`,
+            background: showProjected ? "rgba(201,169,110,0.12)" : "transparent",
+            border: `1px solid ${showProjected ? "#c9a96e" : "#4a453e"}`,
             borderRadius: 8, padding: "0 14px", minHeight: 44, cursor: "pointer",
             fontSize: 13.5, letterSpacing: "0",
-            color: showProjected ? "#f0b429" : "#7d7d88", fontFamily: FONT,
+            color: showProjected ? "#c9a96e" : "#8b8477", fontFamily: FONT,
           }}>
             <span style={{
               width: 9, height: 9, borderRadius: 2,
-              background: showProjected ? "rgba(251,191,36,0.35)" : "transparent",
-              border: `1px dashed ${showProjected ? "#f0b429" : "#7d7d88"}`,
+              background: showProjected ? "rgba(201,169,110,0.35)" : "transparent",
+              border: `1px dashed ${showProjected ? "#c9a96e" : "#8b8477"}`,
             }} />
             Projected
           </button>
@@ -833,12 +963,12 @@ function MonthlyChart({ paystubs, projection, year }) {
           {allEmployers.map((emp) => (
             <div key={emp} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: colorFor(emp) }} />
-              <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#d8d8de", fontFamily: FONT }}>{emp}</span>
+              <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#ddd4c5", fontFamily: FONT }}>{emp}</span>
             </div>
           ))}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 3, background: "transparent", border: "1px dashed #71717a" }} />
-            <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#7d7d88", fontFamily: FONT }}>Projected</span>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "transparent", border: "1px dashed #7a7367" }} />
+            <span style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8477", fontFamily: FONT }}>Projected</span>
           </div>
         </div>
       </div>
@@ -847,10 +977,10 @@ function MonthlyChart({ paystubs, projection, year }) {
         {gridLines.map((g, i) => (
           <g key={i}>
             <line x1={ML} x2={W - MR} y1={g.y} y2={g.y}
-              stroke="rgba(255,255,255,0.08)" strokeWidth="1"
+              stroke="rgba(240,228,208,0.08)" strokeWidth="1"
               strokeDasharray={i === 0 ? "" : "2,4"} />
             <text x={ML - 8} y={g.y + 3} textAnchor="end"
-              style={{ fill: "#63636e", fontSize: 11.5, fontFamily: FONT }}>
+              style={{ fill: "#716a5f", fontSize: 11.5, fontFamily: FONT }}>
               {g.val >= 1000 ? `$${(g.val / 1000).toFixed(0)}k` : `$${g.val.toFixed(0)}`}
             </text>
           </g>
@@ -901,12 +1031,12 @@ function MonthlyChart({ paystubs, projection, year }) {
               {monthTotal > 0 && (
                 <text x={x + barWidth / 2} y={MT + innerH - (monthTotal / yMax) * innerH - 6}
                   textAnchor="middle"
-                  style={{ fill: isAllProjection ? "#7d7d88" : "#ededf0", fontSize: 12.5, fontFamily: FONT }}>
+                  style={{ fill: isAllProjection ? "#8b8477" : "#ece5d8", fontSize: 12.5, fontFamily: FONT }}>
                   {monthTotal >= 1000 ? `$${(monthTotal / 1000).toFixed(1)}k` : ""}
                 </text>
               )}
               <text x={x + barWidth / 2} y={H - MB + 18} textAnchor="middle"
-                style={{ fill: isAllProjection ? "#63636e" : "#8b8b96", fontSize: 13.5, fontFamily: FONT }}>
+                style={{ fill: isAllProjection ? "#716a5f" : "#9b9386", fontSize: 13.5, fontFamily: FONT }}>
                 {MONTH_LABELS[i]}
               </text>
               <rect x={ML + slot * i} y={MT} width={slot} height={innerH}
@@ -930,16 +1060,16 @@ function MonthlyChart({ paystubs, projection, year }) {
 
 function PaystubTable({ paystubs }) {
   return (
-    <div style={{ background: "#101014", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, overflow: "hidden" }}>
+    <div style={{ background: "#141311", border: "1px solid rgba(240,228,208,0.08)", borderRadius: 16, overflow: "hidden" }}>
       <div style={{ overflowX: "auto" }}>
         <table className="stub-table" style={{ width: "100%", borderCollapse: "collapse", fontFamily: FONT, minWidth: 640 }}>
           <thead>
-            <tr style={{ background: "#0a0a0c" }}>
+            <tr style={{ background: "#0e0d0c" }}>
               {[
                 ["#", "left"], ["Date", "left"], ["Employer", "left"],
                 ["Gross", "right"], ["Net", "right"], ["403(b)", "right"],
               ].map(([h, align], i) => (
-                <th key={i} style={{ textAlign: align, padding: "14px 20px", fontSize: 11.5, letterSpacing: "0", color: "#8b8b96", fontWeight: 500, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>{h}</th>
+                <th key={i} style={{ textAlign: align, padding: "14px 20px", fontSize: 11.5, letterSpacing: "0", color: "#9b9386", fontWeight: 500, borderBottom: "1px solid rgba(240,228,208,0.08)" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -947,9 +1077,9 @@ function PaystubTable({ paystubs }) {
             {paystubs.map((p, i) => {
               const color = colorFor(p.employer);
               return (
-                <tr key={i} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
-                  <td className="stub-n" style={{ padding: "14px 20px", fontSize: 12.5, color: "#7d7d88" }}>{i + 1}</td>
-                  <td className="stub-date" style={{ padding: "14px 20px", fontSize: 13.5, color: "#d8d8de", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
+                <tr key={i} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(240,228,208,0.05)" }}>
+                  <td className="stub-n" style={{ padding: "14px 20px", fontSize: 12.5, color: "#8b8477" }}>{i + 1}</td>
+                  <td className="stub-date" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ddd4c5", whiteSpace: "nowrap" }}>{formatPayDate(p.pay_date)}</td>
                   <td className="stub-emp" style={{ padding: "14px 20px" }}>
                     <span style={{
                       display: "inline-flex", alignItems: "center", gap: 8,
@@ -961,9 +1091,9 @@ function PaystubTable({ paystubs }) {
                       {p.employer}
                     </span>
                   </td>
-                  <td data-l="Gross" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.gross))}</td>
-                  <td data-l="Net" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ededf0", textAlign: "right" }}>{fmt(n(p.net))}</td>
-                  <td data-l="403(b)" style={{ padding: "14px 20px", fontSize: 13.5, color: "#9b8fd4", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
+                  <td data-l="Gross" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ece5d8", textAlign: "right" }}>{fmt(n(p.gross))}</td>
+                  <td data-l="Net" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ece5d8", textAlign: "right" }}>{fmt(n(p.net))}</td>
+                  <td data-l="403(b)" style={{ padding: "14px 20px", fontSize: 13.5, color: "#ab9fcf", textAlign: "right" }}>{fmt(n(p.retirement_403b))}</td>
                 </tr>
               );
             })}
@@ -986,16 +1116,16 @@ function PaystubSection({ paystubs, orderedEmployers, loaded }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96" }}>All Paystubs</div>
-          <div style={{ display: "flex", gap: 2, background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 2 }}>
+          <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#9b9386" }}>All Paystubs</div>
+          <div style={{ display: "flex", gap: 2, background: "#0e0d0c", border: "1px solid rgba(240,228,208,0.08)", borderRadius: 8, padding: 2 }}>
             {options.map((key) => {
               const active = filter === key;
               const isAll = key === "all";
-              const color = isAll ? "#ededf0" : colorFor(key);
+              const color = isAll ? "#ece5d8" : colorFor(key);
               return (
                 <button key={key} onClick={() => setFilter(key)} style={{
                   background: active ? color : "transparent",
-                  color: active ? "#08080a" : "#7d7d88",
+                  color: active ? "#0c0b0a" : "#8b8477",
                   border: "none", borderRadius: 6, padding: "0 14px", cursor: "pointer",
                   minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
                   fontSize: 13.5, letterSpacing: "0",
@@ -1005,14 +1135,14 @@ function PaystubSection({ paystubs, orderedEmployers, loaded }) {
             })}
           </div>
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88" }}>
+        <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477" }}>
           {filter === "all" ? `${paystubs.length} total` : `${filtered.length} of ${paystubs.length}`}
         </div>
       </div>
       {!loaded ? (
-        <p style={{ color: "#63636e", fontFamily: FONT }}>Loading…</p>
+        <p style={{ color: "#716a5f", fontFamily: FONT }}>Loading…</p>
       ) : filtered.length === 0 ? (
-        <p style={{ color: "#63636e", fontFamily: FONT }}>
+        <p style={{ color: "#716a5f", fontFamily: FONT }}>
           {paystubs.length === 0 ? "No paystubs yet." : `No ${filter} paystubs.`}
         </p>
       ) : (
@@ -1068,41 +1198,43 @@ function Dashboard() {
   })), [orderedEmployers, totals]);
 
   const taxesOther = Math.max(0, totals.gross - totals.net - totals.r403b);
+  const [sub, setSub] = useState("overview");
 
   return (
     <div style={{ padding: "28px 24px 56px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+        <div className="page-head">
           <div>
-            <p style={{ fontFamily: FONT, fontSize: 14, color: "#8b8b96", margin: "0 0 6px" }}>
-              year to date · {year}
-            </p>
-            <h1 style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>
-              Income Dashboard
-            </h1>
+            <p className="eyebrow">Year to date · {year}</p>
+            <h1 style={{ margin: 0, lineHeight: 1.05 }}>Income</h1>
           </div>
           {lastUpdated && (
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 11.5, letterSpacing: "0", color: "#7d7d88", fontFamily: FONT, marginBottom: 4 }}>Last Updated</div>
-              <div style={{ fontFamily: FONT, fontSize: 13.5, color: "#d8d8de" }}>{formatPayDate(lastUpdated)}</div>
-            </div>
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477" }}>Updated {formatPayDate(lastUpdated)}</div>
           )}
         </div>
 
+        <SubTabs options={[["overview", "Overview"], ["employers", "Employers"], ["monthly", "Monthly"], ["paystubs", "Paystubs"]]}
+          value={sub} onChange={setSub} />
+
+        {sub === "overview" && <>
         <div className="dash-stats">
-          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#ededf0" />
-          <StatCard label="Taxes / Other" value={fmt(taxesOther)} sub={totals.gross ? `${((taxesOther / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#f87171" />
-          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#5ec98a" />
-          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#9b8fd4" />
+          <StatCard label="Gross YTD" value={fmt(totals.gross)} sub={`${paystubs.length} paystubs`} accent="#ece5d8" />
+          <StatCard label="Taxes / Other" value={fmt(taxesOther)} sub={totals.gross ? `${((taxesOther / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#d98a80" />
+          <StatCard label="Net YTD" value={fmt(totals.net)} sub={totals.gross ? `${((totals.net / totals.gross) * 100).toFixed(1)}% take-home` : ""} accent="#93c4a2" />
+          <StatCard label="403(b) YTD" value={fmt(totals.r403b)} sub={totals.gross ? `${((totals.r403b / totals.gross) * 100).toFixed(1)}% of gross` : ""} accent="#ab9fcf" />
         </div>
 
+        {projection && <ProjectionCard ytdGross={totals.gross} projection={projection} paystubs={paystubs} />}
+        </>}
+
+        {sub === "employers" && (
         <div className="dash-pie-grid">
           <div style={{
-            background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-            border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28,
+            background: "#141311",
+            border: "1px solid rgba(240,228,208,0.08)", borderRadius: 16, padding: 28,
           }}>
-            <div style={{ fontSize: 13.5, letterSpacing: "0", color: "#8b8b96", marginBottom: 24 }}>Income Split</div>
+            <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9386", marginBottom: 24 }}>Income Split</div>
             <PieChart data={pieData} size={240} />
           </div>
           <div className="dash-employers">
@@ -1111,18 +1243,11 @@ function Dashboard() {
             ))}
           </div>
         </div>
-
-        {projection && (
-          <div style={{ marginBottom: 32 }}>
-            <ProjectionCard ytdGross={totals.gross} projection={projection} paystubs={paystubs} />
-          </div>
         )}
 
-        <div style={{ marginBottom: 32 }}>
-          <MonthlyChart paystubs={paystubs} projection={projection} year={year} />
-        </div>
+        {sub === "monthly" && <MonthlyChart paystubs={paystubs} projection={projection} year={year} />}
 
-        <PaystubSection paystubs={paystubs} orderedEmployers={orderedEmployers} loaded={loaded} />
+        {sub === "paystubs" && <PaystubSection paystubs={paystubs} orderedEmployers={orderedEmployers} loaded={loaded} />}
 
 
       </div>
@@ -1216,10 +1341,10 @@ const benefitStatus = (benefit, year) => {
 function PeriodChip({ period, hit, wide, pendingAuto }) {
   // Captured is captured: every claimed period reads green, whether or not the
   // rest of the year is done. What still needs doing stays amber.
-  let bg = "transparent", border = "rgba(255,255,255,0.055)", color = "#4a4a54", weight = 450;
-  if (hit)                            { bg = "rgba(34,197,94,0.13)";  border = "transparent"; color = "#5ec98a"; }
-  else if (pendingAuto)               { bg = "transparent"; border = "rgba(34,197,94,0.28)"; color = "#3f8f61"; }
-  else if (period.when === "current") { bg = "rgba(240,180,41,0.14)"; border = "#f0b429"; color = "#f0b429"; weight = 550; }
+  let bg = "transparent", border = "rgba(240,228,208,0.055)", color = "#4a453e", weight = 450;
+  if (hit)                            { bg = "rgba(147,196,162,0.13)";  border = "transparent"; color = "#93c4a2"; }
+  else if (pendingAuto)               { bg = "transparent"; border = "rgba(147,196,162,0.28)"; color = "#6f9e80"; }
+  else if (period.when === "current") { bg = "rgba(201,169,110,0.14)"; border = "#c9a96e"; color = "#c9a96e"; weight = 550; }
   return (
     <div style={{
       minWidth: wide ? 58 : 27, height: 19, padding: "0 4px", flexShrink: 0,
@@ -1233,25 +1358,25 @@ function PeriodChip({ period, hit, wide, pendingAuto }) {
 function BenefitRow({ benefit, year, accent, first }) {
   const st = benefitStatus(benefit, year);
   const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
-  const DONE = "#5ec98a";
+  const DONE = "#93c4a2";
   return (
     <div className="bene-row" title={benefit.detail} style={{
-      borderTop: first ? "none" : "1px solid rgba(255,255,255,0.05)",
+      borderTop: first ? "none" : "1px solid rgba(240,228,208,0.05)",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 7, flex: "1 1 165px", minWidth: 0 }}>
         <span style={{
           fontSize: 13.5, fontFamily: FONT,
-          color: st.complete ? "#6e7d74" : "#d8d8de",
+          color: st.complete ? "#6e7d74" : "#ddd4c5",
           textDecoration: st.complete ? "line-through" : "none",
           textDecorationColor: "rgba(110,125,116,0.5)",
           textDecorationThickness: "1px",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{benefit.name}</span>
         {benefit.auto && (
-          <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "#5ec98a", border: "1px solid rgba(94,201,138,0.3)", borderRadius: 3, padding: "0 4px", fontFamily: FONT, flexShrink: 0 }}>Auto</span>
+          <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "#93c4a2", border: "1px solid rgba(147,196,162,0.3)", borderRadius: 3, padding: "0 4px", fontFamily: FONT, flexShrink: 0 }}>Auto</span>
         )}
       </div>
-      <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e", flexShrink: 0, minWidth: 34, textAlign: "right" }}>
+      <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#716a5f", flexShrink: 0, minWidth: 34, textAlign: "right" }}>
         {fmt0(st.per)}
       </span>
       <div className="chip-strip">
@@ -1261,15 +1386,15 @@ function BenefitRow({ benefit, year, accent, first }) {
             pendingAuto={st.complete && !st.claimedSet.has(p.key)} />
         ))}
       </div>
-      <span style={{ fontFamily: FONT, fontSize: 13.5, color: st.complete ? "#6e7d74" : "#a8a8b2", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
-        {fmt0(st.captured)}<span style={{ color: st.complete ? "rgba(34,197,94,0.4)" : "#4a4a54" }}> / {fmt0(st.total)}</span>
+      <span style={{ fontFamily: FONT, fontSize: 13.5, color: st.complete ? "#6e7d74" : "#b4ab9d", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
+        {fmt0(st.captured)}<span style={{ color: st.complete ? "rgba(147,196,162,0.4)" : "#4a453e" }}> / {fmt0(st.total)}</span>
       </span>
     </div>
   );
 }
 
 function CardBlock({ card, year }) {
-  const accent = card.color || "#5ec98a";
+  const accent = card.color || "#93c4a2";
   const [showPerks, setShowPerks] = useState(false);
   let captured = 0, total = 0, openN = 0;
   for (const b of card.benefits || []) {
@@ -1291,8 +1416,8 @@ function CardBlock({ card, year }) {
 
   return (
     <div style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)", borderLeft: `3px solid ${accent}`,
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)", borderLeft: `3px solid ${accent}`,
       borderRadius: 12, padding: "16px 18px", marginBottom: 12,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
@@ -1301,24 +1426,24 @@ function CardBlock({ card, year }) {
             width: 30, height: 20, borderRadius: 4, flexShrink: 0,
             background: `linear-gradient(135deg, ${accent} 0%, ${accent}88 100%)`,
           }} />
-          <span style={{ fontFamily: FONT, fontSize: 15.5, fontWeight: 600, color: "#fafafa", lineHeight: 1.2 }}>{card.name}</span>
-          <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e" }}>{fmt0(n(card.annual_fee))}/yr</span>
+          <span style={{ fontFamily: FONT, fontSize: 15.5, fontWeight: 600, color: "#f6f1e7", lineHeight: 1.2 }}>{card.name}</span>
+          <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#716a5f" }}>{fmt0(n(card.annual_fee))}/yr</span>
           {openN > 0 && (
-            <span style={{ fontSize: 10.5, letterSpacing: "0.1em", color: "#f0b429", border: "1px solid rgba(240,180,41,0.35)", background: "rgba(240,180,41,0.12)", borderRadius: 3, padding: "1px 5px", fontFamily: FONT }}>{openN} open</span>
+            <span style={{ fontSize: 10.5, letterSpacing: "0.1em", color: "#c9a96e", border: "1px solid rgba(201,169,110,0.35)", background: "rgba(201,169,110,0.12)", borderRadius: 3, padding: "1px 5px", fontFamily: FONT }}>{openN} open</span>
           )}
         </div>
         <div style={{ fontFamily: FONT, fontSize: 13.5, color: accent }}>
-          {fmt0(captured)}<span style={{ fontSize: 13.5, color: "#4a4a54" }}> / {fmt0(total)}</span>
+          {fmt0(captured)}<span style={{ fontSize: 13.5, color: "#4a453e" }}> / {fmt0(total)}</span>
         </div>
       </div>
 
-      <div style={{ height: 3, borderRadius: 3, background: "rgba(255,255,255,0.06)", marginBottom: 14, overflow: "hidden" }}>
+      <div style={{ height: 3, borderRadius: 3, background: "rgba(240,228,208,0.06)", marginBottom: 14, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${pct}%`, background: accent, opacity: 0.75, borderRadius: 3 }} />
       </div>
 
       {cadences.map((cad) => (
         <div key={cad} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 10.5, letterSpacing: "0", color: "#63636e", marginBottom: 2 }}>
+          <div style={{ fontSize: 10.5, letterSpacing: "0", color: "#716a5f", marginBottom: 2 }}>
             {CADENCE_META[cad]?.label || cad}
           </div>
           {groups[cad].map((b, i) => (
@@ -1328,16 +1453,16 @@ function CardBlock({ card, year }) {
       ))}
 
       {card.perks && card.perks.length > 0 && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 8, marginTop: 2 }}>
+        <div style={{ borderTop: "1px solid rgba(240,228,208,0.05)", paddingTop: 8, marginTop: 2 }}>
           <button onClick={() => setShowPerks((v) => !v)} style={{
             background: "transparent", border: "none", padding: "14px 0", cursor: "pointer",
             fontFamily: FONT, fontSize: 12.5, letterSpacing: "0",
-            color: "#63636e", minHeight: 44, display: "inline-flex", alignItems: "center",
+            color: "#716a5f", minHeight: 44, display: "inline-flex", alignItems: "center",
           }}>
             {showPerks ? "▾" : "▸"} Ongoing Perks ({card.perks.length})
           </button>
           {showPerks && (
-            <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: "#7d7d88", fontSize: 13.5, lineHeight: 1.7 }}>
+            <ul style={{ margin: "8px 0 0", paddingLeft: 16, color: "#8b8477", fontSize: 13.5, lineHeight: 1.7 }}>
               {card.perks.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
           )}
@@ -1351,16 +1476,16 @@ function AttentionPanel({ rows }) {
   const total = rows.reduce((s, r) => s + r.atStake, 0);
   return (
     <div style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      borderLeft: `3px solid ${rows.length ? "#f0b429" : "#5ec98a"}`,
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)",
+      borderLeft: `3px solid ${rows.length ? "#c9a96e" : "#93c4a2"}`,
       borderRadius: 12, padding: "14px 18px", marginBottom: 16,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10, marginBottom: rows.length ? 8 : 0 }}>
-        <div style={{ fontSize: 11.5, letterSpacing: "0", color: rows.length ? "#f0b429" : "#5ec98a" }}>
+        <div style={{ fontSize: 11.5, letterSpacing: "0", color: rows.length ? "#c9a96e" : "#93c4a2" }}>
           {rows.length ? "Claim Now" : "All Caught Up"}
         </div>
-        <div style={{ fontFamily: FONT, fontSize: 13.5, color: rows.length ? "#f0b429" : "#5ec98a" }}>
+        <div style={{ fontFamily: FONT, fontSize: 13.5, color: rows.length ? "#c9a96e" : "#93c4a2" }}>
           {rows.length ? `${fmt0(total)} on the table` : "Nothing outstanding"}
         </div>
       </div>
@@ -1369,26 +1494,26 @@ function AttentionPanel({ rows }) {
         // Multi-year credits carry a placeholder far-future end date — show
         // them as open-ended rather than printing a nonsense deadline.
         const openEnded = d == null || d > 3650;
-        const urgent = openEnded ? "#63636e" : d <= 7 ? "#f87171" : d <= 30 ? "#f0b429" : "#7d7d88";
+        const urgent = openEnded ? "#716a5f" : d <= 7 ? "#d98a80" : d <= 30 ? "#c9a96e" : "#8b8477";
         const deadline = openEnded
           ? "No deadline"
           : `${r.expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${d}d`;
         return (
-          <div key={`${r.card.id}-${r.benefit.id}`} style={{
+          <div key={`${r.card.id}-${r.benefit.id}`} className="claim-row" style={{
             display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
-            padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+            padding: "5px 0", borderTop: i === 0 ? "none" : "1px solid rgba(240,228,208,0.05)",
             fontFamily: FONT, fontSize: 12.5,
           }}>
             <div style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               <span style={{ color: r.card.color }}>{r.card.name}</span>
-              <span style={{ margin: "0 6px", color: "#4a4a54" }}>·</span>
-              <span style={{ color: "#d8d8de" }}>{r.benefit.name}</span>
-              <span style={{ marginLeft: 8, color: "#63636e", fontSize: 13.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
+              <span style={{ margin: "0 6px", color: "#4a453e" }}>·</span>
+              <span style={{ color: "#ddd4c5" }}>{r.benefit.name}</span>
+              <span style={{ marginLeft: 8, color: "#716a5f", fontSize: 13.5 }}>{r.open.map((p) => p.label).join(", ")}</span>
             </div>
             <span style={{ color: urgent, fontSize: 13.5, flexShrink: 0, minWidth: 118, textAlign: "right" }}>
               {deadline}
             </span>
-            <span style={{ color: "#ededf0", flexShrink: 0, minWidth: 46, textAlign: "right" }}>{fmt0(r.atStake)}</span>
+            <span style={{ color: "#ece5d8", flexShrink: 0, minWidth: 46, textAlign: "right" }}>{fmt0(r.atStake)}</span>
           </div>
         );
       })}
@@ -1402,6 +1527,7 @@ function Cards() {
   const [firstYear, setFirstYear] = useState(new Date().getFullYear());
   const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [sub, setSub] = useState("claim");
 
   useEffect(() => {
     fetch("cards.json", { cache: "no-store" })
@@ -1451,58 +1577,68 @@ function Cards() {
   }, [cards, year]);
 
   return (
-    <div style={{ padding: "20px 20px 40px" }}>
-      <div style={{ maxWidth: 940, margin: "0 auto" }}>
+    <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
-          <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>
-            Card Benefits
+        <div className="page-head">
+          <div>
+          <p className="eyebrow">Credits &amp; perks</p>
+          <h1 style={{ margin: 0, lineHeight: 1.05 }}>
+            Cards
             {years.length > 1 ? (
               <span style={{ display: "inline-flex", gap: 4, marginLeft: 12, verticalAlign: "middle" }}>
                 {years.map((y) => (
                   <button key={y} onClick={() => setYear(y)} style={{
                     fontFamily: FONT, fontSize: 12.5, letterSpacing: "0.1em", cursor: "pointer",
-                    padding: "2px 7px", borderRadius: 5, background: y === year ? "rgba(255,255,255,0.08)" : "transparent",
-                    border: "1px solid " + (y === year ? "rgba(255,255,255,0.14)" : "transparent"),
-                    color: y === year ? "#d8d8de" : "#63636e",
+                    padding: "2px 7px", borderRadius: 5, background: y === year ? "rgba(240,228,208,0.08)" : "transparent",
+                    border: "1px solid " + (y === year ? "rgba(240,228,208,0.14)" : "transparent"),
+                    color: y === year ? "#ddd4c5" : "#716a5f",
                   }}>{y}</button>
                 ))}
               </span>
             ) : (
-              <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#63636e", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
+              <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#716a5f", marginLeft: 12, letterSpacing: "0.1em" }}>{year}</span>
             )}
           </h1>
+          </div>
           {lastUpdated && (
-            <div style={{ fontFamily: FONT, fontSize: 13.5, color: "#63636e" }}>
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477" }}>
               Updated {formatPayDate(lastUpdated)}
             </div>
           )}
         </div>
 
-        {loaded && cards.length > 0 && <AttentionPanel rows={attention} />}
-
-        {!loaded ? (
-          <p style={{ color: "#63636e", fontFamily: FONT }}>Loading…</p>
-        ) : cards.length === 0 ? (
-          <p style={{ color: "#63636e", fontFamily: FONT }}>No cards yet.</p>
-        ) : (
-          cards.map((c) => <CardBlock key={c.id} card={c} year={year} />)
+        {loaded && cards.length > 0 && (
+          <SubTabs value={sub} onChange={setSub}
+            options={[["claim", attention.length ? `Claim now · ${attention.length}` : "Claim now"], ...cards.map((c) => [c.id, c.name])]} />
         )}
 
+        {!loaded ? (
+          <p style={{ color: "#716a5f", fontFamily: FONT }}>Loading…</p>
+        ) : cards.length === 0 ? (
+          <p style={{ color: "#716a5f", fontFamily: FONT }}>No cards yet.</p>
+        ) : sub === "claim" ? (
+          <AttentionPanel rows={attention} />
+        ) : (
+          cards.filter((c) => c.id === sub).map((c) => <CardBlock key={c.id} card={c} year={year} />)
+        )}
+
+        {sub !== "claim" && (
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
           {[
-            ["Captured", "rgba(34,197,94,0.13)", "#5ec98a"],
-            ["Posts on its own", "transparent", "rgba(34,197,94,0.28)"],
-            ["Open now", "rgba(240,180,41,0.12)", "#f0b429"],
-            ["Not claimed", "transparent", "rgba(255,255,255,0.07)"],
+            ["Captured", "rgba(147,196,162,0.13)", "#93c4a2"],
+            ["Posts on its own", "transparent", "rgba(147,196,162,0.28)"],
+            ["Open now", "rgba(201,169,110,0.12)", "#c9a96e"],
+            ["Not claimed", "transparent", "rgba(240,228,208,0.07)"],
           ].map(([label, bg, border]) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${border}` }} />
-              <span style={{ fontFamily: FONT, fontSize: 11.5, letterSpacing: "0.1em", color: "#63636e" }}>{label}</span>
+              <span style={{ fontFamily: FONT, fontSize: 11.5, letterSpacing: "0.1em", color: "#716a5f" }}>{label}</span>
             </div>
           ))}
-          <span style={{ fontFamily: FONT, fontSize: 11.5, color: "#4a4a54", marginLeft: "auto" }}>Hover a row for details</span>
+          <span style={{ fontFamily: FONT, fontSize: 11.5, color: "#4a453e", marginLeft: "auto" }}>Hover a row for details</span>
         </div>
+        )}
 
       </div>
     </div>
@@ -1522,11 +1658,11 @@ function PropRow({ label, note, children }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-      padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)",
+      padding: "10px 0", borderBottom: "1px solid rgba(240,228,208,0.05)",
     }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, color: "#d8d8de" }}>{label}</div>
-        {note && <div style={{ fontSize: 11.5, color: "#63636e", marginTop: 2 }}>{note}</div>}
+        <div style={{ fontSize: 13.5, color: "#ddd4c5" }}>{label}</div>
+        {note && <div style={{ fontSize: 11.5, color: "#716a5f", marginTop: 2 }}>{note}</div>}
       </div>
       {children}
     </div>
@@ -1534,7 +1670,7 @@ function PropRow({ label, note, children }) {
 }
 
 const propInputStyle = {
-  background: "transparent", border: "none", outline: "none", color: "#fafafa",
+  background: "transparent", border: "none", outline: "none", color: "#f6f1e7",
   fontFamily: FONT, fontSize: 15, textAlign: "right", width: 96,
 };
 
@@ -1542,7 +1678,7 @@ function PropInputShell({ children }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-      borderBottom: "1px solid #52525b", paddingBottom: 4,
+      borderBottom: "1px solid #5a554c", paddingBottom: 4,
     }}>{children}</div>
   );
 }
@@ -1554,7 +1690,7 @@ function MoneyInput({ label, note, value, onChange }) {
   return (
     <PropRow label={label} note={note}>
       <PropInputShell>
-        <span style={{ color: "#7d7d88", fontSize: 14 }}>$</span>
+        <span style={{ color: "#8b8477", fontSize: 14 }}>$</span>
         <input
           type="text" inputMode="decimal" value={text} placeholder="—"
           onFocus={() => { setFocused(true); setText(value === "" || value == null ? "" : String(value)); }}
@@ -1588,7 +1724,7 @@ function RateInput({ label, note, value, onChange }) {
             onChange(parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : cleaned);
           }}
           style={{ ...propInputStyle, width: 66 }} />
-        <span style={{ color: "#7d7d88", fontSize: 14 }}>%</span>
+        <span style={{ color: "#8b8477", fontSize: 14 }}>%</span>
       </PropInputShell>
     </PropRow>
   );
@@ -1597,13 +1733,13 @@ function RateInput({ label, note, value, onChange }) {
 function PropCard({ title, action, children, style }) {
   return (
     <div style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12,
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)", borderRadius: 12,
       padding: "14px 18px 16px", marginBottom: 12, ...style,
     }}>
       {title && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-          <span style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7d7d88", fontWeight: 550 }}>{title}</span>
+          <span style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8b8477", fontWeight: 550 }}>{title}</span>
           {action}
         </div>
       )}
@@ -1617,21 +1753,21 @@ function DerivedRow({ label, value, note, accent }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 0" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-        <span style={{ fontSize: 12.5, color: "#8b8b96" }}>{label}</span>
-        {note && <span style={{ fontSize: 11.5, color: "#5a5a64" }}>{note}</span>}
+        <span style={{ fontSize: 12.5, color: "#9b9386" }}>{label}</span>
+        {note && <span style={{ fontSize: 11.5, color: "#5a554c" }}>{note}</span>}
       </div>
-      <span style={{ fontFamily: FONT, fontSize: 14, color: accent || "#ededf0", fontWeight: 450 }}>{value}</span>
+      <span style={{ fontFamily: FONT, fontSize: 14, color: accent || "#ece5d8", fontWeight: 450 }}>{value}</span>
     </div>
   );
 }
 
-function TotalRow({ label, value, accent = "#fafafa" }) {
+function TotalRow({ label, value, accent = "#f6f1e7" }) {
   return (
     <div style={{
       display: "flex", justifyContent: "space-between", alignItems: "baseline",
-      paddingTop: 12, marginTop: 6, borderTop: "1px solid #52525b",
+      paddingTop: 12, marginTop: 6, borderTop: "1px solid #5a554c",
     }}>
-      <span style={{ fontSize: 13, color: "#d8d8de", fontWeight: 550 }}>{label}</span>
+      <span style={{ fontSize: 13, color: "#ddd4c5", fontWeight: 550 }}>{label}</span>
       <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: accent }}>{value}</span>
     </div>
   );
@@ -1640,18 +1776,18 @@ function TotalRow({ label, value, accent = "#fafafa" }) {
 function Pills({ options, value, onChange }) {
   return (
     <div style={{
-      display: "flex", gap: 2, padding: 3, background: "rgba(255,255,255,0.035)",
-      border: "1px solid rgba(255,255,255,0.06)", borderRadius: 9,
+      display: "flex", gap: 2, padding: 3, background: "rgba(240,228,208,0.035)",
+      border: "1px solid rgba(240,228,208,0.06)", borderRadius: 9,
     }}>
       {options.map(([key, label]) => {
         const active = value === key;
         return (
           <button key={key} onClick={() => onChange(key)} style={{
-            background: active ? "rgba(255,255,255,0.09)" : "transparent",
+            background: active ? "rgba(240,228,208,0.09)" : "transparent",
             border: "none", borderRadius: 6, padding: "0 14px", cursor: "pointer",
             minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center",
             fontSize: 12.5, fontWeight: active ? 550 : 450,
-            color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT,
+            color: active ? "#f6f1e7" : "#8b8477", fontFamily: FONT,
           }}>{label}</button>
         );
       })}
@@ -1753,8 +1889,8 @@ function totalReturn(d, rentGrowth, expInflation, apprRate, years) {
 }
 
 const pctLabel = (v, dp = 2) => v == null ? "—" : `${(v * 100).toFixed(dp)}%`;
-const gradeCoc = (v) => v == null ? "#7d7d88" : v >= 0.08 ? "#5ec98a" : v >= 0.04 ? "#f0b429" : "#e5484d";
-const gradeDscr = (v) => v >= 1.25 ? "#5ec98a" : v >= 1.0 ? "#f0b429" : "#e5484d";
+const gradeCoc = (v) => v == null ? "#8b8477" : v >= 0.08 ? "#93c4a2" : v >= 0.04 ? "#c9a96e" : "#d98a80";
+const gradeDscr = (v) => v >= 1.25 ? "#93c4a2" : v >= 1.0 ? "#c9a96e" : "#d98a80";
 
 /* ─── Property charts ───
    Palette: the documented categorical hues, validated for this dark surface
@@ -1762,9 +1898,9 @@ const gradeDscr = (v) => v >= 1.25 ? "#5ec98a" : v >= 1.0 ? "#f0b429" : "#e5484d
    without creating an unchecked adjacency). Worst CVD ΔE 6.9 sits in the
    6–8 floor band, which is legal only alongside secondary encoding — hence
    the legend, the value labels and the 2px surface gap between slices. */
-const C_PI = "#3987e5", C_TAX = "#c98500", C_OPS = "#d55181", C_PROFIT = "#008300";
-const C_CF = "#3987e5", C_APPR = "#c98500", C_PD = "#199e70";
-const SURFACE = "#101014";
+const C_PI = "#7f9cc4", C_TAX = "#c9a96e", C_OPS = "#c48a9b", C_PROFIT = "#93c4a2";
+const C_CF = "#7f9cc4", C_APPR = "#c9a96e", C_PD = "#7fb39a";
+const SURFACE = "#141311";
 
 function monthlyBuckets(d) {
   const taxIns = d.monthlyPropTax + d.insV + d.hoaV + d.utilV + d.lawV;
@@ -1796,7 +1932,7 @@ function Donut({ buckets, centerLabel, centerValue, note }) {
   const size = 200, cx = size / 2, cy = size / 2, r = size / 2 - 3, ir = r * 0.62;
 
   if (total <= 0) {
-    return <div style={{ color: "#63636e", fontSize: 12.5, padding: "28px 0", textAlign: "center" }}>Nothing to show yet</div>;
+    return <div style={{ color: "#716a5f", fontSize: 12.5, padding: "28px 0", textAlign: "center" }}>Nothing to show yet</div>;
   }
 
   let cum = -Math.PI / 2;
@@ -1825,14 +1961,14 @@ function Donut({ buckets, centerLabel, centerValue, note }) {
               onMouseEnter={() => setHot(s.i)} onMouseLeave={() => setHot(null)}
               style={{ cursor: "default", transition: "opacity .12s" }} />
           ))}
-          <text x={cx} y={cy - 6} textAnchor="middle" style={{ fill: "#7d7d88", fontSize: 10.5, fontFamily: FONT, letterSpacing: "0.06em" }}>
+          <text x={cx} y={cy - 6} textAnchor="middle" style={{ fill: "#8b8477", fontSize: 10.5, fontFamily: FONT, letterSpacing: "0.06em" }}>
             {shown ? shown.label.toUpperCase() : centerLabel}
           </text>
-          <text x={cx} y={cy + 17} textAnchor="middle" style={{ fill: "#fafafa", fontSize: 18, fontFamily: FONT, fontWeight: 600 }}>
+          <text x={cx} y={cy + 17} textAnchor="middle" style={{ fill: "#f6f1e7", fontSize: 18, fontFamily: FONT, fontWeight: 600 }}>
             {shown ? fmt0(shown.value) : centerValue}
           </text>
           {shown && (
-            <text x={cx} y={cy + 34} textAnchor="middle" style={{ fill: "#7d7d88", fontSize: 11, fontFamily: FONT }}>
+            <text x={cx} y={cy + 34} textAnchor="middle" style={{ fill: "#8b8477", fontSize: 11, fontFamily: FONT }}>
               {shown.pct.toFixed(1)}%
             </text>
           )}
@@ -1843,21 +1979,21 @@ function Donut({ buckets, centerLabel, centerValue, note }) {
           const subs = s.items.filter(([, v]) => v > 0.005);
           return (
             <div key={s.i} onMouseEnter={() => setHot(s.i)} onMouseLeave={() => setHot(null)}
-              style={{ padding: "5px 6px", borderRadius: 6, background: hot === s.i ? "rgba(255,255,255,0.05)" : "transparent" }}>
+              style={{ padding: "5px 6px", borderRadius: 6, background: hot === s.i ? "rgba(240,228,208,0.05)" : "transparent" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12.5, color: "#d8d8de" }}>{s.label}</span>
+                  <span style={{ fontSize: 12.5, color: "#ddd4c5" }}>{s.label}</span>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexShrink: 0 }}>
-                  <span style={{ fontFamily: FONT, fontSize: 13, color: "#ededf0" }}>{fmt0(s.value)}</span>
-                  <span style={{ fontFamily: FONT, fontSize: 12, color: "#7d7d88", minWidth: 40, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
+                  <span style={{ fontFamily: FONT, fontSize: 13, color: "#ece5d8" }}>{fmt0(s.value)}</span>
+                  <span style={{ fontFamily: FONT, fontSize: 12, color: "#8b8477", minWidth: 40, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
                 </div>
               </div>
               {subs.length > 1 && hot === s.i && (
                 <div style={{ paddingLeft: 19, marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
                   {subs.map(([lbl, val]) => (
-                    <div key={lbl} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#7d7d88" }}>
+                    <div key={lbl} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#8b8477" }}>
                       <span>{lbl}</span><span style={{ fontFamily: FONT }}>{fmt(val)}</span>
                     </div>
                   ))}
@@ -1867,7 +2003,7 @@ function Donut({ buckets, centerLabel, centerValue, note }) {
           );
         })}
       </div>
-      {note && <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 10, lineHeight: 1.5 }}>{note}</div>}
+      {note && <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 10, lineHeight: 1.5 }}>{note}</div>}
     </div>
   );
 }
@@ -1955,7 +2091,7 @@ function ReturnChart({ series }) {
     const a = Math.abs(v);
     return a >= 1000 ? `${sign}$${Math.round(a / 1000)}k` : `${sign}$${Math.round(a)}`;
   };
-  const tick = { fill: "#63636e", fontSize: 10, fontFamily: FONT };
+  const tick = { fill: "#716a5f", fontSize: 10, fontFamily: FONT };
   const r = hot != null ? series[hot] : null;
 
   return (
@@ -1964,23 +2100,23 @@ function ReturnChart({ series }) {
         {SERIES.map((s) => (
           <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
-            <span style={{ fontSize: 11.5, color: "#8b8b96" }}>{s.label}</span>
+            <span style={{ fontSize: 11.5, color: "#9b9386" }}>{s.label}</span>
           </div>
         ))}
       </div>
 
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}
         onMouseLeave={() => setHot(null)}>
-        <text x={PADL} y={yA0 - 4} style={{ ...tick, fill: "#7d7d88" }}>Cumulative gain</text>
+        <text x={PADL} y={yA0 - 4} style={{ ...tick, fill: "#8b8477" }}>Cumulative gain</text>
         {dS.ticks.map((v) => {
           return (
             <g key={v}>
-              <line x1={PADL} x2={W - PADR} y1={yD(v)} y2={yD(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+              <line x1={PADL} x2={W - PADR} y1={yD(v)} y2={yD(v)} stroke="rgba(240,228,208,0.05)" strokeWidth="1" />
               <text x={PADL - 8} y={yD(v) + 3} textAnchor="end" style={tick}>{money(v)}</text>
             </g>
           );
         })}
-        <line x1={PADL} x2={W - PADR} y1={zeroY} y2={zeroY} stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
+        <line x1={PADL} x2={W - PADR} y1={zeroY} y2={zeroY} stroke="rgba(240,228,208,0.22)" strokeWidth="1" />
 
         {series.map((row, i) => {
           let up = 0, dn = 0;
@@ -2010,23 +2146,23 @@ function ReturnChart({ series }) {
           );
         })}
 
-        <text x={PADL} y={yB0 - 6} style={{ ...tick, fill: "#7d7d88" }}>Annualized return if sold that year</text>
+        <text x={PADL} y={yB0 - 6} style={{ ...tick, fill: "#8b8477" }}>Annualized return if sold that year</text>
         {cS.ticks.map((v, i) => (
           <g key={i}>
-            <line x1={PADL} x2={W - PADR} y1={yC(v)} y2={yC(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+            <line x1={PADL} x2={W - PADR} y1={yC(v)} y2={yC(v)} stroke="rgba(240,228,208,0.05)" strokeWidth="1" />
             <text x={PADL - 8} y={yC(v) + 3} textAnchor="end" style={tick}>{(v * 100).toFixed(0).replace("-", "\u2212")}%</text>
           </g>
         ))}
-        {cS.lo < 0 && cS.hi > 0 && <line x1={PADL} x2={W - PADR} y1={yC(0)} y2={yC(0)} stroke="rgba(255,255,255,0.22)" strokeWidth="1" />}
-        <path d={linePath} fill="none" stroke="#8b8b96" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {cS.lo < 0 && cS.hi > 0 && <line x1={PADL} x2={W - PADR} y1={yC(0)} y2={yC(0)} stroke="rgba(240,228,208,0.22)" strokeWidth="1" />}
+        <path d={linePath} fill="none" stroke="#9b9386" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         {series.map((row, i) => row.cagr == null ? null : (
           <circle key={i} cx={xC(i)} cy={yC(row.cagr)} r={hot === i ? 5.5 : 4}
-            fill={hot === i ? "#fafafa" : "#d8d8de"} stroke={SURFACE} strokeWidth="2" />
+            fill={hot === i ? "#f6f1e7" : "#ddd4c5"} stroke={SURFACE} strokeWidth="2" />
         ))}
 
         {hot != null && (
           <line x1={xC(hot)} x2={xC(hot)} y1={yA0} y2={yB1}
-            stroke="rgba(255,255,255,0.25)" strokeWidth="1" strokeDasharray="3 3" pointerEvents="none" />
+            stroke="rgba(240,228,208,0.25)" strokeWidth="1" strokeDasharray="3 3" pointerEvents="none" />
         )}
         {series.map((_, i) => (
           <rect key={i} x={PADL + band * i} y={yA0} width={band} height={yB1 - yA0}
@@ -2034,34 +2170,34 @@ function ReturnChart({ series }) {
         ))}
         {series.map((row, i) => (
           <text key={i} x={xC(i)} y={H - 10} textAnchor="middle"
-            style={{ ...tick, fill: hot === i ? "#d8d8de" : "#63636e" }}>{row.year}</text>
+            style={{ ...tick, fill: hot === i ? "#ddd4c5" : "#716a5f" }}>{row.year}</text>
         ))}
-        <text x={W / 2} y={H - 26} textAnchor="middle" style={{ ...tick, fill: "#4a4a52" }}> </text>
+        <text x={W / 2} y={H - 26} textAnchor="middle" style={{ ...tick, fill: "#4a453e" }}> </text>
       </svg>
 
       {r && (
         <div style={{
-          position: "absolute", top: 0, right: 0, background: "#18181d",
-          border: "1px solid rgba(255,255,255,0.12)", borderRadius: 9, padding: "9px 12px",
+          position: "absolute", top: 0, right: 0, background: "#1c1a17",
+          border: "1px solid rgba(240,228,208,0.12)", borderRadius: 9, padding: "9px 12px",
           pointerEvents: "none", minWidth: 178, boxShadow: "0 6px 22px rgba(0,0,0,0.5)",
         }}>
-          <div style={{ fontSize: 11, color: "#7d7d88", marginBottom: 6 }}>After year {r.year}</div>
+          <div style={{ fontSize: 11, color: "#8b8477", marginBottom: 6 }}>After year {r.year}</div>
           {SERIES.map((s) => (
             <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12, padding: "1px 0" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 7, color: "#8b8b96" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 7, color: "#9b9386" }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color }} />{s.label}
               </span>
-              <span style={{ fontFamily: FONT, color: r[s.key] >= 0 ? "#ededf0" : "#e5877f" }}>{fmt0(r[s.key])}</span>
+              <span style={{ fontFamily: FONT, color: r[s.key] >= 0 ? "#ece5d8" : "#d98a80" }}>{fmt0(r[s.key])}</span>
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12.5,
-            marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-            <span style={{ color: "#d8d8de", fontWeight: 550 }}>Total gain</span>
-            <span style={{ fontFamily: FONT, fontWeight: 600, color: r.gain >= 0 ? "#5ec98a" : "#e5484d" }}>{fmt0(r.gain)}</span>
+            marginTop: 6, paddingTop: 6, borderTop: "1px solid rgba(240,228,208,0.1)" }}>
+            <span style={{ color: "#ddd4c5", fontWeight: 550 }}>Total gain</span>
+            <span style={{ fontFamily: FONT, fontWeight: 600, color: r.gain >= 0 ? "#93c4a2" : "#d98a80" }}>{fmt0(r.gain)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, fontSize: 12, marginTop: 3 }}>
-            <span style={{ color: "#8b8b96" }}>Annualized</span>
-            <span style={{ fontFamily: FONT, color: "#ededf0" }}>{r.cagr == null ? "—" : (r.cagr * 100).toFixed(1) + "%"}</span>
+            <span style={{ color: "#9b9386" }}>Annualized</span>
+            <span style={{ fontFamily: FONT, color: "#ece5d8" }}>{r.cagr == null ? "—" : (r.cagr * 100).toFixed(1) + "%"}</span>
           </div>
         </div>
       )}
@@ -2088,16 +2224,16 @@ function PriceSlider({ value, onChange }) {
   return (
     <PropCard title="Listing price">
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginTop: 6, marginBottom: 10 }}>
-        <span style={{ fontFamily: FONT, fontSize: 26, fontWeight: 600, color: "#fafafa" }}>{fmt0(cur)}</span>
+        <span style={{ fontFamily: FONT, fontSize: 26, fontWeight: 600, color: "#f6f1e7" }}>{fmt0(cur)}</span>
         {Math.abs(delta) >= 1 && (
-          <span style={{ fontFamily: FONT, fontSize: 13, color: delta > 0 ? "#e5877f" : "#5ec98a" }}>
+          <span style={{ fontFamily: FONT, fontSize: 13, color: delta > 0 ? "#d98a80" : "#93c4a2" }}>
             {delta > 0 ? "+" : "−"}{fmt0(Math.abs(delta))} ({pct > 0 ? "+" : "−"}{Math.abs(pct).toFixed(1)}%)
           </span>
         )}
         {Math.abs(delta) >= 1 && (
           <button onClick={() => { fromSlider.current = true; onChange(base.current); }}
-            style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6,
-              padding: "3px 9px", color: "#8b8b96", fontFamily: FONT, fontSize: 11, cursor: "pointer", marginLeft: "auto" }}>
+            style={{ background: "transparent", border: "1px solid rgba(240,228,208,0.12)", borderRadius: 6,
+              padding: "3px 9px", color: "#9b9386", fontFamily: FONT, fontSize: 11, cursor: "pointer", marginLeft: "auto" }}>
             Reset
           </button>
         )}
@@ -2106,10 +2242,10 @@ function PriceSlider({ value, onChange }) {
         onChange={(e) => { fromSlider.current = true; onChange(parseFloat(e.target.value)); }}
         className="prop-range" style={{ width: "100%" }} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ fontSize: 11, color: "#5a5a64", fontFamily: FONT }}>{fmt0(lo)}</span>
-        <span style={{ fontSize: 11, color: "#5a5a64", fontFamily: FONT }}>{fmt0(hi)}</span>
+        <span style={{ fontSize: 11, color: "#5a554c", fontFamily: FONT }}>{fmt0(lo)}</span>
+        <span style={{ fontSize: 11, color: "#5a554c", fontFamily: FONT }}>{fmt0(hi)}</span>
       </div>
-      <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 8, lineHeight: 1.5 }}>
         Drag to see where the deal stops working. Everything below moves with it.
       </div>
     </PropCard>
@@ -2119,12 +2255,12 @@ function PriceSlider({ value, onChange }) {
 function StatTile({ label, value, sub, accent }) {
   return (
     <div style={{
-      background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px 15px",
+      background: "#141311",
+      border: "1px solid rgba(240,228,208,0.08)", borderRadius: 12, padding: "13px 15px",
     }}>
-      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", textTransform: "uppercase", color: "#7d7d88", fontWeight: 550 }}>{label}</div>
-      <div style={{ fontFamily: FONT, fontSize: 21, fontWeight: 600, color: accent || "#fafafa", marginTop: 5 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#5a5a64", marginTop: 3 }}>{sub}</div>}
+      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", textTransform: "uppercase", color: "#8b8477", fontWeight: 550 }}>{label}</div>
+      <div style={{ fontFamily: FONT, fontSize: 21, fontWeight: 600, color: accent || "#f6f1e7", marginTop: 5 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "#5a554c", marginTop: 3 }}>{sub}</div>}
     </div>
   );
 }
@@ -2142,11 +2278,11 @@ function DealTab({ v, set }) {
       {d.hasData && (
         <div className="prop-kpis">
           <StatTile label="Monthly profit" value={fmt(d.monthlyProfit)} sub="after every expense"
-            accent={d.monthlyProfit >= 0 ? "#5ec98a" : "#e5484d"} />
+            accent={d.monthlyProfit >= 0 ? "#93c4a2" : "#d98a80"} />
           <StatTile label="Cash-on-cash" value={pctLabel(d.cashOnCash)} sub="cash flow ÷ cash in"
             accent={gradeCoc(d.cashOnCash)} />
           <StatTile label="DSCR" value={d.dscr == null ? "—" : d.dscr.toFixed(2)}
-            sub={d.dscr == null ? "no loan" : "NOI ÷ P&I"} accent={d.dscr == null ? "#7d7d88" : gradeDscr(d.dscr)} />
+            sub={d.dscr == null ? "no loan" : "NOI ÷ P&I"} accent={d.dscr == null ? "#8b8477" : gradeDscr(d.dscr)} />
           <StatTile label="Cash needed" value={fmt0(d.cashNeeded)} sub="to close" />
         </div>
       )}
@@ -2179,7 +2315,7 @@ function DealTab({ v, set }) {
           </PropCard>
 
           <PropCard title="Monthly Expenses">
-            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#5a5a64", padding: "8px 0 2px" }}>% OF RENT</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#5a554c", padding: "8px 0 2px" }}>% OF RENT</div>
             <RateInput label="Management fee" value={v.mgmtPct} onChange={set("mgmtPct")} />
             <RateInput label="Repairs & maintenance" note="ongoing fixes, not big replacements"
               value={v.repairsPct} onChange={set("repairsPct")} />
@@ -2188,22 +2324,22 @@ function DealTab({ v, set }) {
             <RateInput label="Vacancy" note="months empty, spread over the year"
               value={v.vacancyPct} onChange={set("vacancyPct")} />
             <div style={{ margin: "6px 0 10px" }}>
-              <DerivedRow label="Management fee" note={`${v.mgmtPct || 0}% of rent`} value={fmt(d.mgmtFee)} accent="#d98b8b" />
-              <DerivedRow label="Repairs & maintenance" note={`${v.repairsPct || 0}% of rent`} value={fmt(d.repairAmt)} accent="#d98b8b" />
-              <DerivedRow label="Capital expenditures" note={`${v.capexPct || 0}% of rent`} value={fmt(d.capexAmt)} accent="#d98b8b" />
-              <DerivedRow label="Vacancy" note={`${v.vacancyPct || 0}% of rent`} value={fmt(d.vacancyLoss)} accent="#d98b8b" />
+              <DerivedRow label="Management fee" note={`${v.mgmtPct || 0}% of rent`} value={fmt(d.mgmtFee)} accent="#d98a80" />
+              <DerivedRow label="Repairs & maintenance" note={`${v.repairsPct || 0}% of rent`} value={fmt(d.repairAmt)} accent="#d98a80" />
+              <DerivedRow label="Capital expenditures" note={`${v.capexPct || 0}% of rent`} value={fmt(d.capexAmt)} accent="#d98a80" />
+              <DerivedRow label="Vacancy" note={`${v.vacancyPct || 0}% of rent`} value={fmt(d.vacancyLoss)} accent="#d98a80" />
             </div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#5a5a64", padding: "4px 0 2px" }}>FIXED COSTS</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#5a554c", padding: "4px 0 2px" }}>FIXED COSTS</div>
             <RateInput label="County Property Tax" note="annual rate" value={v.propTaxRate} onChange={set("propTaxRate")} />
             <div style={{ margin: "6px 0 10px" }}>
-              <DerivedRow label="Property tax" note="annual" value={fmt(d.annualPropTax)} accent="#d98b8b" />
-              <DerivedRow label="Property tax" note="monthly" value={fmt(d.monthlyPropTax)} accent="#d98b8b" />
+              <DerivedRow label="Property tax" note="annual" value={fmt(d.annualPropTax)} accent="#d98a80" />
+              <DerivedRow label="Property tax" note="monthly" value={fmt(d.monthlyPropTax)} accent="#d98a80" />
             </div>
             <MoneyInput label="Insurance" note="monthly" value={v.insurance} onChange={set("insurance")} />
             <MoneyInput label="HOA" note="monthly" value={v.hoa} onChange={set("hoa")} />
             <MoneyInput label="Utilities" note="monthly" value={v.utilities} onChange={set("utilities")} />
             <MoneyInput label="Lawyer" note="monthly" value={v.lawyer} onChange={set("lawyer")} />
-            <TotalRow label="Total monthly expenses" value={fmt(d.totalExpWithLoan)} accent="#e5877f" />
+            <TotalRow label="Total monthly expenses" value={fmt(d.totalExpWithLoan)} accent="#d98a80" />
           </PropCard>
         </div>
 
@@ -2225,10 +2361,10 @@ function DealTab({ v, set }) {
                 <DerivedRow label="Monthly revenue" value={fmt(d.rentV)} />
                 <DerivedRow label="Monthly expenses" value={fmt(d.totalExpWithLoan)} />
                 <TotalRow label="Monthly profit" value={fmt(d.monthlyProfit)}
-                  accent={d.monthlyProfit >= 0 ? "#5ec98a" : "#e5484d"} />
+                  accent={d.monthlyProfit >= 0 ? "#93c4a2" : "#d98a80"} />
                 <div style={{ marginTop: 8 }}>
                   <DerivedRow label="Annual cash flow" value={fmt(d.annualProfit)}
-                    accent={d.annualProfit >= 0 ? "#5ec98a" : "#e5484d"} />
+                    accent={d.annualProfit >= 0 ? "#93c4a2" : "#d98a80"} />
                 </div>
               </PropCard>
 
@@ -2239,7 +2375,7 @@ function DealTab({ v, set }) {
                       <div style={{ fontSize: 12.5, color: gradeDscr(d.dscr) }}>
                         {d.dscr >= 1.25 ? "Strong — on a conservative basis" : d.dscr >= 1.0 ? "Borderline" : "Below 1.0 — negative coverage"}
                       </div>
-                      <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 4, maxWidth: 330, lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 4, maxWidth: 330, lineHeight: 1.5 }}>
                         NOI ÷ P&amp;I, counting capex and vacancy — stricter than the rent ÷ PITIA most DSCR lenders underwrite on.
                       </div>
                     </div>
@@ -2250,7 +2386,7 @@ function DealTab({ v, set }) {
             </>
           ) : (
             <PropCard>
-              <div style={{ textAlign: "center", padding: "26px 0", fontSize: 13, color: "#7d7d88" }}>
+              <div style={{ textAlign: "center", padding: "26px 0", fontSize: 13, color: "#8b8477" }}>
                 Enter a sale price and monthly rent to see the breakdown.
               </div>
             </PropCard>
@@ -2270,7 +2406,7 @@ function ProjectionsTab({ v, set }) {
   if (!d.hasData || d.cashNeeded <= 0) {
     return (
       <PropCard>
-        <div style={{ textAlign: "center", padding: "22px 0", fontSize: 13.5, color: "#7d7d88" }}>
+        <div style={{ textAlign: "center", padding: "22px 0", fontSize: 13.5, color: "#8b8477" }}>
           Enter a sale price and rent on the Deal tab first.
         </div>
       </PropCard>
@@ -2279,8 +2415,8 @@ function ProjectionsTab({ v, set }) {
 
   const r = totalReturn(d, rg, infl, appr, years);
   const series = returnSeries(d, rg, infl, appr, years);
-  const cell = { fontFamily: FONT, fontSize: 12.5, textAlign: "right", color: "#ededf0" };
-  const head = { fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#63636e", fontWeight: 550 };
+  const cell = { fontFamily: FONT, fontSize: 12.5, textAlign: "right", color: "#ece5d8" };
+  const head = { fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#716a5f", fontWeight: 550 };
 
   return (
     <>
@@ -2300,24 +2436,24 @@ function ProjectionsTab({ v, set }) {
           <PropCard title={`${years}-year total return`}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap", margin: "8px 0 4px" }}>
               <div>
-                <div style={{ fontFamily: FONT, fontSize: 34, fontWeight: 600, color: r.total >= 0 ? "#5ec98a" : "#e5484d", lineHeight: 1 }}>
+                <div style={{ fontFamily: FONT, fontSize: 34, fontWeight: 600, color: r.total >= 0 ? "#93c4a2" : "#d98a80", lineHeight: 1 }}>
                   {pctLabel(r.total)}
                 </div>
-                <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 5 }}>cumulative on cash invested</div>
+                <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 5 }}>cumulative on cash invested</div>
               </div>
               <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 600, color: "#ededf0", lineHeight: 1 }}>
+                <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 600, color: "#ece5d8", lineHeight: 1 }}>
                   {r.annualized == null ? "—" : pctLabel(r.annualized)}
                 </div>
-                <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 5 }}>annualized</div>
+                <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 5 }}>annualized</div>
               </div>
             </div>
-            <div style={{ marginTop: 12, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ marginTop: 12, paddingTop: 6, borderTop: "1px solid rgba(240,228,208,0.07)" }}>
               <DerivedRow label="Rent profit" note={`${years} yr cumulative`} value={fmt0(r.cumCashFlow)}
-                accent={r.cumCashFlow >= 0 ? "#5ec98a" : "#e5484d"} />
+                accent={r.cumCashFlow >= 0 ? "#93c4a2" : "#d98a80"} />
               <DerivedRow label="Appreciation" note={`${v.apprPct || 0}%/yr compounding`} value={fmt0(r.apprGain)} />
               <DerivedRow label="Principal paydown" value={fmt0(r.paydown)} />
-              <TotalRow label="Total gain" value={fmt0(r.totalGain)} accent={r.totalGain >= 0 ? "#5ec98a" : "#e5484d"} />
+              <TotalRow label="Total gain" value={fmt0(r.totalGain)} accent={r.totalGain >= 0 ? "#93c4a2" : "#d98a80"} />
               <div style={{ marginTop: 8 }}>
                 <DerivedRow label="Cash invested" value={fmt0(d.cashNeeded)} />
               </div>
@@ -2330,7 +2466,7 @@ function ProjectionsTab({ v, set }) {
         <div style={{ marginTop: 6 }}>
           <ReturnChart series={series} />
         </div>
-        <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 10, lineHeight: 1.55 }}>
+        <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 10, lineHeight: 1.55 }}>
           Rent profit is cash you actually banked. Appreciation and paydown are equity — real, but locked
           in the property until you sell or refinance. A return leaning mostly on appreciation is a forecast,
           not income.
@@ -2339,7 +2475,7 @@ function ProjectionsTab({ v, set }) {
 
       <div className="prop-charts">
         <PropCard title="Year by year">
-          <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 58px", gap: 8, padding: "6px 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 58px", gap: 8, padding: "6px 0 8px", borderBottom: "1px solid rgba(240,228,208,0.07)" }}>
             <div style={head}>Yr</div>
             <div style={{ ...head, textAlign: "right" }}>Rent/mo</div>
             <div style={{ ...head, textAlign: "right" }}>Profit/mo</div>
@@ -2348,22 +2484,22 @@ function ProjectionsTab({ v, set }) {
           </div>
           {cashFlowYears(d, rg, infl, years).map((row) => (
             <div key={row.year} style={{ display: "grid", gridTemplateColumns: "28px 1fr 1fr 1fr 58px", gap: 8,
-              padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "baseline" }}>
-              <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88" }}>{row.year}</div>
+              padding: "8px 0", borderBottom: "1px solid rgba(240,228,208,0.04)", alignItems: "baseline" }}>
+              <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477" }}>{row.year}</div>
               <div style={cell}>{fmt0(row.rent)}</div>
-              <div style={{ ...cell, color: row.profit >= 0 ? "#5ec98a" : "#e5484d" }}>{fmt0(row.profit)}</div>
-              <div style={{ ...cell, color: row.cumulative >= 0 ? "#d8d8de" : "#e5877f" }}>{fmt0(row.cumulative)}</div>
+              <div style={{ ...cell, color: row.profit >= 0 ? "#93c4a2" : "#d98a80" }}>{fmt0(row.profit)}</div>
+              <div style={{ ...cell, color: row.cumulative >= 0 ? "#ddd4c5" : "#d98a80" }}>{fmt0(row.cumulative)}</div>
               <div style={{ ...cell, color: gradeCoc(row.coc), fontWeight: 550 }}>{pctLabel(row.coc, 1)}</div>
             </div>
           ))}
-          <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 10, lineHeight: 1.55 }}>
+          <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 10, lineHeight: 1.55 }}>
             Rent and rent-linked costs grow {v.rentGrowthPct || 0}%/yr; tax, insurance, HOA and utilities
             inflate {v.expInflationPct || 0}%/yr. The mortgage payment is fixed.
           </div>
         </PropCard>
 
         <PropCard title={`Appreciation scenarios · ${years} yr`}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 1fr 1fr 1fr", gap: 8, padding: "6px 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 44px 1fr 1fr 1fr", gap: 8, padding: "6px 0 8px", borderBottom: "1px solid rgba(240,228,208,0.07)" }}>
             <div style={head}>Case</div>
             <div style={{ ...head, textAlign: "right" }}>Rate</div>
             <div style={{ ...head, textAlign: "right" }}>Equity</div>
@@ -2374,16 +2510,16 @@ function ProjectionsTab({ v, set }) {
             const s = totalReturn(d, rg, infl, rate / 100, years);
             return (
               <div key={label} style={{ display: "grid", gridTemplateColumns: "1fr 44px 1fr 1fr 1fr", gap: 8,
-                padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "baseline" }}>
-                <div style={{ fontSize: 12.5, color: "#d8d8de", fontWeight: 550 }}>{label}</div>
-                <div style={{ ...cell, color: "#7d7d88" }}>{rate}%</div>
-                <div style={{ ...cell, color: "#8ab4f8" }}>{fmt0(s.apprGain + s.paydown)}</div>
-                <div style={{ ...cell, color: s.total >= 0 ? "#5ec98a" : "#e5484d", fontWeight: 550 }}>{pctLabel(s.total, 1)}</div>
-                <div style={{ ...cell, color: "#d8d8de" }}>{s.annualized == null ? "—" : pctLabel(s.annualized, 1)}</div>
+                padding: "9px 0", borderBottom: "1px solid rgba(240,228,208,0.04)", alignItems: "baseline" }}>
+                <div style={{ fontSize: 12.5, color: "#ddd4c5", fontWeight: 550 }}>{label}</div>
+                <div style={{ ...cell, color: "#8b8477" }}>{rate}%</div>
+                <div style={{ ...cell, color: "#8fa8cc" }}>{fmt0(s.apprGain + s.paydown)}</div>
+                <div style={{ ...cell, color: s.total >= 0 ? "#93c4a2" : "#d98a80", fontWeight: 550 }}>{pctLabel(s.total, 1)}</div>
+                <div style={{ ...cell, color: "#ddd4c5" }}>{s.annualized == null ? "—" : pctLabel(s.annualized, 1)}</div>
               </div>
             );
           })}
-          <div style={{ fontSize: 11.5, color: "#5a5a64", marginTop: 10, lineHeight: 1.55 }}>
+          <div style={{ fontSize: 11.5, color: "#5a554c", marginTop: 10, lineHeight: 1.55 }}>
             Equity = appreciation + principal paid down. Total return also includes cumulative rent
             profit. Gains are before selling costs and taxes.
           </div>
@@ -2523,14 +2659,14 @@ function SignIn() {
   };
 
   const field = {
-    background: "transparent", border: "none", outline: "none", color: "#fafafa",
+    background: "transparent", border: "none", outline: "none", color: "#f6f1e7",
     fontFamily: FONT, fontSize: 14, width: "100%",
   };
-  const wrap = { borderBottom: "1px solid #52525b", paddingBottom: 6, marginTop: 12 };
+  const wrap = { borderBottom: "1px solid #5a554c", paddingBottom: 6, marginTop: 12 };
 
   return (
     <PropCard title={mode === "in" ? "Sign in to sync deals" : "Create your account"}>
-      <div style={{ fontSize: 12.5, color: "#7d7d88", marginTop: 4, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 12.5, color: "#8b8477", marginTop: 4, lineHeight: 1.5 }}>
         Signing in saves your deals to the cloud so they follow you between your PC, Mac and phone.
       </div>
       <div style={wrap}>
@@ -2543,17 +2679,17 @@ function SignIn() {
           onChange={(e) => setPw(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") go(); }} style={field} />
       </div>
-      {msg && <div style={{ fontSize: 12.5, color: "#f0b429", marginTop: 12 }}>{msg}</div>}
+      {msg && <div style={{ fontSize: 12.5, color: "#c9a96e", marginTop: 12 }}>{msg}</div>}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
         <button onClick={go} disabled={busy || !email || !pw} style={{
-          background: busy || !email || !pw ? "rgba(255,255,255,0.06)" : "#5ec98a",
-          color: busy || !email || !pw ? "#63636e" : "#08080a",
+          background: busy || !email || !pw ? "rgba(240,228,208,0.06)" : "#93c4a2",
+          color: busy || !email || !pw ? "#716a5f" : "#0c0b0a",
           border: "none", borderRadius: 8, padding: "0 20px", minHeight: 44,
           display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: FONT,
           fontSize: 13, fontWeight: 600, cursor: busy || !email || !pw ? "not-allowed" : "pointer",
         }}>{busy ? "…" : mode === "in" ? "Sign in" : "Create account"}</button>
         <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(""); }} style={{
-          background: "transparent", border: "none", color: "#7d7d88", minHeight: 44,
+          background: "transparent", border: "none", color: "#8b8477", minHeight: 44,
           display: "inline-flex", alignItems: "center", padding: "0 2px",
           fontFamily: FONT, fontSize: 12.5, cursor: "pointer", textDecoration: "underline",
         }}>{mode === "in" ? "Create an account" : "I already have one"}</button>
@@ -2564,22 +2700,22 @@ function SignIn() {
 
 function DealsBar({ d }) {
   const btn = (primary) => ({
-    background: primary ? "rgba(94,201,138,0.14)" : "transparent",
-    border: `1px solid ${primary ? "rgba(94,201,138,0.35)" : "rgba(255,255,255,0.1)"}`,
+    background: primary ? "rgba(147,196,162,0.14)" : "transparent",
+    border: `1px solid ${primary ? "rgba(147,196,162,0.35)" : "rgba(240,228,208,0.1)"}`,
     borderRadius: 7, padding: "5px 11px", cursor: "pointer",
-    fontFamily: FONT, fontSize: 12, color: primary ? "#5ec98a" : "#8b8b96",
+    fontFamily: FONT, fontSize: 12, color: primary ? "#93c4a2" : "#9b9386",
   });
   return (
     <PropCard title="Saved deals" action={
       <button onClick={() => getSb()?.auth.signOut()} style={{
-        background: "transparent", border: "none", color: "#63636e",
+        background: "transparent", border: "none", color: "#716a5f",
         fontFamily: FONT, fontSize: 11.5, cursor: "pointer",
       }}>Sign out</button>
     }>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
         <select value={d.currentId || ""} onChange={(e) => e.target.value ? d.load(e.target.value) : d.startNew()}
           style={{
-            background: "#101014", color: "#ededf0", border: "1px solid #3f3f46",
+            background: "#141311", color: "#ece5d8", border: "1px solid #3d3933",
             borderRadius: 7, padding: "6px 8px", fontFamily: FONT, fontSize: 12.5,
             flex: "1 1 150px", minWidth: 0, outline: "none",
           }}>
@@ -2588,8 +2724,8 @@ function DealsBar({ d }) {
         </select>
         <input value={d.name} onChange={(e) => d.setName(e.target.value)} placeholder="Name this deal"
           style={{
-            background: "transparent", border: "none", borderBottom: "1px solid #52525b",
-            color: "#fafafa", fontFamily: FONT, fontSize: 13, padding: "4px 2px",
+            background: "transparent", border: "none", borderBottom: "1px solid #5a554c",
+            color: "#f6f1e7", fontFamily: FONT, fontSize: 13, padding: "4px 2px",
             flex: "1 1 130px", minWidth: 0, outline: "none",
           }} />
       </div>
@@ -2598,7 +2734,7 @@ function DealsBar({ d }) {
         {d.currentId && <button onClick={() => d.save(true)} style={btn(false)}>Save as new</button>}
         {d.currentId && <button onClick={d.remove} style={btn(false)}>Delete</button>}
         <button onClick={d.startNew} style={btn(false)}>New</button>
-        {d.status && <span style={{ fontSize: 12, color: "#7d7d88", marginLeft: "auto" }}>{d.status}</span>}
+        {d.status && <span style={{ fontSize: 12, color: "#8b8477", marginLeft: "auto" }}>{d.status}</span>}
       </div>
     </PropCard>
   );
@@ -2614,6 +2750,7 @@ function Property() {
   });
   const set = useCallback((key) => (val) => setV((prev) => ({ ...prev, [key]: val })), []);
   const [sub, setSub] = useState("deal");
+  const [showSync, setShowSync] = useState(false);
   const deals = useDeals(v, setV);
 
   /* Keep the in-progress deal across tab switches and reloads. */
@@ -2624,16 +2761,23 @@ function Property() {
   return (
     <div className="prop-wrap">
       <div>
-        <div style={{ marginBottom: 22 }}>
-          <p style={{ fontFamily: FONT, fontSize: 13.5, color: "#8b8b96", margin: "0 0 4px" }}>rental deal analyzer</p>
-          <h1 style={{ fontFamily: FONT, fontSize: 27, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Property</h1>
+        <div className="page-head">
+          <div>
+            <p className="eyebrow">Rental deal analyzer</p>
+            <h1 style={{ margin: 0, lineHeight: 1.05 }}>Property</h1>
+          </div>
+          {syncConfigured() && deals.ready && (
+            <button onClick={() => setShowSync((x) => !x)} style={{
+              background: showSync ? "rgba(201,169,110,0.14)" : "transparent", color: "#c9a96e",
+              border: "1px solid rgba(201,169,110,0.4)", borderRadius: 999, padding: "0 16px", minHeight: 36,
+              fontFamily: FONT, fontSize: 12.5, cursor: "pointer",
+            }}>{deals.session ? "Saved deals" : "Sign in to sync"}</button>
+          )}
         </div>
 
-        {syncConfigured() && deals.ready && (deals.session ? <DealsBar d={deals} /> : <SignIn />)}
+        {showSync && syncConfigured() && deals.ready && (deals.session ? <DealsBar d={deals} /> : <SignIn />)}
 
-        <div style={{ display: "flex", marginBottom: 18 }}>
-          <Pills options={[["deal", "Deal"], ["proj", "Projections"]]} value={sub} onChange={setSub} />
-        </div>
+        <SubTabs options={[["deal", "Deal"], ["proj", "Projections"]]} value={sub} onChange={setSub} />
         {sub === "deal" ? <DealTab v={v} set={set} /> : <ProjectionsTab v={v} set={set} />}
       </div>
     </div>
@@ -2648,12 +2792,12 @@ function Property() {
    saved snapshot per day). */
 
 const NW_COLORS = {
-  liquid: "#5ec98a",
-  netWorth: "#ededf0",
-  debt: "#f87171",
-  milestone: "#f0b429",
+  liquid: "#93c4a2",
+  netWorth: "#ece5d8",
+  debt: "#d98a80",
+  milestone: "#c9a96e",
 };
-const ACCOUNT_COLORS = ["#5ec98a", "#38bdf8", "#f0b429", "#c084fc", "#2dd4bf", "#fb7185"];
+const ACCOUNT_COLORS = ["#93c4a2", "#7f9cc4", "#c9a96e", "#b39cd0", "#7fb8b0", "#d98a80"];
 const accountColor = (i) => ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length];
 
 const parseDay = (iso) => {
@@ -2673,11 +2817,11 @@ const isoOf = (d) =>
 const todayIso = () => isoOf(new Date());
 
 const panel = {
-  background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
-  border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
+  background: "#141311",
+  border: "1px solid rgba(240,228,208,0.08)", borderRadius: 16, padding: 24,
 };
-const panelTitle = { fontSize: 13.5, color: "#8b8b96", marginBottom: 18, fontFamily: FONT };
-const rowLine = { display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT };
+const panelTitle = { fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9386", marginBottom: 18, fontFamily: FONT };
+const rowLine = { display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(240,228,208,0.05)", fontSize: 13.5, fontFamily: FONT };
 
 function useWidth() {
   const ref = useRef(null);
@@ -2706,8 +2850,8 @@ function Tooltip({ x, W, children }) {
   return (
     <div style={{
       position: "absolute", top: 8, left: Math.min(Math.max(x - 90, 0), W - 180), width: 180,
-      background: "#18181b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 12px",
-      fontFamily: FONT, fontSize: 12.5, color: "#d8d8de", pointerEvents: "none",
+      background: "#1c1a17", border: "1px solid rgba(240,228,208,0.12)", borderRadius: 10, padding: "10px 12px",
+      fontFamily: FONT, fontSize: 12.5, color: "#ddd4c5", pointerEvents: "none",
     }}>{children}</div>
   );
 }
@@ -2751,7 +2895,7 @@ function HistoryChart({ history, milestones }) {
     <div style={panel}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
         <div style={{ ...panelTitle, marginBottom: 0 }}>History</div>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5, color: "#d8d8de", fontFamily: FONT }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5, color: "#ddd4c5", fontFamily: FONT }}>
           {[["Liquid", "liquid", NW_COLORS.liquid], ["Net worth", "netWorth", NW_COLORS.netWorth]].map(([l, k, c]) => (
             <span key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 14, height: 3, borderRadius: 2, background: c }} />{l}
@@ -2767,9 +2911,9 @@ function HistoryChart({ history, milestones }) {
             {ticks.map((t, i) => (
               <g key={i}>
                 <line x1={ML} x2={W - MR} y1={yOf(t)} y2={yOf(t)}
-                  stroke={Math.abs(t) < 1e-6 ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.08)"}
+                  stroke={Math.abs(t) < 1e-6 ? "rgba(240,228,208,0.22)" : "rgba(240,228,208,0.08)"}
                   strokeDasharray={Math.abs(t) < 1e-6 ? "" : "2,4"} />
-                <text x={ML - 8} y={yOf(t) + 4} textAnchor="end" style={{ fill: "#63636e", fontSize: 11.5, fontFamily: FONT }}>{kfmt(t)}</text>
+                <text x={ML - 8} y={yOf(t) + 4} textAnchor="end" style={{ fill: "#716a5f", fontSize: 11.5, fontFamily: FONT }}>{kfmt(t)}</text>
               </g>
             ))}
 
@@ -2787,7 +2931,7 @@ function HistoryChart({ history, milestones }) {
 
             {months.map((d, i) => i % every === 0 && (
               <text key={i} x={ML + ((d - start) / span) * innerW} y={H - 8} textAnchor="middle"
-                style={{ fill: "#8b8b96", fontSize: 11.5, fontFamily: FONT }}>
+                style={{ fill: "#9b9386", fontSize: 11.5, fontFamily: FONT }}>
                 {d.toLocaleDateString("en-US", { month: "short" })}{d.getMonth() === 0 ? ` '${String(d.getFullYear()).slice(2)}` : ""}
               </text>
             ))}
@@ -2801,7 +2945,7 @@ function HistoryChart({ history, milestones }) {
 
             {hover && (
               <g>
-                <line x1={xOf(hover.date)} x2={xOf(hover.date)} y1={MT} y2={MT + innerH} stroke="rgba(255,255,255,0.25)" />
+                <line x1={xOf(hover.date)} x2={xOf(hover.date)} y1={MT} y2={MT + innerH} stroke="rgba(240,228,208,0.25)" />
                 <circle cx={xOf(hover.date)} cy={yOf(hover.liquid)} r="4.5" fill={NW_COLORS.liquid} />
                 <circle cx={xOf(hover.date)} cy={yOf(hover.netWorth)} r="4.5" fill={NW_COLORS.netWorth} />
               </g>
@@ -2810,14 +2954,14 @@ function HistoryChart({ history, milestones }) {
         )}
         {hover && (
           <Tooltip x={xOf(hover.date)} W={W}>
-            <div style={{ color: "#8b8b96", marginBottom: 6 }}>{shortDate(hover.date)}{hover.live ? " · now" : ""}</div>
+            <div style={{ color: "#9b9386", marginBottom: 6 }}>{shortDate(hover.date)}{hover.live ? " · now" : ""}</div>
             <div style={{ display: "flex", justifyContent: "space-between" }}><span>Liquid</span><span style={{ color: NW_COLORS.liquid }}>{fmt0(hover.liquid)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net worth</span><span style={{ color: "#fafafa" }}>{fmt0(hover.netWorth)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net worth</span><span style={{ color: "#f6f1e7" }}>{fmt0(hover.netWorth)}</span></div>
           </Tooltip>
         )}
       </div>
       {history.length <= 1 && (
-        <div style={{ marginTop: 10, fontSize: 12.5, color: "#7d7d88", fontFamily: FONT }}>
+        <div style={{ marginTop: 10, fontSize: 12.5, color: "#8b8477", fontFamily: FONT }}>
           A point is saved every night, so the lines fill in day by day from here.
         </div>
       )}
@@ -2829,15 +2973,15 @@ function HoldingRow({ h, asOf }) {
   return (
     <div style={rowLine}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ color: "#ededf0", fontWeight: 550 }}>{h.symbol}</div>
-        <div style={{ fontSize: 11.5, color: "#7d7d88", marginTop: 2 }}>
+        <div style={{ color: "#ece5d8", fontWeight: 550 }}>{h.symbol}</div>
+        <div style={{ fontSize: 11.5, color: "#8b8477", marginTop: 2 }}>
           {h.shares.toLocaleString("en-US", { maximumFractionDigits: 3 })} × {fmt(h.price)}
-          <span style={{ marginLeft: 6, color: h.live ? NW_COLORS.liquid : "#63636e" }}>
+          <span style={{ marginLeft: 6, color: h.live ? NW_COLORS.liquid : "#716a5f" }}>
             {h.live ? "● live" : `price from ${shortDate(asOf)}`}
           </span>
         </div>
       </div>
-      <div style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(h.value)}</div>
+      <div style={{ color: "#ece5d8", whiteSpace: "nowrap" }}>{fmt(h.value)}</div>
     </div>
   );
 }
@@ -2846,28 +2990,28 @@ function AccountCard({ account, color, asOf }) {
   return (
     <div style={{ ...panel, padding: 20, borderLeft: `3px solid ${color}` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{account.name}</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#f6f1e7", fontFamily: FONT }}>{account.name}</div>
         <span style={{
           fontSize: 11, padding: "3px 8px", borderRadius: 999, fontFamily: FONT, whiteSpace: "nowrap",
-          color: account.kind === "liquid" ? NW_COLORS.liquid : "#9b8fd4",
-          background: account.kind === "liquid" ? "rgba(94,201,138,0.1)" : "rgba(155,143,212,0.12)",
+          color: account.kind === "liquid" ? NW_COLORS.liquid : "#ab9fcf",
+          background: account.kind === "liquid" ? "rgba(147,196,162,0.1)" : "rgba(171,159,207,0.12)",
         }}>{account.kind === "liquid" ? "Liquid" : "Retirement"}</span>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{fmt(account.value)}</div>
+      <div style={{ fontSize: 22, fontWeight: 600, color: "#f6f1e7", fontFamily: FONT }}>{fmt(account.value)}</div>
       <div style={{ fontSize: 12.5, fontFamily: FONT, marginTop: 4, marginBottom: 10, color: account.gain >= 0 ? NW_COLORS.liquid : NW_COLORS.debt }}>
         {signed(account.gain)} total gain
       </div>
       {account.holdings.map((h) => <HoldingRow key={h.symbol} h={h} asOf={asOf} />)}
       {account.cash > 0.005 && (
-        <div style={rowLine}><span style={{ color: "#8b8b96" }}>Cash</span><span style={{ color: "#ededf0" }}>{fmt(account.cash)}</span></div>
+        <div style={rowLine}><span style={{ color: "#9b9386" }}>Cash</span><span style={{ color: "#ece5d8" }}>{fmt(account.cash)}</span></div>
       )}
       {account.pending && (
         <div style={rowLine}>
           <span style={{ color: NW_COLORS.milestone }}>Pending · {account.pending.note}</span>
-          <span style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(account.pending.amount)}</span>
+          <span style={{ color: "#ece5d8", whiteSpace: "nowrap" }}>{fmt(account.pending.amount)}</span>
         </div>
       )}
-      {account.note && <div style={{ fontSize: 12, color: "#63636e", fontFamily: FONT, marginTop: 8 }}>{account.note}</div>}
+      {account.note && <div style={{ fontSize: 12, color: "#716a5f", fontFamily: FONT, marginTop: 8 }}>{account.note}</div>}
     </div>
   );
 }
@@ -2875,7 +3019,7 @@ function AccountCard({ account, color, asOf }) {
 function CashCardsStrip({ ynab, totals }) {
   if (!ynab.ok) {
     return (
-      <div style={{ ...panel, padding: "16px 20px", fontSize: 13.5, color: "#d8d8de", fontFamily: FONT }}>
+      <div style={{ ...panel, padding: "16px 20px", fontSize: 13.5, color: "#ddd4c5", fontFamily: FONT }}>
         YNAB not connected ({ynab.error}). Add your YNAB token as <code>YNABKEY</code> in the Worker's Settings → Variables and Secrets.
       </div>
     );
@@ -2884,7 +3028,7 @@ function CashCardsStrip({ ynab, totals }) {
     <div className="nw-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
       {[["Cash · YNAB", totals.cash, NW_COLORS.liquid], ["Credit cards owed · YNAB", totals.cards, NW_COLORS.debt]].map(([l, v, c]) => (
         <div key={l} style={{ ...panel, padding: "16px 20px" }}>
-          <div style={{ fontSize: 12.5, color: "#8b8b96", fontFamily: FONT, marginBottom: 6 }}>{l}</div>
+          <div style={{ fontSize: 12.5, color: "#9b9386", fontFamily: FONT, marginBottom: 6 }}>{l}</div>
           <div style={{ fontSize: 22, fontWeight: 600, color: c, fontFamily: FONT }}>{fmt(v)}</div>
         </div>
       ))}
@@ -2902,28 +3046,28 @@ function LoansCard({ loans, asOf }) {
     <div style={panel}>
       <div style={{ ...panelTitle, marginBottom: 14 }}>Student loans · as of {shortDate(asOf)}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 14, marginBottom: 18 }}>
-        {[["Balance", fmt0(total), NW_COLORS.debt], ["Avg. rate", `${avgRate.toFixed(2)}%`, "#ededf0"], ["Interest / month", `≈ ${fmt0(monthlyInterest)}`, "#ededf0"]].map(([l, v, c]) => (
+        {[["Balance", fmt0(total), NW_COLORS.debt], ["Avg. rate", `${avgRate.toFixed(2)}%`, "#ece5d8"], ["Interest / month", `≈ ${fmt0(monthlyInterest)}`, "#ece5d8"]].map(([l, v, c]) => (
           <div key={l}>
-            <div style={{ fontSize: 11.5, color: "#7d7d88", fontFamily: FONT, marginBottom: 4 }}>{l}</div>
+            <div style={{ fontSize: 11.5, color: "#8b8477", fontFamily: FONT, marginBottom: 4 }}>{l}</div>
             <div style={{ fontSize: 18, color: c, fontFamily: FONT, fontWeight: 600 }}>{v}</div>
           </div>
         ))}
       </div>
       {open.map((l) => (
-        <div key={l.name} style={{ padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div key={l.name} style={{ padding: "8px 0", borderTop: "1px solid rgba(240,228,208,0.05)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13.5, fontFamily: FONT }}>
-            <span style={{ color: "#d8d8de", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</span>
+            <span style={{ color: "#ddd4c5", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</span>
             <span style={{ whiteSpace: "nowrap" }}>
-              <span style={{ color: l.rate >= 7 ? NW_COLORS.debt : "#8b8b96", marginRight: 10 }}>{l.rate.toFixed(2)}%</span>
-              <span style={{ color: "#ededf0" }}>{fmt(l.balance)}</span>
+              <span style={{ color: l.rate >= 7 ? NW_COLORS.debt : "#9b9386", marginRight: 10 }}>{l.rate.toFixed(2)}%</span>
+              <span style={{ color: "#ece5d8" }}>{fmt(l.balance)}</span>
             </span>
           </div>
-          <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.05)", marginTop: 6 }}>
-            <div style={{ height: 3, borderRadius: 2, width: `${(l.balance / maxBal) * 100}%`, background: l.rate >= 7 ? NW_COLORS.debt : "#52525b" }} />
+          <div style={{ height: 3, borderRadius: 2, background: "rgba(240,228,208,0.05)", marginTop: 6 }}>
+            <div style={{ height: 3, borderRadius: 2, width: `${(l.balance / maxBal) * 100}%`, background: l.rate >= 7 ? NW_COLORS.debt : "#5a554c" }} />
           </div>
         </div>
       ))}
-      <div style={{ fontSize: 12, color: "#63636e", fontFamily: FONT, marginTop: 10 }}>Sorted by interest rate. Red = 7% or higher.</div>
+      <div style={{ fontSize: 12, color: "#716a5f", fontFamily: FONT, marginTop: 10 }}>Sorted by interest rate. Red = 7% or higher.</div>
     </div>
   );
 }
@@ -2964,9 +3108,9 @@ function NetWorth() {
   }, [data]);
 
   const msg = (text, retry) => (
-    <div style={{ ...panel, color: "#d8d8de", fontFamily: FONT, fontSize: 13.5 }}>
+    <div style={{ ...panel, color: "#ddd4c5", fontFamily: FONT, fontSize: 13.5 }}>
       {text}
-      {retry && <button onClick={retry} style={{ marginLeft: 10, background: "#27272a", color: "#fafafa", border: 0, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Try again</button>}
+      {retry && <button onClick={retry} style={{ marginLeft: 10, background: "#2a2723", color: "#f6f1e7", border: 0, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Try again</button>}
     </div>
   );
 
@@ -3000,21 +3144,22 @@ function NetWorth() {
   return (
     <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
-          <h1 style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Net Worth</h1>
+        <div className="page-head">
+          <div>
+            <p className="eyebrow">Everything you own, minus what you owe</p>
+            <h1 style={{ margin: 0, lineHeight: 1.05 }}>Net Worth</h1>
+          </div>
           {data && (
-            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#7d7d88", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477", display: "flex", alignItems: "center", gap: 10 }}>
               Updated {new Date(data.generatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
               <button onClick={load} disabled={loading} style={{
-                background: "rgba(255,255,255,0.06)", color: "#d8d8de", border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(240,228,208,0.06)", color: "#ddd4c5", border: "1px solid rgba(240,228,208,0.08)",
                 borderRadius: 7, padding: "4px 10px", fontSize: 12.5, cursor: "pointer",
               }}>{loading ? "…" : "Refresh"}</button>
             </div>
           )}
         </div>
-        <div className="nw-subtabs" style={{ marginBottom: 20 }}>
-          <Pills options={NW_TABS} value={tab} onChange={setTab} />
-        </div>
+        <SubTabs options={NW_TABS} value={tab} onChange={setTab} />
         {body}
       </div>
     </div>
@@ -3022,25 +3167,21 @@ function NetWorth() {
 }
 
 function App() {
-  // Always open on the Dashboard rather than restoring the last tab.
-  const [view, setView] = useState("dash");
+  // Always open on Net Worth rather than restoring the last tab.
+  const [view, setView] = useState("worth");
   const changeView = (v) => setView(v);
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#08080a",
-      color: "#fff",
-      paddingTop: "env(safe-area-inset-top)",
-      paddingBottom: "env(safe-area-inset-bottom)",
-    }}>
+    <div style={{ minHeight: "100vh", color: "#f6f1e7" }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
         input[type=number] { -moz-appearance: textfield; }
-        input::placeholder { color: #52525b; }
+        input::placeholder { color: #5a554c; }
       `}</style>
       <TabBar view={view} setView={changeView} />
-      {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : view === "worth" ? <NetWorth /> : <Calc />}
+      <main className="app-main">
+        {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : view === "worth" ? <NetWorth /> : <Calc />}
+      </main>
     </div>
   );
 }
