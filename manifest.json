@@ -1,7 +1,7 @@
 {
   "name": "Pay Calculator",
   "short_name": "Pay Calc",
-  "start_url": "/Income-Calculator/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#09090b",

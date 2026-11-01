@@ -1,0 +1,8 @@
+.*
+.git/
+.wrangler/
+worker.js
+wrangler.jsonc
+README.md
+supabase-setup.sql
+node_modules/
