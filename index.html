@@ -3087,8 +3087,8 @@ function NetWorth() {
 
   const pieData = useMemo(() => {
     if (!data) return [];
-    const parts = data.accounts.map((a, i) => ({ label: a.name, value: a.value, color: accountColor(i) }));
-    if (data.ynab.ok && data.totals.cash > 0) parts.unshift({ label: "Cash (YNAB)", value: data.totals.cash, color: ACCOUNT_COLORS[0] });
+    const parts = data.accounts.map((a, i) => ({ label: a.chart_label || a.name, value: a.value, color: accountColor(i) }));
+    if (data.ynab.ok && data.totals.cash > 0) parts.unshift({ label: "Cash (Amex accounts)", value: data.totals.cash, color: ACCOUNT_COLORS[0] });
     return parts.filter((p) => p.value > 0);
   }, [data]);
 

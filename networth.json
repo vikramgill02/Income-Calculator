@@ -27,7 +27,8 @@
           "price": 100.73,
           "cost": 2600.87
         }
-      ]
+      ],
+      "chart_label": "Fidelity CMA (SGOV)"
     },
     {
       "name": "Taxable Brokerage",
