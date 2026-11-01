@@ -6,3 +6,4 @@ wrangler.jsonc
 README.md
 supabase-setup.sql
 node_modules/
+.gitignore
