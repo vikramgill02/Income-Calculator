@@ -142,6 +142,29 @@ input { font-family: var(--font); }
 @media (max-width: 820px) {
   .dash-pie-grid { grid-template-columns: 1fr; }
 }
+/* Five tabs are wider than a phone at desktop padding. */
+.tabbar::-webkit-scrollbar { display: none; }
+@media (max-width: 480px) {
+  .tabbar-wrap { padding: 18px 16px 0 !important; }
+  .tabbar-btn { padding: 7px 9px !important; font-size: 12.5px !important; }
+}
+.nw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.nw-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+@media (max-width: 820px) {
+  .nw-split { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .nw-page { padding: 22px 16px 48px !important; }
+}
 </style>
 </head>
 <body>
@@ -212,21 +235,21 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
 
 function TabBar({ view, setView }) {
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "22px 24px 0" }}>
-      <div style={{
-        display: "flex", gap: 2, padding: 3,
+    <div className="tabbar-wrap" style={{ display: "flex", justifyContent: "center", padding: "22px 24px 0" }}>
+      <div className="tabbar" style={{
+        display: "flex", gap: 2, padding: 3, maxWidth: "100%", overflowX: "auto", scrollbarWidth: "none",
         background: "rgba(255,255,255,0.035)",
         border: "1px solid rgba(255,255,255,0.06)",
         borderRadius: 10,
       }}>
-        {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"], ["prop", "Property"]].map(([key, label]) => {
+        {[["calc", "Pay Calc"], ["dash", "Dashboard"], ["cards", "Cards"], ["prop", "Property"], ["worth", "Net Worth"]].map(([key, label]) => {
           const active = view === key;
           return (
-            <button key={key} onClick={() => setView(key)} style={{
+            <button key={key} className="tabbar-btn" onClick={() => setView(key)} style={{
               background: active ? "rgba(255,255,255,0.09)" : "transparent",
               border: "none", borderRadius: 7, padding: "7px 16px", cursor: "pointer",
               fontSize: 13, fontWeight: active ? 550 : 450,
-              color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT,
+              color: active ? "#fafafa" : "#7d7d88", fontFamily: FONT, whiteSpace: "nowrap", flexShrink: 0,
             }}>{label}</button>
           );
         })}
@@ -437,7 +460,7 @@ function StatCard({ label, value, sub, accent }) {
   );
 }
 
-function PieChart({ data, size = 240 }) {
+function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
@@ -467,7 +490,7 @@ function PieChart({ data, size = 240 }) {
         {slices.map((s, i) => (
           <path key={i} d={s.path} fill={s.color} stroke="#08080a" strokeWidth="2" />
         ))}
-        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#8b8b96", fontSize: 11.5, letterSpacing: "0", fontFamily: FONT }}>YTD GROSS</text>
+        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#8b8b96", fontSize: 11.5, letterSpacing: "0", fontFamily: FONT }}>{centerLabel}</text>
         <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#fff", fontSize: 19, fontFamily: FONT, fontWeight: 600 }}>{fmt0(total)}</text>
       </svg>
       <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
@@ -2617,6 +2640,458 @@ function Property() {
 
 /* ─── App shell ─── */
 
+/* ─── Net Worth ───
+   Data comes from /api/networth (worker.js): Fidelity holdings from
+   networth.json priced live, cash and credit cards from YNAB, loans from
+   networth.json, and one saved snapshot per day for the history chart. */
+
+const NW_COLORS = {
+  liquid: "#5ec98a",
+  netWorth: "#ededf0",
+  invest: "#9b8fd4",
+  debt: "#f87171",
+  milestone: "#f0b429",
+};
+const ACCOUNT_COLORS = ["#5ec98a", "#38bdf8", "#f0b429", "#c084fc", "#2dd4bf", "#fb7185"];
+
+const parseDay = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+const shortDate = (iso) =>
+  parseDay(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const signed = (v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v));
+const kfmt = (v) => {
+  const a = Math.abs(v);
+  const s = a >= 1000 ? `$${(a / 1000).toFixed(a >= 100000 ? 0 : 1).replace(/\.0$/, "")}k` : `$${a.toFixed(0)}`;
+  return v < 0 ? `−${s}` : s;
+};
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const panel = {
+  background: "linear-gradient(180deg, #101014 0%, #09090b 100%)",
+  border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24,
+};
+const panelTitle = { fontSize: 13.5, color: "#8b8b96", marginBottom: 18, fontFamily: FONT };
+
+function useWidth() {
+  const ref = useRef(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.floor(e.contentRect.width)));
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
+
+function GoalCard({ goal, liquid, ynabOk }) {
+  const by = parseDay(goal.by);
+  const now = new Date();
+  const monthsLeft = Math.max(0, (by - now) / (1000 * 60 * 60 * 24 * 30.44));
+  const toLow = Math.max(0, goal.low - liquid);
+  const perMonth = monthsLeft > 0 ? toLow / monthsLeft : toLow;
+  const pct = Math.min(100, (liquid / goal.high) * 100);
+  const lowPct = (goal.low / goal.high) * 100;
+  const hit = liquid >= goal.low;
+
+  return (
+    <div style={panel}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+        <div style={{ ...panelTitle, marginBottom: 0 }}>
+          Liquid goal · {kfmt(goal.low)}–{kfmt(goal.high)} by {shortDate(goal.by)}
+        </div>
+        <div style={{ fontSize: 12.5, color: "#7d7d88", fontFamily: FONT }}>
+          {monthsLeft > 0 ? `${monthsLeft.toFixed(1)} months left` : "Deadline reached"}
+        </div>
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 600, color: NW_COLORS.liquid, fontFamily: FONT, marginBottom: 16 }}>
+        {fmt0(liquid)}
+      </div>
+      <div style={{ position: "relative", height: 12, borderRadius: 6, background: "rgba(255,255,255,0.06)", marginBottom: 8 }}>
+        <div style={{ position: "absolute", inset: 0, width: `${pct}%`, borderRadius: 6, background: NW_COLORS.liquid }} />
+        <div style={{ position: "absolute", left: `${lowPct}%`, top: -4, bottom: -4, width: 2, background: "#fafafa", opacity: 0.6 }} />
+      </div>
+      <div style={{ position: "relative", height: 16, fontSize: 11.5, color: "#7d7d88", fontFamily: FONT }}>
+        <span style={{ position: "absolute", left: 0 }}>$0</span>
+        <span style={{ position: "absolute", left: `${lowPct}%`, transform: "translateX(-50%)" }}>{kfmt(goal.low)}</span>
+        <span style={{ position: "absolute", right: 0 }}>{kfmt(goal.high)}</span>
+      </div>
+      <div style={{ marginTop: 16, fontSize: 13.5, color: "#d8d8de", fontFamily: FONT, lineHeight: 1.5 }}>
+        {hit
+          ? <>You're in the goal range. {liquid < goal.high && <>{fmt0(goal.high - liquid)} more reaches the top of it.</>}</>
+          : <>Save about <b style={{ color: "#fafafa" }}>{fmt0(perMonth)}/month</b> to reach {kfmt(goal.low)} — {fmt0(toLow)} to go.</>}
+      </div>
+      <div style={{ marginTop: 6, fontSize: 12, color: "#63636e", fontFamily: FONT }}>
+        Liquid = YNAB checking, savings &amp; cash + CRNA Fund + Taxable Brokerage.
+        {!ynabOk && <span style={{ color: NW_COLORS.milestone }}> YNAB isn't connected, so cash is missing from this number.</span>}
+      </div>
+    </div>
+  );
+}
+
+function HistoryChart({ history, goal, milestones }) {
+  const [ref, width] = useWidth();
+  const [hover, setHover] = useState(null);
+  const narrow = width < 560;
+  const W = Math.max(width, 300), H = narrow ? 280 : 320;
+  const ML = 52, MR = 14, MT = narrow ? 50 : 34, MB = 30;
+  const innerW = W - ML - MR, innerH = H - MT - MB;
+
+  const today = todayIso();
+  const startIso = history.length ? history[0].date : today;
+  const lastMilestone = milestones.reduce((m, x) => (x.date > m ? x.date : m), goal.by);
+  const start = parseDay(startIso);
+  const endD = parseDay(lastMilestone);
+  const end = new Date(endD.getFullYear(), endD.getMonth() + 1, 1);
+  const span = end - start || 1;
+  const xOf = (iso) => ML + ((parseDay(iso) - start) / span) * innerW;
+
+  const vals = history.flatMap((p) => [p.liquid, p.netWorth]).concat([0, goal.high]);
+  const rawMin = Math.min(...vals), rawMax = Math.max(...vals) * 1.08;
+  // Round the gridline spacing to 1, 2, 2.5 or 5 × a power of ten.
+  const rough = (rawMax - rawMin) / 4;
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.max(1, rough))));
+  const tickStep = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((v) => v >= rough);
+  const yMin = Math.floor(rawMin / tickStep) * tickStep, yMax = Math.ceil(rawMax / tickStep) * tickStep;
+  const yOf = (v) => MT + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
+  const ticks = [];
+  for (let v = yMin; v <= yMax + 1e-6; v += tickStep) ticks.push(v);
+
+  const months = [];
+  for (let d = new Date(start.getFullYear(), start.getMonth() + 1, 1); d < end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(d);
+  const every = Math.max(1, Math.ceil((months.length * 46) / innerW));
+
+  const pathFor = (key) => history.map((p, i) => `${i ? "L" : "M"} ${xOf(p.date)} ${yOf(p[key])}`).join(" ");
+  const last = history[history.length - 1];
+
+  const onMove = (e) => {
+    if (!history.length) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    let best = history[0];
+    for (const p of history) if (Math.abs(xOf(p.date) - px) < Math.abs(xOf(best.date) - px)) best = p;
+    setHover(best);
+  };
+
+  return (
+    <div style={panel}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ ...panelTitle, marginBottom: 0 }}>History</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: "#d8d8de", fontFamily: FONT }}>
+          {[["Liquid", NW_COLORS.liquid], ["Net worth", NW_COLORS.netWorth]].map(([l, c]) => (
+            <span key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 14, height: 3, borderRadius: 2, background: c }} />{l}
+            </span>
+          ))}
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(94,201,138,0.14)", border: "1px dashed rgba(94,201,138,0.6)" }} />Goal
+          </span>
+        </div>
+      </div>
+      <div ref={ref} style={{ position: "relative" }}>
+        {width > 0 && (
+          <svg width={W} height={H} style={{ display: "block", touchAction: "pan-y" }}
+            onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}>
+            {ticks.map((t, i) => (
+              <g key={i}>
+                <line x1={ML} x2={W - MR} y1={yOf(t)} y2={yOf(t)} stroke="rgba(255,255,255,0.08)"
+                  strokeDasharray={Math.abs(t) < 1e-6 ? "" : "2,4"} />
+                <text x={ML - 8} y={yOf(t) + 4} textAnchor="end" style={{ fill: "#63636e", fontSize: 11.5, fontFamily: FONT }}>{kfmt(t)}</text>
+              </g>
+            ))}
+            {yMin < 0 && <line x1={ML} x2={W - MR} y1={yOf(0)} y2={yOf(0)} stroke="rgba(255,255,255,0.22)" />}
+
+            <rect x={ML} y={yOf(goal.high)} width={Math.max(0, xOf(goal.by) - ML)} height={yOf(goal.low) - yOf(goal.high)}
+              fill="rgba(94,201,138,0.10)" stroke="rgba(94,201,138,0.45)" strokeDasharray="4,4" />
+
+            {last && last.date < goal.by && last.liquid < goal.low && (
+              <line x1={xOf(last.date)} y1={yOf(last.liquid)} x2={xOf(goal.by)} y2={yOf(goal.low)}
+                stroke={NW_COLORS.liquid} strokeWidth="1.5" strokeDasharray="5,5" opacity="0.55" />
+            )}
+
+            {milestones.map((m, i) => {
+              const x = xOf(m.date);
+              const anchor = x > W - 90 ? "end" : x < ML + 60 ? "start" : "middle";
+              return (
+                <g key={m.date}>
+                  <line x1={x} x2={x} y1={MT - 4} y2={MT + innerH} stroke={NW_COLORS.milestone} strokeDasharray="3,4" opacity="0.7" />
+                  <text x={x} y={MT - 8 - 12 * (narrow ? i % 3 : i % 2)} textAnchor={anchor}
+                    style={{ fill: NW_COLORS.milestone, fontSize: 11.5, fontFamily: FONT }}>{m.label}</text>
+                </g>
+              );
+            })}
+
+            {months.map((d, i) => i % every === 0 && (
+              <text key={i} x={ML + ((d - start) / span) * innerW} y={H - 8} textAnchor="middle"
+                style={{ fill: "#8b8b96", fontSize: 11.5, fontFamily: FONT }}>
+                {d.toLocaleDateString("en-US", { month: "short" })}{d.getMonth() === 0 ? ` '${String(d.getFullYear()).slice(2)}` : ""}
+              </text>
+            ))}
+
+            {[["netWorth", NW_COLORS.netWorth], ["liquid", NW_COLORS.liquid]].map(([k, c]) => (
+              <g key={k}>
+                {history.length > 1 && <path d={pathFor(k)} fill="none" stroke={c} strokeWidth="2.25" strokeLinejoin="round" />}
+                {last && <circle cx={xOf(last.date)} cy={yOf(last[k])} r="4" fill={c} />}
+              </g>
+            ))}
+
+            {hover && (
+              <g>
+                <line x1={xOf(hover.date)} x2={xOf(hover.date)} y1={MT} y2={MT + innerH} stroke="rgba(255,255,255,0.25)" />
+                <circle cx={xOf(hover.date)} cy={yOf(hover.liquid)} r="4.5" fill={NW_COLORS.liquid} />
+                <circle cx={xOf(hover.date)} cy={yOf(hover.netWorth)} r="4.5" fill={NW_COLORS.netWorth} />
+              </g>
+            )}
+          </svg>
+        )}
+        {hover && (
+          <div style={{
+            position: "absolute", top: 8, left: Math.min(Math.max(xOf(hover.date) - 90, 0), W - 180), width: 180,
+            background: "#18181b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 12px",
+            fontFamily: FONT, fontSize: 12.5, color: "#d8d8de", pointerEvents: "none",
+          }}>
+            <div style={{ color: "#8b8b96", marginBottom: 6 }}>{shortDate(hover.date)}{hover.live ? " · now" : ""}</div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Liquid</span><span style={{ color: NW_COLORS.liquid }}>{fmt0(hover.liquid)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net worth</span><span style={{ color: "#fafafa" }}>{fmt0(hover.netWorth)}</span></div>
+          </div>
+        )}
+      </div>
+      {history.length <= 1 && (
+        <div style={{ marginTop: 10, fontSize: 12.5, color: "#7d7d88", fontFamily: FONT }}>
+          A point is saved every night, so the lines fill in day by day from here.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HoldingRow({ h, asOf }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, color: "#ededf0", fontFamily: FONT, fontWeight: 550 }}>{h.symbol}</div>
+        <div style={{ fontSize: 11.5, color: "#7d7d88", fontFamily: FONT, marginTop: 2 }}>
+          {h.shares.toLocaleString("en-US", { maximumFractionDigits: 3 })} × {fmt(h.price)}
+          <span style={{ marginLeft: 6, color: h.live ? NW_COLORS.liquid : "#63636e" }}>
+            {h.live ? "● live" : `price from ${shortDate(asOf)}`}
+          </span>
+        </div>
+      </div>
+      <div style={{ fontSize: 13.5, color: "#ededf0", fontFamily: FONT, whiteSpace: "nowrap" }}>{fmt(h.value)}</div>
+    </div>
+  );
+}
+
+function AccountCard({ account, color, asOf }) {
+  return (
+    <div style={{ ...panel, borderLeft: `3px solid ${color}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{account.name}</div>
+        <span style={{
+          fontSize: 11, padding: "3px 8px", borderRadius: 999, fontFamily: FONT, whiteSpace: "nowrap",
+          color: account.kind === "liquid" ? NW_COLORS.liquid : NW_COLORS.invest,
+          background: account.kind === "liquid" ? "rgba(94,201,138,0.1)" : "rgba(155,143,212,0.12)",
+        }}>{account.kind === "liquid" ? "Liquid" : "Retirement"}</span>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 600, color: "#fafafa", fontFamily: FONT }}>{fmt(account.value)}</div>
+      <div style={{ fontSize: 12.5, fontFamily: FONT, marginTop: 4, marginBottom: 12, color: account.gain >= 0 ? NW_COLORS.liquid : NW_COLORS.debt }}>
+        {signed(account.gain)} total gain
+      </div>
+      {account.holdings.map((h) => <HoldingRow key={h.symbol} h={h} asOf={asOf} />)}
+      {account.cash > 0.005 && (
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT }}>
+          <span style={{ color: "#8b8b96" }}>Cash</span><span style={{ color: "#ededf0" }}>{fmt(account.cash)}</span>
+        </div>
+      )}
+      {account.pending && (
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT }}>
+          <span style={{ color: NW_COLORS.milestone }}>Pending · {account.pending.note}</span>
+          <span style={{ color: "#ededf0", whiteSpace: "nowrap" }}>{fmt(account.pending.amount)}</span>
+        </div>
+      )}
+      {account.note && <div style={{ fontSize: 12, color: "#63636e", fontFamily: FONT, marginTop: 8 }}>{account.note}</div>}
+    </div>
+  );
+}
+
+function BalanceList({ rows, negate }) {
+  return rows.map((a) => (
+    <div key={a.name} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: 13.5, fontFamily: FONT }}>
+      <span style={{ color: "#d8d8de", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+      <span style={{ color: negate ? (a.balance < 0 ? NW_COLORS.debt : "#ededf0") : "#ededf0", whiteSpace: "nowrap" }}>
+        {fmt(negate ? Math.abs(a.balance) : a.balance)}
+      </span>
+    </div>
+  ));
+}
+
+function YnabCard({ ynab, totals }) {
+  return (
+    <div style={panel}>
+      <div style={panelTitle}>Cash &amp; credit cards · from YNAB</div>
+      {!ynab.ok ? (
+        <div style={{ fontSize: 13.5, color: "#d8d8de", fontFamily: FONT, lineHeight: 1.5 }}>
+          Not connected ({ynab.error}). Add your YNAB personal access token as <code>YNABKEY</code> in the
+          Worker's Settings → Variables and Secrets.
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, fontFamily: FONT, marginBottom: 2 }}>
+            <span style={{ color: "#8b8b96" }}>Cash</span><span style={{ color: NW_COLORS.liquid, fontWeight: 600 }}>{fmt(totals.cash)}</span>
+          </div>
+          <BalanceList rows={ynab.cash} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, fontFamily: FONT, marginTop: 18, marginBottom: 2 }}>
+            <span style={{ color: "#8b8b96" }}>Credit cards owed</span><span style={{ color: NW_COLORS.debt, fontWeight: 600 }}>{fmt(totals.cards)}</span>
+          </div>
+          <BalanceList rows={ynab.cards} negate />
+        </>
+      )}
+    </div>
+  );
+}
+
+function LoansCard({ loans, asOf }) {
+  const open = loans.filter((l) => l.balance > 0).sort((a, b) => b.rate - a.rate);
+  const total = open.reduce((s, l) => s + l.balance, 0);
+  const avgRate = total ? open.reduce((s, l) => s + l.balance * l.rate, 0) / total : 0;
+  const monthlyInterest = open.reduce((s, l) => s + (l.balance * l.rate) / 100 / 12, 0);
+  const maxBal = Math.max(1, ...open.map((l) => l.balance));
+  return (
+    <div style={panel}>
+      <div style={{ ...panelTitle, marginBottom: 14 }}>Student loans · as of {shortDate(asOf)}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 14, marginBottom: 18 }}>
+        {[["Balance", fmt0(total), NW_COLORS.debt], ["Avg. rate", `${avgRate.toFixed(2)}%`, "#ededf0"], ["Interest / month", `≈ ${fmt0(monthlyInterest)}`, "#ededf0"]].map(([l, v, c]) => (
+          <div key={l}>
+            <div style={{ fontSize: 11.5, color: "#7d7d88", fontFamily: FONT, marginBottom: 4 }}>{l}</div>
+            <div style={{ fontSize: 18, color: c, fontFamily: FONT, fontWeight: 600 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+      {open.map((l) => (
+        <div key={l.name} style={{ padding: "8px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13.5, fontFamily: FONT }}>
+            <span style={{ color: "#d8d8de", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</span>
+            <span style={{ whiteSpace: "nowrap" }}>
+              <span style={{ color: l.rate >= 7 ? NW_COLORS.debt : "#8b8b96", marginRight: 10 }}>{l.rate.toFixed(2)}%</span>
+              <span style={{ color: "#ededf0" }}>{fmt(l.balance)}</span>
+            </span>
+          </div>
+          <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.05)", marginTop: 6 }}>
+            <div style={{ height: 3, borderRadius: 2, width: `${(l.balance / maxBal) * 100}%`, background: l.rate >= 7 ? NW_COLORS.debt : "#52525b" }} />
+          </div>
+        </div>
+      ))}
+      <div style={{ fontSize: 12, color: "#63636e", fontFamily: FONT, marginTop: 10 }}>Sorted by interest rate. Red = 7% or higher.</div>
+    </div>
+  );
+}
+
+function NetWorth() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch("api/networth", { cache: "no-store" })
+      .then((r) => r.json().then((j) => (r.ok ? j : Promise.reject(new Error(j.error || r.status)))))
+      .then((j) => { setData(j); setError(""); })
+      .catch((e) => setError(String(e.message || e)))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(load, [load]);
+
+  // Saved history plus a live point for right now.
+  const history = useMemo(() => {
+    if (!data) return [];
+    const t = data.totals, today = todayIso();
+    const live = { date: today, liquid: t.liquid, netWorth: t.netWorth, live: true };
+    return [...(data.history || []).filter((p) => p.date !== today), live];
+  }, [data]);
+
+  const pieData = useMemo(() => {
+    if (!data) return [];
+    const parts = data.accounts.map((a, i) => ({ label: a.name, value: a.value, color: ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length] }));
+    if (data.ynab.ok && data.totals.cash > 0) parts.unshift({ label: "Cash (YNAB)", value: data.totals.cash, color: ACCOUNT_COLORS[0] });
+    return parts.filter((p) => p.value > 0);
+  }, [data]);
+
+  if (error && !data) {
+    return (
+      <div className="nw-page" style={{ padding: "28px 24px 56px", maxWidth: 720, margin: "0 auto", color: "#d8d8de", fontFamily: FONT }}>
+        <h1 style={{ fontSize: 30, fontWeight: 600, color: "#fafafa", margin: "0 0 12px" }}>Net Worth</h1>
+        Couldn't load balances ({error}). <button onClick={load} style={{ marginLeft: 8, background: "#27272a", color: "#fafafa", border: 0, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Try again</button>
+      </div>
+    );
+  }
+  if (!data) {
+    return <div style={{ padding: 48, textAlign: "center", color: "#7d7d88", fontFamily: FONT }}>Loading balances…</div>;
+  }
+
+  const t = data.totals;
+  const accountColor = (i) => ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length];
+
+  return (
+    <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 24, marginBottom: 32, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontFamily: FONT, fontSize: 14, color: "#8b8b96", margin: "0 0 6px" }}>everything you own, minus what you owe</p>
+            <h1 style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, margin: 0, color: "#fafafa", lineHeight: 1.1 }}>Net Worth</h1>
+          </div>
+          <div style={{ textAlign: "right", fontFamily: FONT }}>
+            <div style={{ fontSize: 11.5, color: "#7d7d88", marginBottom: 4 }}>Updated</div>
+            <div style={{ fontSize: 13.5, color: "#d8d8de" }}>
+              {new Date(data.generatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+              <button onClick={load} disabled={loading} style={{
+                marginLeft: 10, background: "rgba(255,255,255,0.06)", color: "#d8d8de", border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 7, padding: "4px 10px", fontSize: 12.5, cursor: "pointer",
+              }}>{loading ? "…" : "Refresh"}</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="dash-stats">
+          <StatCard label="Net worth" value={fmt0(t.netWorth)} sub="Cash + investments − cards − loans" accent={NW_COLORS.netWorth} />
+          <StatCard label="Liquid" value={fmt0(t.liquid)} sub={`Goal ${kfmt(data.goal.low)}–${kfmt(data.goal.high)}`} accent={NW_COLORS.liquid} />
+          <StatCard label="Investments" value={fmt0(t.investments)} sub={`${data.accounts.length} Fidelity accounts`} accent={NW_COLORS.invest} />
+          <StatCard label="Debt" value={fmt0(t.loans + t.cards)} sub={`Loans ${fmt0(t.loans)} · Cards ${fmt0(t.cards)}`} accent={NW_COLORS.debt} />
+        </div>
+
+        <div style={{ marginBottom: 32 }}>
+          <GoalCard goal={data.goal} liquid={t.liquid} ynabOk={data.ynab.ok} />
+        </div>
+
+        <div style={{ marginBottom: 32 }}>
+          <HistoryChart history={history} goal={data.goal} milestones={data.milestones} />
+        </div>
+
+        <div className="nw-split">
+          <div style={panel}>
+            <div style={panelTitle}>Where it sits</div>
+            <PieChart data={pieData} size={240} centerLabel="ASSETS" />
+          </div>
+          <YnabCard ynab={data.ynab} totals={t} />
+        </div>
+
+        <div style={{ ...panelTitle, fontSize: 15, color: "#d8d8de" }}>
+          Fidelity · holdings from {shortDate(data.asOf)}
+        </div>
+        <div className="nw-grid" style={{ marginBottom: 32 }}>
+          {data.accounts.map((a, i) => <AccountCard key={a.name} account={a} color={accountColor(i)} asOf={data.asOf} />)}
+        </div>
+
+        <LoansCard loans={data.loans} asOf={data.loansAsOf} />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   // Always open on the Dashboard rather than restoring the last tab.
   const [view, setView] = useState("dash");
@@ -2636,7 +3111,7 @@ function App() {
         input::placeholder { color: #52525b; }
       `}</style>
       <TabBar view={view} setView={changeView} />
-      {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : <Calc />}
+      {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : view === "worth" ? <NetWorth /> : <Calc />}
     </div>
   );
 }
