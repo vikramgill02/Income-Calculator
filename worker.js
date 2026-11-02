@@ -20,7 +20,15 @@ function readCookie(request, name) {
   return null;
 }
 
-function loginPage(error) {
+// Where to send someone after they unlock: only a path on this site.
+function safeNext(value) {
+  const v = String(value || "");
+  return v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/__login") ? v : "/";
+}
+
+const escapeAttr = (v) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+function loginPage(error, next = "/") {
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8" />
@@ -41,6 +49,7 @@ function loginPage(error) {
 </style>
 </head><body>
 <form method="POST" action="/__login">
+  <input type="hidden" name="next" value="${escapeAttr(next)}" />
   <h1>Enter password</h1>
   <input type="password" name="password" autocomplete="current-password" autofocus required />
   ${error ? `<p>${error}</p>` : ""}
@@ -229,19 +238,19 @@ export default {
       if ((await tokenFor(attempt)) !== expected) {
         // Slow down guessing.
         await new Promise((r) => setTimeout(r, 1500));
-        return html(loginPage("Wrong password."), 401);
+        return html(loginPage("Wrong password.", safeNext(form.get("next"))), 401);
       }
       return new Response(null, {
         status: 303,
         headers: {
-          Location: "/",
+          Location: safeNext(form.get("next")),
           "Set-Cookie": `${COOKIE}=${expected}; Max-Age=${ONE_YEAR}; Path=/; HttpOnly; Secure; SameSite=Lax`,
         },
       });
     }
 
     if (readCookie(request, COOKIE) !== expected) {
-      return html(loginPage(""), 401);
+      return html(loginPage("", safeNext(url.pathname + url.search)), 401);
     }
 
     if (url.pathname === "/api/networth") {
@@ -254,7 +263,11 @@ export default {
       }
     }
 
-    const res = await env.ASSETS.fetch(request);
+    // Page addresses like /dashboard/paystubs aren't files: serve the app and
+    // let it pick the page from the address. Anything with a file extension
+    // (logos, JSON) is served as-is, so a missing file still 404s.
+    const isPage = request.method === "GET" && !url.pathname.split("/").pop().includes(".");
+    const res = await env.ASSETS.fetch(isPage ? new Request(url.origin + "/", request) : request);
     const out = new Response(res.body, res);
     out.headers.set("X-Robots-Tag", "noindex, nofollow");
     return out;

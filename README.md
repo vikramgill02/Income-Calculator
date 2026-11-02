@@ -2,6 +2,18 @@
 
 Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Five tabs, in this order (opens on Net Worth). Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
 
+Every page and sub-tab has its own address, so the back button, refresh, bookmarks and home-screen shortcuts all land where you expect:
+
+| Page | Addresses |
+| --- | --- |
+| Net Worth | `/` · `/networth/accounts` · `/networth/loans` |
+| Dashboard | `/dashboard` · `/dashboard/employers` · `/dashboard/monthly` · `/dashboard/paystubs` |
+| Pay Calc | `/pay` |
+| Cards | `/cards` · `/cards/<card id from cards.json>` (e.g. `/cards/amex-gold`) |
+| Property | `/property` · `/property/projections` |
+
+It is still one `index.html`: `worker.js` serves it for any address without a file extension and the app picks the page from the URL. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
+
 - **Net Worth** — the landing tab, in three sub-tabs. *Overview*: a donut of where your money sits — hover a slice (or tap it on a phone) to see that account's balance, holdings and pending transfers; otherwise it shows liquid, net worth and debt. *Accounts*: YNAB cash and credit-card totals plus each Fidelity account's holdings, priced live. *Loans*: student loans by interest rate.
 - **Dashboard** — year-to-date income in four sub-tabs: *Overview* (gross / taxes / net / 403(b) and the year-end projection), *Employers* (split by employer with logos), *Monthly* (bar chart with projections) and *Paystubs* (filterable table). Data lives in [`paystubs.json`](./paystubs.json).
 - **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $78.31/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× (~$117.47/hr).
@@ -12,7 +24,7 @@ Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cor
 
 ## Hosting & password
 
-Cloudflare builds and deploys the site on every push to `main`. `worker.js` sits in front of every file and shows a password page; a correct password sets a cookie that keeps that device unlocked for a year. The password is the `PASSWORD` secret on the `dashboard` Worker (Settings → Variables and Secrets) — it is never stored in this repo. If the secret is missing, the site refuses every request.
+Cloudflare builds and deploys the site on every push to `main`. `worker.js` sits in front of every file and shows a password page; a correct password sets a cookie that keeps that device unlocked for a year. After unlocking you land on the address you originally opened. The password is the `PASSWORD` secret on the `dashboard` Worker (Settings → Variables and Secrets) — it is never stored in this repo. If the secret is missing, the site refuses every request.
 
 - `wrangler.jsonc` — Worker config. `name` must match the Worker's name in Cloudflare.
 - `.assetsignore` — files that are never served (the worker code, config, this README, the SQL).

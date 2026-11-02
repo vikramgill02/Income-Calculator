@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Gill &amp; Co.</title>
-<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="icon" type="image/png" href="/favicon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -169,17 +169,17 @@ input { font-family: var(--font); }
   border-bottom: 1px solid var(--line);
 }
 .subtabs::-webkit-scrollbar { display: none; }
-.subtabs button {
-  position: relative; flex-shrink: 0; background: none; border: none; cursor: pointer;
+.subtabs a {
+  position: relative; flex-shrink: 0; display: flex; align-items: center; text-decoration: none; cursor: pointer;
   min-height: 44px; padding: 0 14px; font-size: 13.5px; font-weight: 450; color: var(--muted);
 }
-.subtabs button:first-child { padding-left: 2px; }
-.subtabs button:hover { color: var(--text); }
-.subtabs button.active { color: var(--text); }
-.subtabs button.active::after {
+.subtabs a:first-child { padding-left: 2px; }
+.subtabs a:hover { color: var(--text); }
+.subtabs a.active { color: var(--text); }
+.subtabs a.active::after {
   content: ""; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 1.5px; background: var(--gold);
 }
-.subtabs button:first-child.active::after { left: 2px; }
+.subtabs a:first-child.active::after { left: 2px; }
 .page-head {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
 }
@@ -221,14 +221,14 @@ details.fine[open] summary::before { content: "− "; }
 .wordmark .seal { width: 38px; height: 38px; display: block; }
 .wordmark em { color: var(--gold); font-style: italic; }
 .topnav-tabs { display: flex; gap: 6px; }
-.topnav-tabs button {
-  position: relative; background: none; border: none; cursor: pointer;
+.topnav-tabs a {
+  position: relative; display: inline-block; text-decoration: none; cursor: pointer;
   padding: 10px 14px; font-size: 13.5px; font-weight: 450; letter-spacing: 0.01em;
   color: var(--muted);
 }
-.topnav-tabs button:hover { color: var(--text); }
-.topnav-tabs button.active { color: var(--text); }
-.topnav-tabs button.active::after {
+.topnav-tabs a:hover { color: var(--text); }
+.topnav-tabs a.active { color: var(--text); }
+.topnav-tabs a.active::after {
   content: ""; position: absolute; left: 14px; right: 14px; bottom: 2px;
   height: 1.5px; border-radius: 1px; background: var(--gold);
 }
@@ -247,12 +247,12 @@ details.fine[open] summary::before { content: "− "; }
     backdrop-filter: saturate(140%) blur(16px);
     border-top: 1px solid var(--line);
   }
-  .bottomnav button {
-    background: none; border: none; cursor: pointer; min-height: 52px;
+  .bottomnav a {
+    text-decoration: none; -webkit-tap-highlight-color: transparent; cursor: pointer; min-height: 52px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     color: #716a5f; font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em;
   }
-  .bottomnav button.active { color: var(--gold); }
+  .bottomnav a.active { color: var(--gold); }
   .app-main { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
 .nw-grid {
@@ -288,7 +288,7 @@ details.fine[open] summary::before { content: "− "; }
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo, useCallback, useRef } = React;
+const { useState, useEffect, useMemo, useCallback, useRef, useContext } = React;
 
 const FONT = "var(--font)";
 
@@ -302,9 +302,9 @@ const n = (v) => parseFloat(v) || 0;
 const EMPLOYERS = ["CCMC", "NorthBay", "Sutter"];
 
 const EMPLOYER_META = {
-  CCMC:     { color: "#a4545f", logo: "logos/ccmc.png",     full: "Community Medical Centers" },
-  NorthBay: { color: "#6f9e80", logo: "logos/northbay.jpg", full: "NorthBay Healthcare" },
-  Sutter:   { color: "#6fa8a2", logo: "logos/sutter.png",   full: "Sutter Health" },
+  CCMC:     { color: "#a4545f", logo: "/logos/ccmc.png",     full: "Community Medical Centers" },
+  NorthBay: { color: "#6f9e80", logo: "/logos/northbay.jpg", full: "NorthBay Healthcare" },
+  Sutter:   { color: "#6fa8a2", logo: "/logos/sutter.png",   full: "Sutter Health" },
 };
 
 const colorFor = (emp) => EMPLOYER_META[emp]?.color || "#93c4a2";
@@ -348,6 +348,72 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
   );
 }
 
+/* ─── routing ───
+   Every page and sub-tab has its own address, like a normal website, so the
+   back button, refresh and bookmarks all work. "/" is Net Worth; a page's
+   first sub-tab is the bare page address (/dashboard), the rest add a
+   segment (/dashboard/paystubs). worker.js serves index.html for these. */
+
+const PAGES = { worth: "networth", dash: "dashboard", calc: "pay", cards: "cards", prop: "property" };
+
+function parsePath(pathname) {
+  const [first = "", second = ""] = pathname.replace(/^\/+|\/+$/g, "").split("/");
+  const view = Object.keys(PAGES).find((k) => PAGES[k] === first);
+  if (!view) return { view: "worth", sub: "", known: first === "" };
+  return { view, sub: second ? decodeURIComponent(second) : "", known: true };
+}
+
+const pathFor = (view, sub) =>
+  sub ? `/${PAGES[view]}/${encodeURIComponent(sub)}` : view === "worth" ? "/" : `/${PAGES[view]}`;
+
+const RouteContext = React.createContext({ view: "worth", sub: "", navigate: () => {} });
+
+function useRouter() {
+  const [route, setRoute] = useState(() => {
+    const r = parsePath(window.location.pathname);
+    // An address we don't know (e.g. /foo) becomes the home page.
+    if (!r.known) window.history.replaceState(null, "", "/");
+    return r;
+  });
+  useEffect(() => {
+    const onPop = () => setRoute(parsePath(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const navigate = useCallback((path) => {
+    if (path === window.location.pathname) return;
+    const next = parsePath(path);
+    window.history.pushState(null, "", path);
+    setRoute((prev) => {
+      // New page starts at the top; switching sub-tabs keeps your place.
+      if (prev.view !== next.view) window.scrollTo(0, 0);
+      return next;
+    });
+  }, []);
+  return { view: route.view, sub: route.sub, navigate };
+}
+
+/* Sub-tab state kept in the address. `first` is the default sub-tab;
+   `valid` (when known) sends a stale or mistyped sub-tab back to it. */
+function useSubRoute(view, first, valid) {
+  const { sub, navigate } = useContext(RouteContext);
+  const value = sub && (!valid || valid.includes(sub)) ? sub : first;
+  const href = (key) => pathFor(view, key === first ? "" : key);
+  return [value, (key) => navigate(href(key)), href];
+}
+
+/* An in-app link: a plain click swaps the page without reloading; cmd/ctrl-
+   click or long-press still opens it in a new tab like any other link. */
+function Link({ to, onNavigate, children, ...rest }) {
+  const { navigate } = useContext(RouteContext);
+  const onClick = (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    onNavigate ? onNavigate() : navigate(to);
+  };
+  return <a href={to} onClick={onClick} {...rest}>{children}</a>;
+}
+
 /* ─── tab bar ─── */
 
 const NAV = [
@@ -365,25 +431,27 @@ const NavIcon = ({ children }) => (
 
 /* Desktop: a slim header with the wordmark and text tabs. Phone: the header
    keeps only the wordmark and the tabs move to a bar along the bottom. */
-function TabBar({ view, setView }) {
+function TabBar({ view }) {
   return (
     <>
       <header className="topnav">
         <div className="topnav-inner">
-          <div className="wordmark"><img src="logos/gc-seal.png" alt="" className="seal" /><span>Gill <em>&amp;</em> Co.</span></div>
+          <div className="wordmark"><img src="/logos/gc-seal.png" alt="" className="seal" /><span>Gill <em>&amp;</em> Co.</span></div>
           <nav className="topnav-tabs">
             {NAV.map(([key, label]) => (
-              <button key={key} onClick={() => setView(key)} className={view === key ? "active" : ""}>{label}</button>
+              <Link key={key} to={pathFor(key, "")} className={view === key ? "active" : ""}
+                aria-current={view === key ? "page" : undefined}>{label}</Link>
             ))}
           </nav>
         </div>
       </header>
       <nav className="bottomnav">
         {NAV.map(([key, label, icon]) => (
-          <button key={key} onClick={() => setView(key)} className={view === key ? "active" : ""} aria-label={label}>
+          <Link key={key} to={pathFor(key, "")} className={view === key ? "active" : ""} aria-label={label}
+            aria-current={view === key ? "page" : undefined}>
             <NavIcon>{icon}</NavIcon>
             <span>{label}</span>
-          </button>
+          </Link>
         ))}
       </nav>
     </>
@@ -391,12 +459,12 @@ function TabBar({ view, setView }) {
 }
 
 /* Section tabs inside a page: text with a gold underline. */
-function SubTabs({ options, value, onChange }) {
+function SubTabs({ options, value, onChange, href }) {
   return (
     <div className="subtabs" role="tablist">
       {options.map(([key, label]) => (
-        <button key={key} role="tab" aria-selected={value === key} onClick={() => onChange(key)}
-          className={value === key ? "active" : ""}>{label}</button>
+        <Link key={key} to={href(key)} onNavigate={() => onChange(key)} role="tab" aria-selected={value === key}
+          className={value === key ? "active" : ""}>{label}</Link>
       ))}
     </div>
   );
@@ -1208,7 +1276,7 @@ function Dashboard() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetch("paystubs.json", { cache: "no-store" })
+    fetch("/paystubs.json", { cache: "no-store" })
       .then((r) => r.ok ? r.json() : { year: new Date().getFullYear(), paystubs: [] })
       .then((data) => {
         if (data.year) setYear(data.year);
@@ -1244,7 +1312,7 @@ function Dashboard() {
   })), [orderedEmployers, totals]);
 
   const taxesOther = Math.max(0, totals.gross - totals.net - totals.r403b);
-  const [sub, setSub] = useState("overview");
+  const [sub, setSub, subHref] = useSubRoute("dash", "overview", ["overview", "employers", "monthly", "paystubs"]);
 
   return (
     <div style={{ padding: "28px 24px 56px" }}>
@@ -1260,7 +1328,7 @@ function Dashboard() {
           )}
         </div>
 
-        <SubTabs options={[["overview", "Overview"], ["employers", "Employers"], ["monthly", "Monthly"], ["paystubs", "Paystubs"]]}
+        <SubTabs options={[["overview", "Overview"], ["employers", "Employers"], ["monthly", "Monthly"], ["paystubs", "Paystubs"]]} href={subHref}
           value={sub} onChange={setSub} />
 
         {sub === "overview" && <>
@@ -1573,10 +1641,10 @@ function Cards() {
   const [firstYear, setFirstYear] = useState(new Date().getFullYear());
   const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [sub, setSub] = useState("claim");
+  const [sub, setSub, subHref] = useSubRoute("cards", "claim", loaded ? ["claim", ...cards.map((c) => c.id)] : null);
 
   useEffect(() => {
-    fetch("cards.json", { cache: "no-store" })
+    fetch("/cards.json", { cache: "no-store" })
       .then((r) => r.ok ? r.json() : { cards: [] })
       .then((data) => {
         setCards(Array.isArray(data.cards) ? data.cards : []);
@@ -1655,7 +1723,7 @@ function Cards() {
         </div>
 
         {loaded && cards.length > 0 && (
-          <SubTabs value={sub} onChange={setSub}
+          <SubTabs value={sub} onChange={setSub} href={subHref}
             options={[["claim", attention.length ? `Claim now · ${attention.length}` : "Claim now"], ...cards.map((c) => [c.id, c.name])]} />
         )}
 
@@ -2795,7 +2863,7 @@ function Property() {
     return { ...PROP_DEFAULTS };
   });
   const set = useCallback((key) => (val) => setV((prev) => ({ ...prev, [key]: val })), []);
-  const [sub, setSub] = useState("deal");
+  const [sub, setSub, subHref] = useSubRoute("prop", "deal", ["deal", "projections"]);
   const [showSync, setShowSync] = useState(false);
   const deals = useDeals(v, setV);
 
@@ -2823,7 +2891,7 @@ function Property() {
 
         {showSync && syncConfigured() && deals.ready && (deals.session ? <DealsBar d={deals} /> : <SignIn />)}
 
-        <SubTabs options={[["deal", "Deal"], ["proj", "Projections"]]} value={sub} onChange={setSub} />
+        <SubTabs options={[["deal", "Deal"], ["projections", "Projections"]]} value={sub} onChange={setSub} href={subHref} />
         {sub === "deal" ? <DealTab v={v} set={set} /> : <ProjectionsTab v={v} set={set} />}
       </div>
     </div>
@@ -3012,7 +3080,7 @@ function LoansCard({ loans, asOf }) {
 const NW_TABS = [["overview", "Overview"], ["accounts", "Accounts"], ["loans", "Loans"]];
 
 function NetWorth() {
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab, tabHref] = useSubRoute("worth", "overview", NW_TABS.map(([k]) => k));
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -3022,7 +3090,7 @@ function NetWorth() {
 
   const load = useCallback(() => {
     setLoading(true);
-    getJson("api/networth")
+    getJson("/api/networth")
       .then((j) => { setData(j); setError(""); })
       .catch((e) => setError(String(e.message || e)))
       .finally(() => setLoading(false));
@@ -3097,7 +3165,7 @@ function NetWorth() {
             </div>
           )}
         </div>
-        <SubTabs options={NW_TABS} value={tab} onChange={setTab} />
+        <SubTabs options={NW_TABS} value={tab} onChange={setTab} href={tabHref} />
         {body}
       </div>
     </div>
@@ -3105,10 +3173,14 @@ function NetWorth() {
 }
 
 function App() {
-  // Always open on Net Worth rather than restoring the last tab.
-  const [view, setView] = useState("worth");
-  const changeView = (v) => setView(v);
+  const route = useRouter();
+  const { view } = route;
+  useEffect(() => {
+    const label = NAV.find(([key]) => key === view)[1];
+    document.title = `${label} · Gill & Co.`;
+  }, [view]);
   return (
+    <RouteContext.Provider value={route}>
     <div style={{ minHeight: "100vh", color: "#f6f1e7" }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
@@ -3116,11 +3188,12 @@ function App() {
         input[type=number] { -moz-appearance: textfield; }
         input::placeholder { color: #5a554c; }
       `}</style>
-      <TabBar view={view} setView={changeView} />
+      <TabBar view={view} />
       <main className="app-main">
         {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : view === "worth" ? <NetWorth /> : <Calc />}
       </main>
     </div>
+    </RouteContext.Provider>
   );
 }
 
