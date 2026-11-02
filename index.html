@@ -256,6 +256,14 @@ details.fine[open] summary::before { content: "− "; }
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
+.nw-overview {
+  display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 48px; align-items: start;
+}
+.nw-detail { border-left: 1px solid var(--line); padding-left: 40px; min-height: 100%; }
+@media (max-width: 820px) {
+  .nw-overview { grid-template-columns: 1fr; gap: 28px; }
+  .nw-detail { border-left: none; padding-left: 0; border-top: 1px solid var(--line); padding-top: 24px; }
+}
 .nw-split {
   display: grid;
   grid-template-columns: minmax(280px, 380px) 1fr;
@@ -591,7 +599,12 @@ function StatCard({ label, value, sub, accent }) {
   );
 }
 
-function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
+/* Hover a slice or legend row (tap on a phone) to focus it. `active` and
+   `onActive` are optional, for pages that show more detail elsewhere. */
+function PieChart({ data, size = 240, centerLabel = "YTD GROSS", active: activeProp, onActive }) {
+  const [own, setOwn] = useState(null);
+  const active = activeProp !== undefined ? activeProp : own;
+  const setActive = (i) => { setOwn(i); onActive && onActive(i); };
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
@@ -600,7 +613,8 @@ function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
       </div>
     );
   }
-  const cx = size / 2, cy = size / 2, r = size / 2 - 4, innerR = r * 0.58;
+  const pad = 8;
+  const cx = size / 2, cy = size / 2, r = size / 2 - pad, innerR = r * 0.6;
   let cum = -Math.PI / 2;
   const slices = data.map((d) => {
     const angle = (d.value / total) * Math.PI * 2;
@@ -612,26 +626,54 @@ function PieChart({ data, size = 240, centerLabel = "YTD GROSS" }) {
     const xi1 = cx + innerR * Math.cos(a1), yi1 = cy + innerR * Math.sin(a1);
     const xi2 = cx + innerR * Math.cos(a2), yi2 = cy + innerR * Math.sin(a2);
     const path = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${innerR} ${innerR} 0 ${large} 0 ${xi1} ${yi1} Z`;
-    return { path, color: d.color, label: d.label, value: d.value, pct: (d.value / total) * 100 };
+    const mid = (a1 + a2) / 2;
+    return { path, color: d.color, label: d.label, value: d.value, pct: (d.value / total) * 100, dx: Math.cos(mid) * 6, dy: Math.sin(mid) * 6 };
   });
+  const focus = active != null ? slices[active] : null;
+  const toggle = (i) => setActive(active === i ? null : i);
+  // Hover follows a real mouse only; a tap fires a fake hover before its
+  // click, which would otherwise select and then immediately unselect.
+  const isMouse = (e) => e.pointerType === "mouse";
+  const lastPointer = useRef("mouse");
+  const pick = (i) => (lastPointer.current === "mouse" ? setActive(i) : toggle(i));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <svg width={size} height={size}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+      <svg width={size} height={size} style={{ overflow: "visible" }} onPointerLeave={(e) => isMouse(e) && setActive(null)}
+        onPointerDown={(e) => { lastPointer.current = e.pointerType; }}>
         {slices.map((s, i) => (
-          <path key={i} d={s.path} fill={s.color} stroke="#0c0b0a" strokeWidth="2" />
+          <path key={i} d={s.path} fill={s.color} stroke="#0c0b0a" strokeWidth="2"
+            transform={active === i ? `translate(${s.dx} ${s.dy})` : undefined}
+            opacity={active != null && active !== i ? 0.35 : 1}
+            style={{ cursor: "pointer", transition: "transform 0.15s ease, opacity 0.15s ease" }}
+            onPointerEnter={(e) => isMouse(e) && setActive(i)} onClick={() => pick(i)} />
         ))}
-        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fill: "#9b9386", fontSize: 11.5, letterSpacing: "0", fontFamily: FONT }}>{centerLabel}</text>
-        <text x={cx} y={cy + 22} textAnchor="middle" style={{ fill: "#f6f1e7", fontSize: 19, fontFamily: FONT, fontWeight: 600 }}>{fmt0(total)}</text>
+        <text x={cx} y={cy - 6} textAnchor="middle" style={{ fill: focus ? focus.color : "#9b9386", fontSize: 11, letterSpacing: "0.12em", fontFamily: FONT, textTransform: "uppercase" }}>
+          {focus ? (focus.label.length > 22 ? focus.label.slice(0, 21) + "…" : focus.label) : centerLabel}
+        </text>
+        <text x={cx} y={cy + 20} textAnchor="middle" style={{ fill: "#f6f1e7", fontSize: 21, fontFamily: FONT, fontWeight: 600 }}>
+          {fmt0(focus ? focus.value : total)}
+        </text>
+        {focus && (
+          <text x={cx} y={cy + 40} textAnchor="middle" style={{ fill: "#8b8477", fontSize: 12, fontFamily: FONT }}>{focus.pct.toFixed(1)}% of total</text>
+        )}
       </svg>
-      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+      <div style={{ marginTop: 20, display: "flex", flexDirection: "column", width: "100%" }}>
         {slices.map((s, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
-              <span style={{ fontSize: 12.5, letterSpacing: "0", color: "#ddd4c5", fontFamily: FONT }}>{s.label}</span>
+          <div key={i} onPointerEnter={(e) => isMouse(e) && setActive(i)} onPointerLeave={(e) => isMouse(e) && setActive(null)}
+            onPointerDown={(e) => { lastPointer.current = e.pointerType; }}
+            onClick={() => pick(i)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, cursor: "pointer",
+              padding: "6px 8px", margin: "0 -8px", borderRadius: 8,
+              background: active === i ? "rgba(240,228,208,0.05)" : "transparent",
+              opacity: active != null && active !== i ? 0.55 : 1, transition: "opacity 0.15s ease",
+            }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: "#ddd4c5", fontFamily: FONT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</span>
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "baseline", flexShrink: 0 }}>
               <span style={{ fontFamily: FONT, fontSize: 13.5, color: "#ece5d8" }}>{fmt0(s.value)}</span>
               <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477", minWidth: 44, textAlign: "right" }}>{s.pct.toFixed(1)}%</span>
             </div>
@@ -2788,8 +2830,7 @@ function Property() {
 
 /* ─── Net Worth ───
    Data comes from worker.js: /api/networth (Fidelity holdings from
-   networth.json priced live, cash and credit cards from YNAB, loans, and one
-   saved snapshot per day). */
+   networth.json priced live, cash and credit cards from YNAB, and loans). */
 
 const NW_COLORS = {
   liquid: "#93c4a2",
@@ -2808,14 +2849,6 @@ const parseDay = (iso) => {
 const shortDate = (iso) =>
   parseDay(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const signed = (v, f = fmt) => (v >= 0 ? "+" : "−") + f(Math.abs(v));
-const kfmt = (v) => {
-  const a = Math.abs(v);
-  const s = a >= 1000 ? `$${(a / 1000).toFixed(a >= 100000 ? 0 : 1).replace(/\.0$/, "")}k` : `$${a.toFixed(0)}`;
-  return v < 0 ? `−${s}` : s;
-};
-const isoOf = (d) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const todayIso = () => isoOf(new Date());
 
 const panel = {
   background: "#141311",
@@ -2824,146 +2857,45 @@ const panel = {
 const panelTitle = { fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9386", marginBottom: 18, fontFamily: FONT };
 const rowLine = { display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(240,228,208,0.05)", fontSize: 13.5, fontFamily: FONT };
 
-function useWidth() {
-  const ref = useRef(null);
-  const [w, setW] = useState(0);
-  useEffect(() => {
-    if (!ref.current) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.floor(e.contentRect.width)));
-    ro.observe(ref.current);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, w];
-}
-
-// Gridlines at 1, 2, 2.5 or 5 × a power of ten.
-function niceTicks(lo, hi, count = 4) {
-  const rough = Math.max(1e-6, (hi - lo) / count);
-  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-  const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((v) => v >= rough);
-  const min = Math.floor(lo / step) * step, max = Math.ceil(hi / step) * step;
-  const ticks = [];
-  for (let v = min; v <= max + step / 1e6; v += step) ticks.push(v);
-  return { min, max, ticks };
-}
-
-function Tooltip({ x, W, children }) {
+function SliceDetail({ slice, totals }) {
+  if (!slice) {
+    return (
+      <div style={{ fontFamily: FONT }}>
+        <div style={panelTitle}>At a glance</div>
+        {[["Liquid", totals.liquid, NW_COLORS.liquid], ["Net worth", totals.netWorth, NW_COLORS.netWorth], ["Debt", totals.loans + totals.cards, NW_COLORS.debt]].map(([l, v, c]) => (
+          <div key={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "12px 0", borderTop: "1px solid rgba(240,228,208,0.06)" }}>
+            <span style={{ fontSize: 13.5, color: "#9b9386" }}>{l}</span>
+            <span style={{ fontSize: 22, fontWeight: 600, color: c }}>{fmt0(v)}</span>
+          </div>
+        ))}
+        <div style={{ fontSize: 12.5, color: "#716a5f", marginTop: 14 }}>Hover over a slice (or tap it on your phone) to see what's in it.</div>
+      </div>
+    );
+  }
+  const a = slice.account;
   return (
-    <div style={{
-      position: "absolute", top: 8, left: Math.min(Math.max(x - 90, 0), W - 180), width: 180,
-      background: "#1c1a17", border: "1px solid rgba(240,228,208,0.12)", borderRadius: 10, padding: "10px 12px",
-      fontFamily: FONT, fontSize: 12.5, color: "#ddd4c5", pointerEvents: "none",
-    }}>{children}</div>
-  );
-}
-
-function HistoryChart({ history, milestones }) {
-  const [ref, width] = useWidth();
-  const [hover, setHover] = useState(null);
-  const narrow = width < 560;
-  const W = Math.max(width, 300), H = narrow ? 280 : 340;
-  const ML = 52, MR = 14, MT = narrow ? 50 : 34, MB = 30;
-  const innerW = W - ML - MR, innerH = H - MT - MB;
-
-  const start = parseDay(history.length ? history[0].date : todayIso());
-  const lastMilestone = milestones.reduce((m, x) => (x.date > m ? x.date : m), todayIso());
-  const endD = parseDay(lastMilestone);
-  const end = new Date(endD.getFullYear(), endD.getMonth() + 1, 1);
-  const span = end - start || 1;
-  const xOf = (iso) => ML + ((parseDay(iso) - start) / span) * innerW;
-
-  const vals = history.flatMap((p) => [p.liquid, p.netWorth]).concat([0]);
-  const { min: yMin, max: yMax, ticks } = niceTicks(Math.min(...vals), Math.max(...vals) * 1.1);
-  const yOf = (v) => MT + innerH - ((v - yMin) / (yMax - yMin || 1)) * innerH;
-
-  const months = [];
-  for (let d = new Date(start.getFullYear(), start.getMonth() + 1, 1); d < end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(d);
-  const every = Math.max(1, Math.ceil((months.length * 46) / innerW));
-
-  const pathFor = (key) => history.map((p, i) => `${i ? "L" : "M"} ${xOf(p.date)} ${yOf(p[key])}`).join(" ");
-  const last = history[history.length - 1];
-
-  const onMove = (e) => {
-    if (!history.length) return;
-    const box = e.currentTarget.getBoundingClientRect();
-    const px = ((e.clientX - box.left) / box.width) * W;
-    let best = history[0];
-    for (const p of history) if (Math.abs(xOf(p.date) - px) < Math.abs(xOf(best.date) - px)) best = p;
-    setHover(best);
-  };
-
-  return (
-    <div style={panel}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
-        <div style={{ ...panelTitle, marginBottom: 0 }}>History</div>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5, color: "#ddd4c5", fontFamily: FONT }}>
-          {[["Liquid", "liquid", NW_COLORS.liquid], ["Net worth", "netWorth", NW_COLORS.netWorth]].map(([l, k, c]) => (
-            <span key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 14, height: 3, borderRadius: 2, background: c }} />{l}
-              {last && <b style={{ color: c, fontWeight: 600 }}>{fmt0(last[k])}</b>}
-            </span>
+    <div style={{ fontFamily: FONT }}>
+      <div style={{ ...panelTitle, color: slice.color, marginBottom: 8 }}>{slice.label}</div>
+      <div style={{ fontSize: 30, fontWeight: 600, color: "#f6f1e7" }}>{fmt(slice.value)}</div>
+      <div style={{ fontSize: 13, color: "#8b8477", marginTop: 4, marginBottom: 16 }}>
+        {slice.pct.toFixed(1)}% of assets · {slice.liquid ? "Liquid" : "Retirement"}
+        {a && <span style={{ color: a.gain >= 0 ? NW_COLORS.liquid : NW_COLORS.debt }}> · {signed(a.gain)} gain</span>}
+      </div>
+      {a ? (
+        <>
+          {a.holdings.map((h) => (
+            <div key={h.symbol} style={rowLine}>
+              <span style={{ color: "#ddd4c5" }}>{h.symbol} <span style={{ color: "#716a5f" }}>· {h.shares.toLocaleString("en-US", { maximumFractionDigits: 3 })} sh × {fmt(h.price)}</span></span>
+              <span style={{ color: "#ece5d8", whiteSpace: "nowrap" }}>{fmt(h.value)}</span>
+            </div>
           ))}
-        </div>
-      </div>
-      <div ref={ref} style={{ position: "relative" }}>
-        {width > 0 && (
-          <svg width={W} height={H} style={{ display: "block", touchAction: "pan-y" }}
-            onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}>
-            {ticks.map((t, i) => (
-              <g key={i}>
-                <line x1={ML} x2={W - MR} y1={yOf(t)} y2={yOf(t)}
-                  stroke={Math.abs(t) < 1e-6 ? "rgba(240,228,208,0.22)" : "rgba(240,228,208,0.08)"}
-                  strokeDasharray={Math.abs(t) < 1e-6 ? "" : "2,4"} />
-                <text x={ML - 8} y={yOf(t) + 4} textAnchor="end" style={{ fill: "#716a5f", fontSize: 11.5, fontFamily: FONT }}>{kfmt(t)}</text>
-              </g>
-            ))}
-
-            {milestones.map((m, i) => {
-              const x = xOf(m.date);
-              const anchor = x > W - 90 ? "end" : x < ML + 60 ? "start" : "middle";
-              return (
-                <g key={m.date}>
-                  <line x1={x} x2={x} y1={MT - 4} y2={MT + innerH} stroke={NW_COLORS.milestone} strokeDasharray="3,4" opacity="0.7" />
-                  <text x={x} y={MT - 8 - 12 * (narrow ? i % 3 : i % 2)} textAnchor={anchor}
-                    style={{ fill: NW_COLORS.milestone, fontSize: 11.5, fontFamily: FONT }}>{m.label}</text>
-                </g>
-              );
-            })}
-
-            {months.map((d, i) => i % every === 0 && (
-              <text key={i} x={ML + ((d - start) / span) * innerW} y={H - 8} textAnchor="middle"
-                style={{ fill: "#9b9386", fontSize: 11.5, fontFamily: FONT }}>
-                {d.toLocaleDateString("en-US", { month: "short" })}{d.getMonth() === 0 ? ` '${String(d.getFullYear()).slice(2)}` : ""}
-              </text>
-            ))}
-
-            {[["netWorth", NW_COLORS.netWorth], ["liquid", NW_COLORS.liquid]].map(([k, c]) => (
-              <g key={k}>
-                {history.length > 1 && <path d={pathFor(k)} fill="none" stroke={c} strokeWidth="2.25" strokeLinejoin="round" />}
-                {last && <circle cx={xOf(last.date)} cy={yOf(last[k])} r="4" fill={c} />}
-              </g>
-            ))}
-
-            {hover && (
-              <g>
-                <line x1={xOf(hover.date)} x2={xOf(hover.date)} y1={MT} y2={MT + innerH} stroke="rgba(240,228,208,0.25)" />
-                <circle cx={xOf(hover.date)} cy={yOf(hover.liquid)} r="4.5" fill={NW_COLORS.liquid} />
-                <circle cx={xOf(hover.date)} cy={yOf(hover.netWorth)} r="4.5" fill={NW_COLORS.netWorth} />
-              </g>
-            )}
-          </svg>
-        )}
-        {hover && (
-          <Tooltip x={xOf(hover.date)} W={W}>
-            <div style={{ color: "#9b9386", marginBottom: 6 }}>{shortDate(hover.date)}{hover.live ? " · now" : ""}</div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Liquid</span><span style={{ color: NW_COLORS.liquid }}>{fmt0(hover.liquid)}</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net worth</span><span style={{ color: "#f6f1e7" }}>{fmt0(hover.netWorth)}</span></div>
-          </Tooltip>
-        )}
-      </div>
-      {history.length <= 1 && (
-        <div style={{ marginTop: 10, fontSize: 12.5, color: "#8b8477", fontFamily: FONT }}>
-          A point is saved every night, so the lines fill in day by day from here.
+          {a.cash > 0.005 && <div style={rowLine}><span style={{ color: "#9b9386" }}>Cash</span><span style={{ color: "#ece5d8" }}>{fmt(a.cash)}</span></div>}
+          {a.pending && <div style={rowLine}><span style={{ color: NW_COLORS.milestone }}>Pending · {a.pending.note}</span><span style={{ color: "#ece5d8", whiteSpace: "nowrap" }}>{fmt(a.pending.amount)}</span></div>}
+          {a.note && <div style={{ fontSize: 12, color: "#716a5f", marginTop: 10 }}>{a.note}</div>}
+        </>
+      ) : (
+        <div style={{ fontSize: 13, color: "#9b9386", lineHeight: 1.55 }}>
+          Checking, savings and cash accounts from YNAB. The Fidelity CMA is counted separately so it isn't doubled.
         </div>
       )}
     </div>
@@ -3093,19 +3025,17 @@ function NetWorth() {
   }, []);
   useEffect(load, [load]);
 
-  // Saved history plus a live point for right now.
-  const history = useMemo(() => {
-    if (!data) return [];
-    const t = data.totals, today = todayIso();
-    const live = { date: today, liquid: t.liquid, netWorth: t.netWorth, live: true };
-    return [...(data.history || []).filter((p) => p.date !== today), live];
-  }, [data]);
+  const [slice, setSlice] = useState(null);
 
   const pieData = useMemo(() => {
     if (!data) return [];
-    const parts = data.accounts.map((a, i) => ({ label: a.chart_label || a.name, value: a.value, color: accountColor(i) }));
-    if (data.ynab.ok && data.totals.cash > 0) parts.unshift({ label: "Cash (Amex accounts)", value: data.totals.cash, color: ACCOUNT_COLORS[0] });
-    return parts.filter((p) => p.value > 0);
+    const parts = data.accounts.map((a, i) => ({
+      label: a.chart_label || a.name, value: a.value, color: accountColor(i), account: a, liquid: a.kind === "liquid",
+    }));
+    if (data.ynab.ok && data.totals.cash > 0) parts.unshift({ label: "Cash (Amex accounts)", value: data.totals.cash, color: ACCOUNT_COLORS[0], liquid: true });
+    const kept = parts.filter((p) => p.value > 0);
+    const total = kept.reduce((s, p) => s + p.value, 0);
+    return kept.map((p) => ({ ...p, pct: total ? (p.value / total) * 100 : 0 }));
   }, [data]);
 
   const msg = (text, retry) => (
@@ -3120,12 +3050,16 @@ function NetWorth() {
     body = error ? msg(`Couldn't load balances (${error}).`, load) : msg("Loading balances…");
   } else if (tab === "overview") {
     body = (
-      <div className="nw-split" style={{ marginBottom: 0 }}>
-        <div style={panel}>
-          <div style={panelTitle}>Where it sits</div>
-          <PieChart data={pieData} size={220} centerLabel="ASSETS" />
+      <div style={panel}>
+        <div className="nw-overview">
+          <div>
+            <div style={panelTitle}>Where it sits</div>
+            <PieChart data={pieData} size={260} centerLabel="Assets" active={slice} onActive={setSlice} />
+          </div>
+          <div className="nw-detail">
+            <SliceDetail slice={slice != null ? pieData[slice] : null} totals={data.totals} />
+          </div>
         </div>
-        <HistoryChart history={history} milestones={data.milestones} />
       </div>
     );
   } else if (tab === "accounts") {
