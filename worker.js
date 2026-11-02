@@ -203,6 +203,59 @@ async function netWorthResponse(request, env) {
   });
 }
 
+/* ─── Card credits (temporary lookup) ───
+   Lists inflows on credit-card accounts from YNAB — statement credits and
+   refunds, not card payments — so matching rules for the Cards tab can be
+   written against the real payee names. Behind the password like
+   everything else. */
+
+const escapeHtml = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function cardCreditsPage(env) {
+  if (!env.YNABKEY) return html("<p style='font-family:system-ui;padding:24px'>YNABKEY is not set.</p>", 503);
+  const since = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+  const headers = { Authorization: `Bearer ${env.YNABKEY}` };
+  const [accRes, txRes] = await Promise.all([
+    fetch("https://api.ynab.com/v1/budgets/last-used/accounts", { headers }),
+    fetch(`https://api.ynab.com/v1/budgets/last-used/transactions?since_date=${since}`, { headers }),
+  ]);
+  if (!accRes.ok || !txRes.ok) return html(`<p style='font-family:system-ui;padding:24px'>YNAB returned ${accRes.status}/${txRes.status}.</p>`, 502);
+  const cards = new Map(((await accRes.json()).data.accounts || [])
+    .filter((a) => a.type === "creditCard" && !a.deleted)
+    .map((a) => [a.id, a.name]));
+  const rows = ((await txRes.json()).data.transactions || [])
+    .filter((t) => cards.has(t.account_id) && t.amount > 0 && !t.transfer_account_id && !t.deleted)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const body = rows.map((t) => `<tr>
+    <td>${escapeHtml(t.date)}</td>
+    <td>${escapeHtml(cards.get(t.account_id))}</td>
+    <td>${escapeHtml(t.payee_name)}</td>
+    <td>${escapeHtml(t.import_payee_name_original || t.import_payee_name)}</td>
+    <td>${escapeHtml(t.memo)}</td>
+    <td class="n">$${(t.amount / 1000).toFixed(2)}</td></tr>`).join("");
+
+  return html(`<!doctype html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex" />
+<title>Card credits</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 20px 16px 40px; background: #0c0b0a; color: #ece5d8; font: 13px/1.4 system-ui, -apple-system, sans-serif; }
+  h1 { font: 500 26px Georgia, serif; margin: 0 0 4px; }
+  p { color: #9b9386; margin: 0 0 16px; }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; min-width: 720px; width: 100%; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid rgba(240,228,208,0.08); vertical-align: top; }
+  th { color: #c9a96e; font-weight: 500; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+  td.n { text-align: right; color: #93c4a2; white-space: nowrap; }
+</style></head><body>
+<h1>Card credits</h1>
+<p>${rows.length} credits &amp; refunds on ${[...cards.values()].map(escapeHtml).join(", ")} since ${since}. Card payments are left out.</p>
+<div class="wrap"><table><thead><tr><th>Date</th><th>Card</th><th>Payee</th><th>Bank's original name</th><th>Memo</th><th>Amount</th></tr></thead>
+<tbody>${body || "<tr><td colspan='6'>No credits found.</td></tr>"}</tbody></table></div>
+</body></html>`, 200);
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Cron requests have no origin; ASSETS only needs some absolute URL.
@@ -242,6 +295,14 @@ export default {
 
     if (readCookie(request, COOKIE) !== expected) {
       return html(loginPage(""), 401);
+    }
+
+    if (url.pathname === "/card-credits") {
+      try {
+        return await cardCreditsPage(env);
+      } catch (e) {
+        return html(`<p style='font-family:system-ui;padding:24px'>Error: ${escapeHtml(e.message || e)}</p>`, 500);
+      }
     }
 
     if (url.pathname === "/api/networth") {
