@@ -8,7 +8,7 @@ Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill1
 - **Cards** — credit card credits & perks for Amex Platinum, Amex Gold, and Capital One Venture X: a *Claim now* list of open credits by deadline, then one sub-tab per card. Data lives in [`cards.json`](./cards.json).
 - **Property** — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
-The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
+Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
 
 ## Hosting & password
 
