@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Gill &amp; Co.</title>
+<link rel="icon" type="image/png" href="favicon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -216,7 +217,9 @@ details.fine[open] summary::before { content: "− "; }
   font-family: var(--serif); font-size: 26px; font-weight: 600; color: var(--text);
   letter-spacing: 0.01em;
 }
-.wordmark span { color: var(--gold); font-style: italic; }
+.wordmark { display: flex; align-items: center; gap: 12px; }
+.wordmark .seal { width: 38px; height: 38px; display: block; }
+.wordmark em { color: var(--gold); font-style: italic; }
 .topnav-tabs { display: flex; gap: 6px; }
 .topnav-tabs button {
   position: relative; background: none; border: none; cursor: pointer;
@@ -232,7 +235,8 @@ details.fine[open] summary::before { content: "− "; }
 .bottomnav { display: none; }
 @media (max-width: 720px) {
   .topnav-inner { justify-content: center; height: 52px; }
-  .wordmark { font-size: 23px; }
+  .wordmark { font-size: 23px; gap: 10px; }
+  .wordmark .seal { width: 32px; height: 32px; }
   .topnav-tabs { display: none; }
   .bottomnav {
     display: grid; grid-template-columns: repeat(5, 1fr);
@@ -366,7 +370,7 @@ function TabBar({ view, setView }) {
     <>
       <header className="topnav">
         <div className="topnav-inner">
-          <div className="wordmark">Gill <span>&amp;</span> Co.</div>
+          <div className="wordmark"><img src="logos/gc-seal.png" alt="" className="seal" /><span>Gill <em>&amp;</em> Co.</span></div>
           <nav className="topnav-tabs">
             {NAV.map(([key, label]) => (
               <button key={key} onClick={() => setView(key)} className={view === key ? "active" : ""}>{label}</button>
