@@ -12,7 +12,7 @@ Every page and sub-tab has its own address, so the back button, refresh, bookmar
 | Cards | `/cards` · `/cards/<card id from cards.json>` (e.g. `/cards/amex-gold`) |
 | Property | `/property` · `/property/projections` |
 
-It is still one `index.html`: `worker.js` serves it for any address without a file extension and the app picks the page from the URL. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
+It is still one `index.html`: `not_found_handling: "single-page-application"` in `wrangler.jsonc` serves it for any address that isn't a file, and the app picks the page from the URL. HTML is sent with `Cache-Control: no-cache` so a new deploy shows up immediately. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
 
 - **Net Worth** — the landing tab, in three sub-tabs. *Overview*: a donut of where your money sits — hover a slice (or tap it on a phone) to see that account's balance, holdings and pending transfers; otherwise it shows liquid, net worth and debt. *Accounts*: YNAB cash and credit-card totals plus each Fidelity account's holdings, priced live. *Loans*: student loans by interest rate.
 - **Dashboard** — year-to-date income in four sub-tabs: *Overview* (gross / taxes / net / 403(b) and the year-end projection), *Employers* (split by employer with logos), *Monthly* (bar chart with projections) and *Paystubs* (filterable table). Data lives in [`paystubs.json`](./paystubs.json).
@@ -29,6 +29,8 @@ Cloudflare builds and deploys the site on every push to `main`. `worker.js` sits
 - `wrangler.jsonc` — Worker config. `name` must match the Worker's name in Cloudflare.
 - `.assetsignore` — files that are never served (the worker code, config, this README, the SQL).
 - Changing the password logs out every device.
+- **Is my change live?** Open `/api/version` on the site. Its `id` should match the top Version ID on the Worker's *Deployments* tab.
+- **Before pushing,** run `bash tests/smoke.sh`. It starts the site in Cloudflare's local runtime (`wrangler dev`) and checks every page address, the data files, that private files aren't served, and the password gate.
 
 ### Net Worth tab
 

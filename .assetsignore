@@ -7,3 +7,5 @@ README.md
 supabase-setup.sql
 node_modules/
 .gitignore
+tests/
+.dev.vars

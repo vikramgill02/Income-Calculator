@@ -8,8 +8,13 @@
     "binding": "ASSETS",
     // Every request goes through worker.js first so the password check
     // also covers paystubs.json, cards.json, networth.json and the logos.
-    "run_worker_first": true
+    "run_worker_first": true,
+    // Page addresses like /cards or /dashboard/paystubs aren't files: serve
+    // index.html for them and the app picks the page from the URL.
+    "not_found_handling": "single-page-application"
   },
+  // Lets /api/version report which deploy is live.
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
   // Daily net-worth snapshots. No id: Cloudflare creates the namespace on
   // first deploy and reuses it after.
   "kv_namespaces": [{ "binding": "HISTORY" }],

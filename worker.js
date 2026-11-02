@@ -263,13 +263,25 @@ export default {
       }
     }
 
-    // Page addresses like /dashboard/paystubs aren't files: serve the app and
-    // let it pick the page from the address. Anything with a file extension
-    // (logos, JSON) is served as-is, so a missing file still 404s.
-    const isPage = request.method === "GET" && !url.pathname.split("/").pop().includes(".");
-    const res = await env.ASSETS.fetch(isPage ? new Request(url.origin + "/", request) : request);
+    // Which deploy is live: compare `id` with the Version ID on Cloudflare's
+    // Deployments tab.
+    if (url.pathname === "/api/version") {
+      const v = env.CF_VERSION_METADATA || {};
+      return new Response(JSON.stringify({ id: v.id || null, tag: v.tag || null, deployed: v.timestamp || null }), {
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      });
+    }
+
+    // Page addresses (/cards, /dashboard/paystubs) get index.html via
+    // not_found_handling in wrangler.jsonc.
+    const res = await env.ASSETS.fetch(request);
     const out = new Response(res.body, res);
     out.headers.set("X-Robots-Tag", "noindex, nofollow");
+    // Always check for a fresh copy of the page so a new deploy shows up
+    // immediately instead of a cached old version.
+    if ((out.headers.get("Content-Type") || "").includes("text/html")) {
+      out.headers.set("Cache-Control", "no-cache");
+    }
     return out;
   },
 };
