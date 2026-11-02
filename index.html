@@ -2797,7 +2797,8 @@ const NW_COLORS = {
   debt: "#d98a80",
   milestone: "#c9a96e",
 };
-const ACCOUNT_COLORS = ["#93c4a2", "#7f9cc4", "#c9a96e", "#b39cd0", "#7fb8b0", "#d98a80"];
+// Cash and the Fidelity CMA share greens to read as liquid.
+const ACCOUNT_COLORS = ["#93c4a2", "#4f8a63", "#c9a96e", "#b39cd0", "#7fb8b0", "#d98a80"];
 const accountColor = (i) => ACCOUNT_COLORS[(i + 1) % ACCOUNT_COLORS.length];
 
 const parseDay = (iso) => {
