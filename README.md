@@ -134,7 +134,7 @@ deal loses more than the cash put in, since a compound rate is undefined there.
 
 Card claims and saved deals live in the Supabase project `Income-Calculator`. Only `worker.js` talks to it, so the browser never holds a database key:
 
-- **`SUPABASE_SECRET_KEY`** — a secret on the `dashboard` Worker (Settings → Variables and Secrets). Copy it from Supabase → Project Settings → API Keys → *Secret keys* (an older `service_role` key works too). Without it, Cards is read-only and saved deals are off.
+- **`SupabaseKey`** — a secret on the `dashboard` Worker (Settings → Variables and Secrets). Copy it from Supabase → Project Settings → API Keys → *Secret keys* (an older `service_role` key works too; the name `SUPABASE_SECRET_KEY` is also accepted). Without it, Cards is read-only and saved deals are off.
 - The tables have row-level security on, no policies, and no grants for the public roles, so the publishable/anon key can't read or write them. The secret key bypasses that, which is why it stays on the Worker.
 - To rebuild from scratch, run [`supabase-setup.sql`](./supabase-setup.sql) in **SQL Editor → New query**. The project URL is set at the top of the *Cloud data* section in `worker.js`.
 

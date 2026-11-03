@@ -214,7 +214,7 @@ async function netWorthResponse(request, env) {
 
 /* ─── Cloud data (Supabase) ───
    Card claims and saved property deals live in Supabase. Only this worker
-   talks to it, with the SUPABASE_SECRET_KEY secret (Worker → Settings →
+   talks to it, with the SupabaseKey secret (Worker → Settings →
    Variables and Secrets), so the site password is the one login for
    everything. The tables have row-level security on and no policies, so the
    public key can't read or write them at all; only the secret key can. */
@@ -225,8 +225,12 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 
+// The Worker secret holding Supabase's secret key. Either name works.
+const supabaseKey = (env) => env.SupabaseKey || env.SUPABASE_SECRET_KEY || "";
+const NO_KEY = "The SupabaseKey secret is not set on the Worker";
+
 async function supabase(env, path, { method = "GET", body, prefer } = {}) {
-  const key = env.SUPABASE_SECRET_KEY;
+  const key = supabaseKey(env);
   // New sb_secret_ keys go on `apikey` only; an older service_role key is a
   // JWT and also goes on Authorization.
   const headers = { apikey: key, "Content-Type": "application/json", "User-Agent": "gill-co-worker" };
@@ -340,7 +344,7 @@ async function syncClaims(env, origin) {
     saving: false, error, ynab: ynabStatus,
     rows: [...matches.values()].map((m) => ({ ...m, claimed: true, source: "ynab" })),
   });
-  if (!env.SUPABASE_SECRET_KEY) return readOnly("SUPABASE_SECRET_KEY is not set on the Worker");
+  if (!supabaseKey(env)) return readOnly(NO_KEY);
   let saved;
   try {
     saved = await supabase(env, `card_claims?select=${CLAIM_COLS}`);
@@ -377,7 +381,7 @@ const PERIOD_RE = /^(\d{4}(-(0[1-9]|1[0-2]|Q[1-4]|H[12]))?|once)$/;
 
 // POST { card_id, benefit_id, periods: [...], claimed } — mark used or not.
 async function saveClaims(request, env, origin) {
-  if (!env.SUPABASE_SECRET_KEY) return json({ error: "SUPABASE_SECRET_KEY is not set on the Worker" }, 503);
+  if (!supabaseKey(env)) return json({ error: NO_KEY }, 503);
   const body = await readJson(request);
   const { card_id, benefit_id, periods, claimed } = body || {};
   const cards = await loadCards(env, origin);
@@ -400,7 +404,7 @@ async function saveClaims(request, env, origin) {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function dealsResponse(request, env, url) {
-  if (!env.SUPABASE_SECRET_KEY) return json({ error: "SUPABASE_SECRET_KEY is not set on the Worker" }, 503);
+  if (!supabaseKey(env)) return json({ error: NO_KEY }, 503);
   if (request.method === "GET") {
     return json({ deals: await supabase(env, "deals?select=id,name,data,updated_at&order=updated_at.desc") });
   }

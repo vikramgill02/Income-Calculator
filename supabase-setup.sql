@@ -2,7 +2,7 @@
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- Safe to run again; it only creates what's missing.
 --
--- Only worker.js talks to these tables, using the SUPABASE_SECRET_KEY secret,
+-- Only worker.js talks to these tables, using the SupabaseKey Worker secret,
 -- so the site password is the one login. Row-level security is on with no
 -- policies and the public roles have no grants: the public (publishable /
 -- anon) key can't read or write anything here. The secret key bypasses RLS.
