@@ -289,7 +289,7 @@ details.fine[open] summary::before { content: "− "; }
   .wordmark .seal { width: 32px; height: 32px; }
   .topnav-tabs { display: none; }
   .bottomnav {
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
     background: rgba(16,15,13,0.88);
@@ -469,14 +469,13 @@ function Link({ to, onNavigate, children, ...rest }) {
 const NAV = [
   ["worth", "Net Worth", <path d="M3 17l5-5 4 4 8-9M15 7h5v5" />],
   ["dash", "Dashboard", <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />],
-  ["calc", "Pay Calc", <g><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></g>],
   ["cards", "Cards", <g><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19M6.5 15h4" /></g>],
   ["tools", "Tools", <path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L3.5 17.5a1.4 1.4 0 0 0 2 2l5.7-5.7a4 4 0 0 0 5.3-5.3l-2.4 2.4-2-.5-.5-2z" />],
 ];
 
-/* Pages that live under a tab without being one: Property sits in Tools. */
-const NAV_PARENT = { prop: "tools" };
-const PAGE_TITLES = { prop: "Property" };
+/* Pages that live under a tab without being one: they sit in Tools. */
+const NAV_PARENT = { calc: "tools", prop: "tools" };
+const PAGE_TITLES = { calc: "Pay Calc", prop: "Property" };
 
 const NavIcon = ({ children }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
@@ -580,7 +579,7 @@ function Calc() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 52 }}>
           <div>
-            <p className="eyebrow">Sutter · biweekly</p>
+            <p className="eyebrow"><Link to="/tools" style={{ color: "inherit", textDecoration: "none" }}>Tools</Link> · Sutter biweekly</p>
             <h1 style={{ margin: 0, lineHeight: 1.05 }}>Pay Calculator</h1>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -3363,6 +3362,8 @@ function NetWorth() {
    (and a page in PAGES) to list another one. */
 
 const TOOLS = [
+  { to: "/pay", name: "Pay Calc", blurb: "Estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours, with overtime past 40 hours a week.",
+    icon: <g><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></g> },
   { to: "/property", name: "Property", blurb: "Rental deal analyzer: cash needed, cash flow, cash-on-cash ROI, DSCR and 3/5/10-year projections. Saved deals sync across devices.",
     icon: <path d="M3 11l9-7 9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5" /> },
 ];

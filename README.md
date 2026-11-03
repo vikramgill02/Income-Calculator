@@ -1,6 +1,6 @@
 # Income-Calculator
 
-Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Five tabs, in this order (opens on Net Worth); Property lives under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
+Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Four tabs, in this order (opens on Net Worth); Pay Calc and Property live under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
 
 Every page and sub-tab has its own address, so the back button, refresh, bookmarks and home-screen shortcuts all land where you expect:
 
@@ -8,7 +8,7 @@ Every page and sub-tab has its own address, so the back button, refresh, bookmar
 | --- | --- |
 | Net Worth | `/` · `/networth/accounts` · `/networth/loans` |
 | Dashboard | `/dashboard` · `/dashboard/employers` · `/dashboard/monthly` · `/dashboard/paystubs` |
-| Pay Calc | `/pay` |
+| Pay Calc (in Tools) | `/pay` |
 | Cards | `/cards` · `/cards/<card id from cards.json>` (e.g. `/cards/amex-gold`) |
 | Tools | `/tools` (a list of misc tools) |
 | Property (in Tools) | `/property` · `/property/projections` |
@@ -17,9 +17,9 @@ It is still one `index.html`: `not_found_handling: "single-page-application"` in
 
 - **Net Worth** — the landing tab, in three sub-tabs. *Overview*: a donut of where your money sits — hover a slice (or tap it on a phone) to see that account's balance, holdings and pending transfers; otherwise it shows liquid, net worth and debt. *Accounts*: YNAB cash and credit-card totals plus each Fidelity account's holdings, priced live. *Loans*: student loans by interest rate.
 - **Dashboard** — year-to-date income in four sub-tabs: *Overview* (gross / taxes / net / 403(b) and the year-end projection), *Employers* (split by employer with logos), *Monthly* (bar chart with projections) and *Paystubs* (filterable table). Data lives in [`paystubs.json`](./paystubs.json).
-- **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $78.31/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× (~$117.47/hr).
+- **Pay Calc** (under Tools) — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $78.31/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× (~$117.47/hr).
 - **Cards** — credit card credits & perks for Amex Platinum, Amex Gold, and Capital One Venture X: a *Claim now* list of open credits by deadline, then one sub-tab per card. Card and benefit definitions live in [`cards.json`](./cards.json); which credits you've used lives in Supabase and fills in from YNAB on its own — see [Card claims](#card-claims).
-- **Tools** — a small page listing tools that don't need their own tab. Property is the first one.
+- **Tools** — a small page listing tools that don't need their own tab: Pay Calc and Property.
 - **Property** (under Tools) — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
 Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
