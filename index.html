@@ -3114,21 +3114,63 @@ const panel = {
 const panelTitle = { fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9386", marginBottom: 18, fontFamily: FONT };
 const rowLine = { display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderTop: "1px solid rgba(240,228,208,0.05)", fontSize: 13.5, fontFamily: FONT };
 
-function SliceDetail({ slice, totals }) {
-  if (!slice) {
-    return (
-      <div style={{ fontFamily: FONT }}>
-        <div style={panelTitle}>At a glance</div>
-        {[["Liquid", totals.liquid, NW_COLORS.liquid], ["Net worth", totals.netWorth, NW_COLORS.netWorth], ["Debt", totals.loans + totals.cards, NW_COLORS.debt]].map(([l, v, c]) => (
-          <div key={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "12px 0", borderTop: "1px solid rgba(240,228,208,0.06)" }}>
-            <span style={{ fontSize: 13.5, color: "#9b9386" }}>{l}</span>
-            <span style={{ fontSize: 22, fontWeight: 600, color: c }}>{fmt0(v)}</span>
-          </div>
-        ))}
-        <div style={{ fontSize: 12.5, color: "#716a5f", marginTop: 14 }}>Hover over a slice (or tap it on your phone) to see what's in it.</div>
+/* At a glance, laid out like a financial statement: what you own, what you
+   owe, and the bottom line. Debts read in parentheses, accountant-style. */
+function GlanceStatement({ totals, ynabOk }) {
+  const assets = totals.cash + totals.investments;
+  const debts = totals.cards + totals.loans;
+  const num = { fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", textAlign: "right" };
+  const owed = (v) => (v > 0.005 ? `(${fmt0(v)})` : fmt0(0));
+  const Section = ({ children }) => (
+    <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#716a5f", margin: "14px 0 2px" }}>{children}</div>
+  );
+  const Line = ({ label, note, value, color = "#ddd4c5" }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, padding: "7px 0 7px 12px" }}>
+      <span style={{ fontSize: 13.5, color: "#ddd4c5" }}>
+        {label}{note && <span style={{ fontSize: 11.5, color: "#716a5f", marginLeft: 6 }}>{note}</span>}
+      </span>
+      <span style={{ ...num, fontSize: 14, color }}>{value}</span>
+    </div>
+  );
+  const Total = ({ label, value, color }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, padding: "7px 0", borderTop: "1px solid rgba(240,228,208,0.14)" }}>
+      <span style={{ fontSize: 13, color: "#9b9386" }}>{label}</span>
+      <span style={{ ...num, fontSize: 14.5, fontWeight: 600, color }}>{value}</span>
+    </div>
+  );
+  return (
+    <div style={{ fontFamily: FONT }}>
+      <div style={{ ...panelTitle, marginBottom: 0 }}>At a glance</div>
+
+      <Section>What you own</Section>
+      <Line label="Cash" note={ynabOk ? "YNAB" : "YNAB offline"} value={fmt0(totals.cash)} />
+      <Line label="Investments" note="Fidelity · incl. retirement" value={fmt0(totals.investments)} />
+      <Total label="Total assets" value={fmt0(assets)} color={NW_COLORS.liquid} />
+
+      <Section>What you owe</Section>
+      <Line label="Consumer debt" note="credit cards" value={owed(totals.cards)} color={NW_COLORS.debt} />
+      <Line label="Student debt" value={owed(totals.loans)} color={NW_COLORS.debt} />
+      <Total label="Total debt" value={owed(debts)} color={NW_COLORS.debt} />
+
+      {/* The bottom line, double-ruled like a statement total. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginTop: 14, padding: "10px 0 8px", borderTop: "1px solid rgba(240,228,208,0.22)", borderBottom: "3px double rgba(240,228,208,0.3)" }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "#f6f1e7" }}>Net worth</span>
+        <span style={{ ...num, fontSize: 24, fontWeight: 600, color: totals.netWorth >= 0 ? NW_COLORS.netWorth : NW_COLORS.debt }}>
+          {totals.netWorth < 0 ? `(${fmt0(-totals.netWorth)})` : fmt0(totals.netWorth)}
+        </span>
       </div>
-    );
-  }
+
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12.5, color: "#716a5f", marginTop: 10 }}>
+        <span>Liquid · cash + non-retirement</span>
+        <span style={{ ...num, color: NW_COLORS.liquid }}>{fmt0(totals.liquid)}</span>
+      </div>
+      <div style={{ fontSize: 12.5, color: "#716a5f", marginTop: 12 }}>Hover over a slice (or tap it on your phone) to see what's in it.</div>
+    </div>
+  );
+}
+
+function SliceDetail({ slice, totals, ynabOk }) {
+  if (!slice) return <GlanceStatement totals={totals} ynabOk={ynabOk} />;
   const a = slice.account;
   return (
     <div style={{ fontFamily: FONT }}>
@@ -3314,7 +3356,7 @@ function NetWorth() {
             <PieChart data={pieData} size={260} centerLabel="Assets" active={slice} onActive={setSlice} />
           </div>
           <div className="nw-detail">
-            <SliceDetail slice={slice != null ? pieData[slice] : null} totals={data.totals} />
+            <SliceDetail slice={slice != null ? pieData[slice] : null} totals={data.totals} ynabOk={data.ynab.ok} />
           </div>
         </div>
       </div>
