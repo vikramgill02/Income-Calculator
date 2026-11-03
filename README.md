@@ -82,7 +82,8 @@ Only pre-tax 403(b) is tracked; Roth/after-tax contributions are excluded. A `pr
 
 Which credits you've used is stored in Supabase, in the `card_claims` table: one row per benefit per period (`2026-03`, `2026-Q4`, `2026-H1`, `2026`, or `once`), with `claimed` true or false. The site password is the only login: once a device is unlocked it can mark credits.
 
-- **Tap to mark.** On a card's sub-tab, tap any month/quarter chip to flip it, or tap *Used* on the *Claim now* list. It saves straight away and shows on every device.
+- **Edit, then Save.** The page is view-only until you tap **Edit**. Then tap any month/quarter chip to flip it, or *Used* on the *Claim now* list. Changes are staged (dashed gold ring) and only saved when you tap **Save** in the bar at the bottom; **Cancel** drops them. Leaving the page with unsaved changes asks first. Saved changes show on every device.
+- **Refresh** re-pulls credits from YNAB and reloads, without leaving the page.
 - **YNAB fills it in.** `/api/claims` (in `worker.js`) reads statement credits on credit-card accounts in YNAB for this year and last. When a credit's bank wording contains a benefit's `match` text, that period is marked used and the amount recorded. This runs each time Cards loads and nightly from the cron, which also keeps the free Supabase project from pausing.
 - **Un-marking sticks.** Tapping a used period off saves `claimed = false`, so a YNAB credit won't mark it again.
 - **Read-only fallback.** If the database can't be reached, the page still shows what YNAB found, says *Read-only*, and taps are off.

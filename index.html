@@ -116,6 +116,34 @@ input { font-family: var(--font); }
   padding: 2px 9px; font-size: 12px;
 }
 .mark-btn:hover > span { background: rgba(147,196,162,0.12); }
+.refresh-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+  background: transparent; border: 1px solid rgba(240,228,208,0.12); border-radius: 999px;
+  color: #b4ab9d; font: inherit; font-size: 12.5px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.refresh-btn:hover { border-color: rgba(201,169,110,0.4); color: var(--gold); }
+.refresh-btn:disabled { cursor: default; opacity: 0.6; }
+.spin { animation: spin 0.9s linear infinite; }
+.edit-btn { color: #c9a96e; border-color: rgba(201,169,110,0.4); }
+/* Save / Cancel bar while editing card claims: pinned to the bottom of the
+   screen, above the phone tab bar. */
+.edit-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+  background: rgba(20,19,17,0.94); border-top: 1px solid rgba(201,169,110,0.35);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+}
+.edit-bar-inner { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+.bar-btn {
+  min-height: 44px; padding: 0 18px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 13.5px;
+  background: transparent; color: #b4ab9d; border: 1px solid rgba(240,228,208,0.14);
+}
+.bar-btn-save { background: #93c4a2; color: #0c0b0a; border-color: #93c4a2; font-weight: 600; }
+.bar-btn:disabled { opacity: 0.45; cursor: default; }
+@media (max-width: 720px) {
+  .edit-bar { bottom: calc(64px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 /* Anything tappable clears Apple's 44px minimum without the padding showing. */
 .tap {
   position: relative;
@@ -1499,15 +1527,22 @@ function useCardClaims() {
     setTimeout(() => setMsg((m) => m === text ? "" : m), 4000);
   }, []);
 
-  useEffect(() => {
-    fetch("/api/claims", { cache: "no-store" })
+  // Each load also has the worker pull fresh credits from YNAB, so this is
+  // what the Refresh button calls too.
+  const [refreshing, setRefreshing] = useState(false);
+  const reload = useCallback(() => {
+    setRefreshing(true);
+    return fetch("/api/claims", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         setRows(new Map((d.rows || []).map((r) => [claimKey(r.card_id, r.benefit_id, r.period), r])));
         setStatus({ loading: false, saving: !!d.saving, error: d.error || "", ynab: d.ynab || { ok: false, error: "" } });
       })
-      .catch(() => setStatus({ loading: false, saving: false, error: "Couldn't reach the server", ynab: { ok: false, error: "" } }));
+      .catch(() => setStatus({ loading: false, saving: false, error: "Couldn't reach the server", ynab: { ok: false, error: "" } }))
+      .finally(() => setRefreshing(false));
   }, []);
+
+  useEffect(() => { reload(); }, [reload]);
 
   // { "card|benefit": { on: Set(periods), off: Set(periods) } }
   const index = useMemo(() => {
@@ -1522,9 +1557,10 @@ function useCardClaims() {
 
   const claimsFor = useCallback((cardId, benefitId) => index.get(`${cardId}|${benefitId}`) || NO_CLAIMS, [index]);
 
-  // Mark periods used (or not). Shows straight away; rolls back if the save fails.
+  // Mark periods used (or not). Shows straight away; rolls back if the save
+  // fails. Resolves true when it saved.
   const setClaimed = useCallback(async (cardId, benefitId, periods, claimed) => {
-    if (!periods.length) return;
+    if (!periods.length) return true;
     let before;
     setRows((m) => {
       before = m;
@@ -1541,9 +1577,11 @@ function useCardClaims() {
         body: JSON.stringify({ card_id: cardId, benefit_id: benefitId, periods, claimed }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `error ${res.status}`);
+      return true;
     } catch (e) {
       setRows(before);
       flash("Couldn't save — " + (e.message || "check your connection"));
+      return false;
     }
   }, [flash]);
 
@@ -1553,10 +1591,10 @@ function useCardClaims() {
     return ys;
   }, [rows]);
 
-  return { claimsFor, setClaimed, status, msg, years };
+  return { claimsFor, setClaimed, status, msg, years, reload, refreshing };
 }
 
-function PeriodChip({ period, hit, wide, pendingAuto, onToggle }) {
+function PeriodChip({ period, hit, wide, pendingAuto, onToggle, changed }) {
   // Captured is captured: every claimed period reads green, whether or not the
   // rest of the year is done. What still needs doing stays amber.
   let bg = "transparent", border = "rgba(240,228,208,0.055)", color = "#4a453e", weight = 450;
@@ -1569,6 +1607,8 @@ function PeriodChip({ period, hit, wide, pendingAuto, onToggle }) {
       borderRadius: 4, background: bg, border: `1px solid ${border}`, color,
       fontFamily: FONT, fontSize: 12.5, fontWeight: weight,
       display: "flex", alignItems: "center", justifyContent: "center",
+      // Unsaved change: dashed gold ring until Save.
+      outline: changed ? "1.5px dashed #c9a96e" : "none", outlineOffset: 1,
     }}>{period.label}</div>
   );
   // Signed in, every period that has come round is a tap target. The padding
@@ -1584,7 +1624,7 @@ function PeriodChip({ period, hit, wide, pendingAuto, onToggle }) {
   );
 }
 
-function BenefitRow({ benefit, year, accent, first, claims, onToggle }) {
+function BenefitRow({ benefit, year, accent, first, claims, onToggle, changed }) {
   const st = benefitStatus(benefit, year, claims);
   const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
   const DONE = "#93c4a2";
@@ -1613,6 +1653,7 @@ function BenefitRow({ benefit, year, accent, first, claims, onToggle }) {
           <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)}
             wide={wide}
             pendingAuto={st.complete && !st.claimedSet.has(p.key)}
+            changed={changed && changed.has(p.key)}
             onToggle={onToggle && (() => onToggle(benefit.id, [p.key], !st.claimedSet.has(p.key)))} />
         ))}
       </div>
@@ -1623,7 +1664,7 @@ function BenefitRow({ benefit, year, accent, first, claims, onToggle }) {
   );
 }
 
-function CardBlock({ card, year, claimsFor, onToggle }) {
+function CardBlock({ card, year, claimsFor, onToggle, changedFor }) {
   const accent = card.color || "#93c4a2";
   const [showPerks, setShowPerks] = useState(false);
   let captured = 0, total = 0, openN = 0;
@@ -1679,6 +1720,7 @@ function CardBlock({ card, year, claimsFor, onToggle }) {
           {groups[cad].map((b, i) => (
             <BenefitRow key={b.id} benefit={b} year={year} accent={accent} first={i === 0}
               claims={claimsFor(card.id, b.id)}
+              changed={changedFor && changedFor(card.id, b.id)}
               onToggle={onToggle && ((benefitId, periods, claimed) => onToggle(card.id, benefitId, periods, claimed))} />
           ))}
         </div>
@@ -1760,7 +1802,7 @@ function AttentionPanel({ rows, onMark }) {
 }
 
 /* Top-right of the Cards page: is YNAB answering, and are taps being saved. */
-function CardsSyncStatus({ status }) {
+function CardsSyncStatus({ status, onRefresh, refreshing, onEdit }) {
   const dot = (ok) => (
     <span style={{ width: 6, height: 6, borderRadius: 3, display: "inline-block", marginRight: 6,
       background: ok == null ? "#4a453e" : ok ? "#93c4a2" : "#d98a80" }} />
@@ -1775,6 +1817,23 @@ function CardsSyncStatus({ status }) {
       <span style={small} title={status.error || "Taps are saved and show on every device"}>
         {dot(loading ? null : status.saving)}{loading ? "Loading" : status.saving ? "Saving on" : "Read-only"}
       </span>
+      <button type="button" onClick={onRefresh} disabled={refreshing} className="refresh-btn"
+        title="Pull the latest credits from YNAB and reload" aria-label="Refresh">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={refreshing ? "spin" : ""}>
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+        </svg>
+        <span>{refreshing ? "Refreshing" : "Refresh"}</span>
+      </button>
+      {onEdit && (
+        <button type="button" onClick={onEdit} className="refresh-btn edit-btn" title="Change which credits are marked used">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+          </svg>
+          <span>Edit</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -1785,7 +1844,79 @@ function Cards() {
   const [firstYear, setFirstYear] = useState(new Date().getFullYear());
   const [loaded, setLoaded] = useState(false);
   const claims = useCardClaims();
-  const onToggle = claims.status.saving ? claims.setClaimed : null;
+
+  /* Edit mode. Nothing on this page changes by accident: taps only count
+     after Edit, they're staged here (dashed gold ring) and nothing is saved
+     until Save. Cancel drops them. Each entry remembers the state it started
+     from, so tapping a chip back again un-stages it. */
+  const [editing, setEditing] = useState(false);
+  const [pending, setPending] = useState(() => new Map());
+  const [savingEdits, setSavingEdits] = useState(false);
+  const canEdit = claims.status.saving;
+
+  const stage = useCallback((cardId, benefitId, periods, claimed) => {
+    setPending((m) => {
+      const out = new Map(m);
+      for (const period of periods) {
+        const k = claimKey(cardId, benefitId, period);
+        const base = out.has(k) ? out.get(k).base : !claimed;
+        if (claimed === base) out.delete(k);
+        else out.set(k, { card_id: cardId, benefit_id: benefitId, period, claimed, base });
+      }
+      return out;
+    });
+  }, []);
+
+  // Saved claims with the staged changes laid on top.
+  const claimsFor = useCallback((cardId, benefitId) => {
+    const saved = claims.claimsFor(cardId, benefitId);
+    let on = null, off = null;
+    for (const p of pending.values()) {
+      if (p.card_id !== cardId || p.benefit_id !== benefitId) continue;
+      if (!on) { on = new Set(saved.on); off = new Set(saved.off); }
+      if (p.claimed) { on.add(p.period); off.delete(p.period); }
+      else { on.delete(p.period); off.add(p.period); }
+    }
+    return on ? { on, off } : saved;
+  }, [claims.claimsFor, pending]);
+
+  const changedFor = useCallback((cardId, benefitId) => {
+    const set = new Set();
+    for (const p of pending.values()) if (p.card_id === cardId && p.benefit_id === benefitId) set.add(p.period);
+    return set;
+  }, [pending]);
+
+  const cancelEdits = () => { setPending(new Map()); setEditing(false); };
+
+  const saveEdits = async () => {
+    setSavingEdits(true);
+    const groups = new Map();
+    for (const p of pending.values()) {
+      const g = `${p.card_id}|${p.benefit_id}|${p.claimed}`;
+      if (!groups.has(g)) groups.set(g, { card_id: p.card_id, benefit_id: p.benefit_id, claimed: p.claimed, periods: [] });
+      groups.get(g).periods.push(p.period);
+    }
+    const left = new Map(pending);
+    for (const g of groups.values()) {
+      if (await claims.setClaimed(g.card_id, g.benefit_id, g.periods, g.claimed)) {
+        for (const period of g.periods) left.delete(claimKey(g.card_id, g.benefit_id, period));
+      }
+    }
+    // Anything that failed stays staged so it can be retried.
+    setPending(left);
+    setSavingEdits(false);
+    if (!left.size) setEditing(false);
+  };
+
+  // Closing or reloading the tab with unsaved changes asks first.
+  useEffect(() => {
+    if (!pending.size) return;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [pending.size]);
+
+  const onToggle = editing && canEdit ? stage : null;
   const [sub, setSub, subHref] = useSubRoute("cards", "claim", loaded ? ["claim", ...cards.map((c) => c.id)] : null);
 
   useEffect(() => {
@@ -1813,7 +1944,7 @@ function Cards() {
     const rows = [];
     for (const c of cards) {
       for (const b of c.benefits || []) {
-        const st = benefitStatus(b, year, claims.claimsFor(c.id, b.id));
+        const st = benefitStatus(b, year, claimsFor(c.id, b.id));
         if (st.open.length) {
           rows.push({
             card: c, benefit: b, open: st.open, atStake: st.atStake,
@@ -1824,7 +1955,7 @@ function Cards() {
     }
     // Soonest deadline first; larger dollars break ties.
     return rows.sort((a, b) => (a.daysLeft - b.daysLeft) || (b.atStake - a.atStake));
-  }, [cards, year, claims.claimsFor]);
+  }, [cards, year, claimsFor]);
 
   return (
     <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
@@ -1851,7 +1982,8 @@ function Cards() {
             )}
           </h1>
           </div>
-          <CardsSyncStatus status={claims.status} />
+          <CardsSyncStatus status={claims.status} onRefresh={claims.reload} refreshing={claims.refreshing}
+            onEdit={canEdit && !editing ? () => setEditing(true) : null} />
         </div>
 
         {!claims.status.loading && !claims.status.saving && (
@@ -1874,7 +2006,7 @@ function Cards() {
           <AttentionPanel rows={attention} onMark={onToggle} />
         ) : (
           cards.filter((c) => c.id === sub).map((c) => (
-            <CardBlock key={c.id} card={c} year={year} claimsFor={claims.claimsFor} onToggle={onToggle} />
+            <CardBlock key={c.id} card={c} year={year} claimsFor={claimsFor} onToggle={onToggle} changedFor={changedFor} />
           ))
         )}
 
@@ -1892,11 +2024,27 @@ function Cards() {
             </div>
           ))}
           <span style={{ fontFamily: FONT, fontSize: 11.5, color: "#4a453e", marginLeft: "auto" }}>
-            {onToggle ? "Tap a period to mark it used or not" : "Hover a row for details"}
+            {editing ? "Tap a period to change it, then Save" : canEdit ? "Tap Edit to change what's marked" : "Hover a row for details"}
           </span>
         </div>
         )}
 
+        {editing && (
+          <>
+            <div style={{ height: 76 }} />
+            <div className="edit-bar" role="region" aria-label="Unsaved changes">
+              <div className="edit-bar-inner">
+                <span style={{ fontFamily: FONT, fontSize: 13, color: "#c9a96e", marginRight: "auto" }}>
+                  {pending.size ? `${pending.size} unsaved change${pending.size === 1 ? "" : "s"}` : "Editing — tap periods to change them"}
+                </span>
+                <button type="button" onClick={cancelEdits} disabled={savingEdits} className="bar-btn">Cancel</button>
+                <button type="button" onClick={saveEdits} disabled={savingEdits || !pending.size} className="bar-btn bar-btn-save">
+                  {savingEdits ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
