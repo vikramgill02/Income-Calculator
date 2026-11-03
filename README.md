@@ -1,6 +1,6 @@
 # Income-Calculator
 
-Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Five tabs, in this order (opens on Net Worth). Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
+Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Five tabs, in this order (opens on Net Worth); Property lives under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
 
 Every page and sub-tab has its own address, so the back button, refresh, bookmarks and home-screen shortcuts all land where you expect:
 
@@ -10,15 +10,17 @@ Every page and sub-tab has its own address, so the back button, refresh, bookmar
 | Dashboard | `/dashboard` · `/dashboard/employers` · `/dashboard/monthly` · `/dashboard/paystubs` |
 | Pay Calc | `/pay` |
 | Cards | `/cards` · `/cards/<card id from cards.json>` (e.g. `/cards/amex-gold`) |
-| Property | `/property` · `/property/projections` |
+| Tools | `/tools` (a list of misc tools) |
+| Property (in Tools) | `/property` · `/property/projections` |
 
 It is still one `index.html`: `not_found_handling: "single-page-application"` in `wrangler.jsonc` serves it for any address that isn't a file, and the app picks the page from the URL. HTML is sent with `Cache-Control: no-cache` so a new deploy shows up immediately. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
 
 - **Net Worth** — the landing tab, in three sub-tabs. *Overview*: a donut of where your money sits — hover a slice (or tap it on a phone) to see that account's balance, holdings and pending transfers; otherwise it shows liquid, net worth and debt. *Accounts*: YNAB cash and credit-card totals plus each Fidelity account's holdings, priced live. *Loans*: student loans by interest rate.
 - **Dashboard** — year-to-date income in four sub-tabs: *Overview* (gross / taxes / net / 403(b) and the year-end projection), *Employers* (split by employer with logos), *Monthly* (bar chart with projections) and *Paystubs* (filterable table). Data lives in [`paystubs.json`](./paystubs.json).
 - **Pay Calc** — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $78.31/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× (~$117.47/hr).
-- **Cards** — credit card credits & perks for Amex Platinum, Amex Gold, and Capital One Venture X: a *Claim now* list of open credits by deadline, then one sub-tab per card. Data lives in [`cards.json`](./cards.json).
-- **Property** — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
+- **Cards** — credit card credits & perks for Amex Platinum, Amex Gold, and Capital One Venture X: a *Claim now* list of open credits by deadline, then one sub-tab per card. Card and benefit definitions live in [`cards.json`](./cards.json); which credits you've used lives in Supabase and fills in from YNAB on its own — see [Card claims](#card-claims).
+- **Tools** — a small page listing tools that don't need their own tab. Property is the first one.
+- **Property** (under Tools) — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
 Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
 
@@ -67,13 +69,26 @@ Only pre-tax 403(b) is tracked; Roth/after-tax contributions are excluded. A `pr
   "annual_fee": 325,
   "benefits": [
     { "id": "gold-dunkin", "name": "Dunkin' Credit", "value": 84,
-      "cadence": "monthly", "per": 7, "detail": "..." }
+      "cadence": "monthly", "per": 7, "detail": "...",
+      "match": "AMEX Dunkin' Credit" }
   ],
   "perks": ["4x points at restaurants worldwide (first $50k/yr)"]
 }
 ```
 
-`cadence` is one of `monthly`, `quarterly`, `semiannual`, `annual`, `multiyear`. `value` is the annual total; `per` is the amount available each period. Benefit checkboxes are stored in the viewer's browser (`localStorage`) and reset automatically when a period rolls over.
+`cadence` is one of `monthly`, `quarterly`, `semiannual`, `annual`, `multiyear`. `value` is the annual total; `per` is the amount available each period. `auto: true` counts every period that has come round as used (charges the card reimburses on its own, like Disney+). `match` is text from the bank's own name for the statement credit, as it shows in YNAB; leave it out for credits that never post as one (Uber Cash). Which periods are used is **not** stored here — see below.
+
+## Card claims
+
+Which credits you've used is stored in Supabase, in the `card_claims` table: one row per benefit per period (`2026-03`, `2026-Q4`, `2026-H1`, `2026`, or `once`), with `claimed` true or false.
+
+- **Tap to mark.** Signed in, tap any month/quarter chip on a card's sub-tab to flip it, or *Used* on the *Claim now* list. It saves straight away and shows on every device you're signed in on.
+- **YNAB fills it in.** `/api/card-credits` (in `worker.js`, behind the password) lists inflows on credit-card accounts in YNAB for this year and last. The page marks a period used when a credit's bank wording contains the benefit's `match` text, and records the amount. It runs each time you open Cards.
+- **Un-marking sticks.** Tapping a used period off saves `claimed = false`, so a YNAB credit won't mark it again.
+- **Signed out**, the page still shows what YNAB found but can't save anything.
+- **Asking Claude.** With the Supabase connector, Claude can answer questions straight from this table (e.g. "which credits did I leave unused in Q3?").
+
+The worker's nightly cron also makes one tiny read from Supabase, because free projects pause after a week with no traffic.
 
 ## Property tab — how the numbers are calculated
 
@@ -117,20 +132,19 @@ gains are **before selling costs and taxes** — so the total return is a
 hold-value figure, not a net-of-sale one. Annualized return shows `—` when a
 deal loses more than the cash put in, since a compound rate is undefined there.
 
-## Property tab — saved deals
+## Supabase setup
 
-The in-progress deal is cached in the browser (`localStorage`), so switching
-tabs or reloading never loses it. Named deals sync across devices through
-Supabase, which is off until two values are filled in near the top of the
-`Property cloud sync` block in [`index.html`](./index.html):
+Card claims and saved deals sync through Supabase (project
+`Income-Calculator`). It's switched on by two values near the top of the
+`Supabase (cloud data)` block in [`index.html`](./index.html):
 
 ```js
 const SUPABASE_URL = "";
 const SUPABASE_ANON_KEY = "";
 ```
 
-Left blank, the tab works exactly as before with no sign-in prompt and no
-cloud saving. To turn syncing on:
+Left blank, every page still works with no sign-in prompt and no
+cloud saving. To set up a fresh project:
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Run [`supabase-setup.sql`](./supabase-setup.sql) in **SQL Editor → New query**.
@@ -140,6 +154,12 @@ cloud saving. To turn syncing on:
 The anon key is designed to be published; Row Level Security is what confines
 each account to its own rows. Never paste the `service_role` key here — it
 bypasses those policies.
+
+## Property tab — saved deals
+
+The in-progress deal is cached in the browser (`localStorage`), so switching
+tabs or reloading never loses it. Named deals sync across devices through
+Supabase once you sign in (the same account as the Cards tab).
 
 ## Property tab — reading the charts
 

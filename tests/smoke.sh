@@ -35,7 +35,7 @@ is_app() { curl -s -H "Cookie: $COOKIE" "$BASE$1" | grep -q 'id="root"' && echo 
 
 echo "Pages serve the app:"
 for p in / /networth/accounts /networth/loans /dashboard /dashboard/employers /dashboard/monthly \
-         /dashboard/paystubs /pay /cards /cards/amex-gold /property /property/projections /nope; do
+         /dashboard/paystubs /pay /cards /cards/amex-gold /tools /property /property/projections /nope; do
   check "$p" "200 app" "$(status "$p") $(is_app "$p")"
 done
 
@@ -55,6 +55,9 @@ check "no cookie -> login" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/
 check "login keeps the page" "/cards" "$(curl -s -o /dev/null -w '%{redirect_url}' -d 'password=smoke-test&next=/cards' "$BASE/__login" | sed "s#$BASE##")"
 check "login refuses other sites" "/" "$(curl -s -o /dev/null -w '%{redirect_url}' -d 'password=smoke-test&next=//evil.example' "$BASE/__login" | sed "s#$BASE##")"
 check "/api/version answers" 200 "$(status /api/version)"
+# No YNABKEY locally, so it should answer with an empty list rather than fail.
+check "/api/card-credits answers JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/api/card-credits" | grep -q '"credits":\[' && echo yes || echo no)"
+check "/api/card-credits is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/card-credits")"
 
 echo
 echo "$PASS passed, $FAIL failed"

@@ -99,6 +99,24 @@ input { font-family: var(--font); }
   overscroll-behavior-x: contain;
 }
 .chip-strip::-webkit-scrollbar { display: none; }
+/* Tappable chips and the Claim-now "Used" button: a tall invisible hit area
+   around a small visible pill. */
+.chip-btn {
+  background: transparent; border: none; padding: 9px 0; margin: 0; cursor: pointer; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent; font: inherit;
+}
+.chip-btn:hover > div { filter: brightness(1.25); }
+.chip-btn:focus-visible > div { outline: 1.5px solid var(--gold); outline-offset: 1px; }
+.mark-btn {
+  background: transparent; border: none; padding: 0; margin: 0; cursor: pointer; flex-shrink: 0;
+  min-height: 36px; display: inline-flex; align-items: center; font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.mark-btn > span {
+  border: 1px solid rgba(147,196,162,0.35); color: #93c4a2; border-radius: 6px;
+  padding: 2px 9px; font-size: 12px;
+}
+.mark-btn:hover > span { background: rgba(147,196,162,0.12); }
 /* Anything tappable clears Apple's 44px minimum without the padding showing. */
 .tap {
   position: relative;
@@ -233,6 +251,11 @@ details.fine[open] summary::before { content: "− "; }
   height: 1.5px; border-radius: 1px; background: var(--gold);
 }
 .bottomnav { display: none; }
+.tool-card {
+  display: block; text-decoration: none; background: #141311; border: 1px solid rgba(240,228,208,0.08);
+  border-radius: 12px; padding: 16px 18px;
+}
+.tool-card:hover { border-color: rgba(201,169,110,0.35); }
 @media (max-width: 720px) {
   .topnav-inner { justify-content: center; height: 52px; }
   .wordmark { font-size: 23px; gap: 10px; }
@@ -354,7 +377,7 @@ function Line({ label, value, highlight = false, muted = false, large = false, n
    first sub-tab is the bare page address (/dashboard), the rest add a
    segment (/dashboard/paystubs). worker.js serves index.html for these. */
 
-const PAGES = { worth: "networth", dash: "dashboard", calc: "pay", cards: "cards", prop: "property" };
+const PAGES = { worth: "networth", dash: "dashboard", calc: "pay", cards: "cards", tools: "tools", prop: "property" };
 
 function parsePath(pathname) {
   const [first = "", second = ""] = pathname.replace(/^\/+|\/+$/g, "").split("/");
@@ -421,8 +444,12 @@ const NAV = [
   ["dash", "Dashboard", <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />],
   ["calc", "Pay Calc", <g><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></g>],
   ["cards", "Cards", <g><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19M6.5 15h4" /></g>],
-  ["prop", "Property", <path d="M3 11l9-7 9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5" />],
+  ["tools", "Tools", <path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L3.5 17.5a1.4 1.4 0 0 0 2 2l5.7-5.7a4 4 0 0 0 5.3-5.3l-2.4 2.4-2-.5-.5-2z" />],
 ];
+
+/* Pages that live under a tab without being one: Property sits in Tools. */
+const NAV_PARENT = { prop: "tools" };
+const PAGE_TITLES = { prop: "Property" };
 
 const NavIcon = ({ children }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
@@ -432,6 +459,7 @@ const NavIcon = ({ children }) => (
 /* Desktop: a slim header with the wordmark and text tabs. Phone: the header
    keeps only the wordmark and the tabs move to a bar along the bottom. */
 function TabBar({ view }) {
+  const tab = NAV_PARENT[view] || view;
   return (
     <>
       <header className="topnav">
@@ -439,7 +467,7 @@ function TabBar({ view }) {
           <div className="wordmark"><img src="/logos/gc-seal.png" alt="" className="seal" /><span>Gill <em>&amp;</em> Co.</span></div>
           <nav className="topnav-tabs">
             {NAV.map(([key, label]) => (
-              <Link key={key} to={pathFor(key, "")} className={view === key ? "active" : ""}
+              <Link key={key} to={pathFor(key, "")} className={tab === key ? "active" : ""}
                 aria-current={view === key ? "page" : undefined}>{label}</Link>
             ))}
           </nav>
@@ -447,7 +475,7 @@ function TabBar({ view }) {
       </header>
       <nav className="bottomnav">
         {NAV.map(([key, label, icon]) => (
-          <Link key={key} to={pathFor(key, "")} className={view === key ? "active" : ""} aria-label={label}
+          <Link key={key} to={pathFor(key, "")} className={tab === key ? "active" : ""} aria-label={label}
             aria-current={view === key ? "page" : undefined}>
             <NavIcon>{icon}</NavIcon>
             <span>{label}</span>
@@ -1369,6 +1397,50 @@ function Dashboard() {
   );
 }
 
+/* ─── Supabase (cloud data) ───
+   Card claims and saved property deals live here. Paste the two values from
+   Supabase → Project Settings → Data API. Left blank, every page still works;
+   only the cloud parts are off. The key is public by design: row-level
+   security means it can only read or write the signed-in account's rows. */
+const SUPABASE_URL = "https://czysubahmllgjhfgehni.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eXN1YmFobWxsZ2poZmdlaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5ODg5NDcsImV4cCI6MjEwNDU2NDk0N30.ZeeO8bdIn3kCZ584SBQMbzNPCPwqqjvjXY1D3wWK4fg";
+
+const syncConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+/* Built once, and only if the library actually loaded — a blocked CDN or a
+   blank config must leave the rest of the tab working. */
+let _sb;
+function getSb() {
+  if (_sb !== undefined) return _sb;
+  try {
+    _sb = syncConfigured() && window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+  } catch (e) { _sb = null; }
+  return _sb;
+}
+
+/* The signed-in Supabase account, shared by every page that syncs. */
+function useSession() {
+  const [session, setSession] = useState(null);
+  const [ready, setReady] = useState(!syncConfigured());
+  useEffect(() => {
+    const sb = getSb();
+    if (!sb) { setReady(true); return; }
+    let alive = true;
+    sb.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSession(data.session || null);
+      setReady(true);
+    }).catch(() => alive && setReady(true));
+    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => {
+      if (alive) setSession(s || null);
+    });
+    return () => { alive = false; sub?.subscription?.unsubscribe(); };
+  }, []);
+  return { session, ready };
+}
+
 /* ─── Cards ─── */
 
 const CADENCE_META = {
@@ -1420,16 +1492,18 @@ const daysUntil = (d, today) => {
   return Math.round((b - a) / DAY_MS);
 };
 
-const benefitStatus = (benefit, year) => {
+const NO_CLAIMS = { on: new Set(), off: new Set() };
+
+// `claims` is { on, off }: period keys marked used / explicitly un-marked.
+const benefitStatus = (benefit, year, claims = NO_CLAIMS) => {
   const periods = periodsFor(benefit.cadence, year);
   const per = n(benefit.per);
   // An `auto` credit reimburses a charge the card already pays on its own
   // (Disney+, Walmart+), so every period that has come round is captured
-  // whether or not anyone ticked it off. Counting those implicitly keeps them
-  // out of the to-do list in perpetuity — no monthly upkeep in cards.json.
-  const cs = new Set(benefit.claimed || []);
+  // whether or not anyone ticked it off — unless it was un-marked by hand.
+  const cs = new Set(claims.on);
   if (benefit.auto) {
-    for (const p of periods) if (p.when !== "future") cs.add(p.key);
+    for (const p of periods) if (p.when !== "future" && !claims.off.has(p.key)) cs.add(p.key);
   }
   const hits = periods.filter((p) => cs.has(p.key));
   const open = periods.filter((p) => !cs.has(p.key) && p.when === "current");
@@ -1452,14 +1526,169 @@ const benefitStatus = (benefit, year) => {
   };
 };
 
-function PeriodChip({ period, hit, wide, pendingAuto }) {
+/* ─── Card claims: Supabase + YNAB ───
+   Each row in `card_claims` is one benefit for one period ("2026-Q4") with
+   claimed true/false. YNAB statement credits whose bank wording contains a
+   benefit's `match` text are written in as claimed automatically, but never
+   over a row you un-marked by hand. Signed out, the page still shows what
+   YNAB found; it just can't save anything. */
+
+// The period a credit posted on a given date counts toward.
+const periodKeyFor = (cadence, date) => {
+  const y = date.slice(0, 4), mm = date.slice(5, 7), m = parseInt(mm, 10);
+  if (cadence === "monthly") return `${y}-${mm}`;
+  if (cadence === "quarterly") return `${y}-Q${Math.ceil(m / 3)}`;
+  if (cadence === "semiannual") return `${y}-H${m <= 6 ? 1 : 2}`;
+  if (cadence === "annual") return y;
+  if (cadence === "multiyear") return "once";
+  return null;
+};
+
+const claimKey = (cardId, benefitId, period) => `${cardId}|${benefitId}|${period}`;
+const CLAIM_CONFLICT = "user_id,card_id,benefit_id,period";
+const round2 = (x) => Math.round(x * 100) / 100;
+
+// YNAB credits → one entry per benefit per period. Two postings in the same
+// period (Saks often splits $50 into two) add together.
+function matchCredits(cards, credits) {
+  const out = new Map();
+  for (const t of credits) {
+    const name = String(t.name || "").toLowerCase();
+    for (const c of cards) {
+      for (const b of c.benefits || []) {
+        if (!b.match || !name.includes(b.match.toLowerCase())) continue;
+        const period = periodKeyFor(b.cadence, t.date);
+        if (!period) continue;
+        const k = claimKey(c.id, b.id, period);
+        const prev = out.get(k);
+        out.set(k, prev
+          ? { ...prev, amount: round2(prev.amount + t.amount), posted_on: t.date > prev.posted_on ? t.date : prev.posted_on }
+          : { card_id: c.id, benefit_id: b.id, period, amount: round2(t.amount), posted_on: t.date, ynab_txn_id: t.id });
+      }
+    }
+  }
+  return out;
+}
+
+function useCardClaims(cards, session) {
+  const [credits, setCredits] = useState(null);   // null while loading
+  const [ynab, setYnab] = useState({ ok: null, error: "" });
+  const [rows, setRows] = useState(() => new Map());
+  const [msg, setMsg] = useState("");
+
+  const flash = useCallback((text) => {
+    setMsg(text);
+    setTimeout(() => setMsg((m) => m === text ? "" : m), 4000);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/card-credits", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { setCredits(Array.isArray(d.credits) ? d.credits : []); setYnab({ ok: !!d.ok, error: d.error || "" }); })
+      .catch(() => { setCredits([]); setYnab({ ok: false, error: "Couldn't reach YNAB" }); });
+  }, []);
+
+  const matches = useMemo(() => credits ? matchCredits(cards, credits) : new Map(), [cards, credits]);
+
+  // Load saved claims, then write in anything new from YNAB.
+  useEffect(() => {
+    const sb = getSb();
+    if (!sb || !session) { setRows(new Map()); return; }
+    if (!cards.length || credits === null) return;
+    let alive = true;
+    (async () => {
+      const { data, error } = await sb.from("card_claims")
+        .select("card_id,benefit_id,period,claimed,source,amount,posted_on");
+      if (!alive) return;
+      if (error) { flash("Couldn't load your claims — " + error.message); return; }
+      const map = new Map((data || []).map((r) => [claimKey(r.card_id, r.benefit_id, r.period), r]));
+      const now = new Date().toISOString();
+      const fresh = [], amounts = [];
+      for (const [k, m] of matches) {
+        const r = map.get(k);
+        if (!r) fresh.push({ ...m, user_id: session.user.id, claimed: true, source: "ynab", updated_at: now });
+        else if (r.claimed && (r.amount == null || Number(r.amount) !== m.amount || r.posted_on !== m.posted_on)) {
+          // Already marked (by hand or from history): just record what posted.
+          amounts.push({ ...m, user_id: session.user.id, updated_at: now });
+        }
+      }
+      // New rows never overwrite one saved meanwhile on another device.
+      if (fresh.length) {
+        const { error: e1 } = await sb.from("card_claims").upsert(fresh, { onConflict: CLAIM_CONFLICT, ignoreDuplicates: true });
+        if (e1) flash("Couldn't save YNAB matches — " + e1.message);
+        else for (const r of fresh) map.set(claimKey(r.card_id, r.benefit_id, r.period), r);
+      }
+      if (amounts.length) {
+        const { error: e2 } = await sb.from("card_claims").upsert(amounts, { onConflict: CLAIM_CONFLICT });
+        if (!e2) for (const r of amounts) {
+          const k = claimKey(r.card_id, r.benefit_id, r.period);
+          map.set(k, { ...map.get(k), ...r });
+        }
+      }
+      if (alive) setRows(map);
+    })();
+    return () => { alive = false; };
+  }, [session, cards, credits, matches, flash]);
+
+  // { "card|benefit": { on: Set(periods), off: Set(periods) } }
+  const index = useMemo(() => {
+    const idx = new Map();
+    const at = (c, b) => {
+      const k = `${c}|${b}`;
+      if (!idx.has(k)) idx.set(k, { on: new Set(), off: new Set() });
+      return idx.get(k);
+    };
+    for (const r of rows.values()) at(r.card_id, r.benefit_id)[r.claimed ? "on" : "off"].add(r.period);
+    for (const m of matches.values()) {
+      const e = at(m.card_id, m.benefit_id);
+      if (!e.off.has(m.period)) e.on.add(m.period);
+    }
+    return idx;
+  }, [rows, matches]);
+
+  const claimsFor = useCallback((cardId, benefitId) => index.get(`${cardId}|${benefitId}`) || NO_CLAIMS, [index]);
+
+  // Mark periods used (or not). Shows straight away; rolls back if the save fails.
+  const setClaimed = useCallback(async (cardId, benefitId, periods, claimed) => {
+    const sb = getSb();
+    if (!sb || !session || !periods.length) return;
+    const now = new Date().toISOString();
+    const next = periods.map((period) => ({
+      user_id: session.user.id, card_id: cardId, benefit_id: benefitId, period,
+      claimed, source: "manual", updated_at: now,
+    }));
+    let before;
+    setRows((m) => {
+      before = m;
+      const out = new Map(m);
+      for (const r of next) {
+        const k = claimKey(cardId, benefitId, r.period);
+        out.set(k, { ...out.get(k), ...r });
+      }
+      return out;
+    });
+    const { error } = await sb.from("card_claims").upsert(next, { onConflict: CLAIM_CONFLICT });
+    if (error) { setRows(before); flash("Couldn't save — " + error.message); }
+  }, [session, flash]);
+
+  const years = useMemo(() => {
+    const ys = new Set();
+    for (const r of rows.values()) { const y = parseInt(r.period, 10); if (!isNaN(y)) ys.add(y); }
+    for (const m of matches.values()) { const y = parseInt(m.period, 10); if (!isNaN(y)) ys.add(y); }
+    return ys;
+  }, [rows, matches]);
+
+  return { claimsFor, setClaimed, ynab, msg, years, loading: credits === null };
+}
+
+function PeriodChip({ period, hit, wide, pendingAuto, onToggle }) {
   // Captured is captured: every claimed period reads green, whether or not the
   // rest of the year is done. What still needs doing stays amber.
   let bg = "transparent", border = "rgba(240,228,208,0.055)", color = "#4a453e", weight = 450;
   if (hit)                            { bg = "rgba(147,196,162,0.13)";  border = "transparent"; color = "#93c4a2"; }
   else if (pendingAuto)               { bg = "transparent"; border = "rgba(147,196,162,0.28)"; color = "#6f9e80"; }
   else if (period.when === "current") { bg = "rgba(201,169,110,0.14)"; border = "#c9a96e"; color = "#c9a96e"; weight = 550; }
-  return (
+  const chip = (
     <div style={{
       minWidth: wide ? 58 : 27, height: 19, padding: "0 4px", flexShrink: 0,
       borderRadius: 4, background: bg, border: `1px solid ${border}`, color,
@@ -1467,10 +1696,19 @@ function PeriodChip({ period, hit, wide, pendingAuto }) {
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>{period.label}</div>
   );
+  // Signed in, every period that has come round is a tap target. The padding
+  // makes the target taller than the chip without changing how it looks.
+  if (!onToggle || period.when === "future") return chip;
+  return (
+    <button type="button" onClick={onToggle} className="chip-btn"
+      aria-pressed={hit} aria-label={`${period.label}: ${hit ? "used" : "not used"}`}>
+      {chip}
+    </button>
+  );
 }
 
-function BenefitRow({ benefit, year, accent, first }) {
-  const st = benefitStatus(benefit, year);
+function BenefitRow({ benefit, year, accent, first, claims, onToggle }) {
+  const st = benefitStatus(benefit, year, claims);
   const wide = benefit.cadence === "semiannual" || benefit.cadence === "annual" || benefit.cadence === "multiyear";
   const DONE = "#93c4a2";
   return (
@@ -1497,7 +1735,8 @@ function BenefitRow({ benefit, year, accent, first }) {
         {st.periods.map((p) => (
           <PeriodChip key={p.key} period={p} hit={st.claimedSet.has(p.key)}
             wide={wide}
-            pendingAuto={st.complete && !st.claimedSet.has(p.key)} />
+            pendingAuto={st.complete && !st.claimedSet.has(p.key)}
+            onToggle={onToggle && (() => onToggle(benefit.id, [p.key], !st.claimedSet.has(p.key)))} />
         ))}
       </div>
       <span style={{ fontFamily: FONT, fontSize: 13.5, color: st.complete ? "#6e7d74" : "#b4ab9d", flexShrink: 0, minWidth: 78, textAlign: "right" }}>
@@ -1507,12 +1746,12 @@ function BenefitRow({ benefit, year, accent, first }) {
   );
 }
 
-function CardBlock({ card, year }) {
+function CardBlock({ card, year, claimsFor, onToggle }) {
   const accent = card.color || "#93c4a2";
   const [showPerks, setShowPerks] = useState(false);
   let captured = 0, total = 0, openN = 0;
   for (const b of card.benefits || []) {
-    const st = benefitStatus(b, year);
+    const st = benefitStatus(b, year, claimsFor(card.id, b.id));
     captured += st.captured;
     total    += st.total;
     openN    += st.open.length;
@@ -1561,7 +1800,9 @@ function CardBlock({ card, year }) {
             {CADENCE_META[cad]?.label || cad}
           </div>
           {groups[cad].map((b, i) => (
-            <BenefitRow key={b.id} benefit={b} year={year} accent={accent} first={i === 0} />
+            <BenefitRow key={b.id} benefit={b} year={year} accent={accent} first={i === 0}
+              claims={claimsFor(card.id, b.id)}
+              onToggle={onToggle && ((benefitId, periods, claimed) => onToggle(card.id, benefitId, periods, claimed))} />
           ))}
         </div>
       ))}
@@ -1586,7 +1827,7 @@ function CardBlock({ card, year }) {
   );
 }
 
-function AttentionPanel({ rows }) {
+function AttentionPanel({ rows, onMark }) {
   const total = rows.reduce((s, r) => s + r.atStake, 0);
   return (
     <div style={{
@@ -1628,9 +1869,46 @@ function AttentionPanel({ rows }) {
               {deadline}
             </span>
             <span style={{ color: "#ece5d8", flexShrink: 0, minWidth: 46, textAlign: "right" }}>{fmt0(r.atStake)}</span>
+            {onMark && (
+              <button type="button" onClick={() => onMark(r.card.id, r.benefit.id, r.open.map((p) => p.key), true)}
+                className="mark-btn" aria-label={`Mark ${r.card.name} ${r.benefit.name} used`}>
+                <span>Used</span>
+              </button>
+            )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* Top-right of the Cards page: where claims come from, and sign in / out. */
+function CardsSyncStatus({ session, ready, ynab, open, onOpen }) {
+  const dot = (ok) => (
+    <span style={{ width: 6, height: 6, borderRadius: 3, display: "inline-block", marginRight: 6,
+      background: ok == null ? "#4a453e" : ok ? "#93c4a2" : "#d98a80" }} />
+  );
+  const small = { fontFamily: FONT, fontSize: 12.5, color: "#8b8477", display: "inline-flex", alignItems: "center" };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+      <span style={small} title={ynab.error || "Statement credits found in YNAB are marked used automatically"}>
+        {dot(ynab.ok)}{ynab.ok === false ? "YNAB offline" : "YNAB"}
+      </span>
+      {syncConfigured() && ready && (session ? (
+        <span style={small}>
+          {dot(true)}Synced
+          <button onClick={() => getSb()?.auth.signOut()} className="tap-sm" style={{
+            background: "transparent", border: "none", color: "#716a5f", cursor: "pointer",
+            fontFamily: FONT, fontSize: 12, marginLeft: 10, padding: 0, textDecoration: "underline",
+          }}>Sign out</button>
+        </span>
+      ) : (
+        <button onClick={onOpen} style={{
+          background: open ? "rgba(201,169,110,0.14)" : "transparent", color: "#c9a96e",
+          border: "1px solid rgba(201,169,110,0.4)", borderRadius: 999, padding: "0 16px", minHeight: 36,
+          fontFamily: FONT, fontSize: 12.5, cursor: "pointer",
+        }}>Sign in to mark credits</button>
+      ))}
     </div>
   );
 }
@@ -1639,8 +1917,11 @@ function Cards() {
   const [cards, setCards] = useState([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [firstYear, setFirstYear] = useState(new Date().getFullYear());
-  const [lastUpdated, setLastUpdated] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
+  const { session, ready } = useSession();
+  const claims = useCardClaims(cards, session);
+  const onToggle = session ? claims.setClaimed : null;
   const [sub, setSub, subHref] = useSubRoute("cards", "claim", loaded ? ["claim", ...cards.map((c) => c.id)] : null);
 
   useEffect(() => {
@@ -1652,7 +1933,6 @@ function Cards() {
         // always opens on the current calendar year so Jan 1 rolls over on its
         // own; earlier years stay reachable through the picker.
         if (data.year) setFirstYear(data.year);
-        if (data.last_updated) setLastUpdated(data.last_updated);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -1661,23 +1941,15 @@ function Cards() {
   // Claim keys already carry their year ("2026-03", "2026-Q1", "2026"), so a
   // new year needs no migration — its periods simply start out unclaimed.
   const years = useMemo(() => {
-    const seen = new Set([new Date().getFullYear(), firstYear]);
-    for (const c of cards) {
-      for (const b of c.benefits || []) {
-        for (const k of b.claimed || []) {
-          const y = parseInt(String(k).slice(0, 4), 10);
-          if (!isNaN(y)) seen.add(y);
-        }
-      }
-    }
+    const seen = new Set([new Date().getFullYear(), firstYear, ...claims.years]);
     return [...seen].sort((a, b) => b - a);
-  }, [cards, firstYear]);
+  }, [firstYear, claims.years]);
 
   const attention = useMemo(() => {
     const rows = [];
     for (const c of cards) {
       for (const b of c.benefits || []) {
-        const st = benefitStatus(b, year);
+        const st = benefitStatus(b, year, claims.claimsFor(c.id, b.id));
         if (st.open.length) {
           rows.push({
             card: c, benefit: b, open: st.open, atStake: st.atStake,
@@ -1688,7 +1960,7 @@ function Cards() {
     }
     // Soonest deadline first; larger dollars break ties.
     return rows.sort((a, b) => (a.daysLeft - b.daysLeft) || (b.atStake - a.atStake));
-  }, [cards, year]);
+  }, [cards, year, claims.claimsFor]);
 
   return (
     <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
@@ -1715,12 +1987,15 @@ function Cards() {
             )}
           </h1>
           </div>
-          {lastUpdated && (
-            <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#8b8477" }}>
-              Updated {formatPayDate(lastUpdated)}
-            </div>
-          )}
+          <CardsSyncStatus session={session} ready={ready} ynab={claims.ynab}
+            open={showSignIn} onOpen={() => setShowSignIn((x) => !x)} />
         </div>
+
+        {showSignIn && ready && !session && syncConfigured() && (
+          <SignIn title="Sign in to mark credits"
+            blurb="Signing in lets you tap a credit to mark it used, and keeps that in sync on your phone and computer. YNAB statement credits are marked for you." />
+        )}
+        {claims.msg && <p style={{ color: "#d98a80", fontFamily: FONT, fontSize: 12.5, margin: "0 0 12px" }}>{claims.msg}</p>}
 
         {loaded && cards.length > 0 && (
           <SubTabs value={sub} onChange={setSub} href={subHref}
@@ -1732,9 +2007,11 @@ function Cards() {
         ) : cards.length === 0 ? (
           <p style={{ color: "#716a5f", fontFamily: FONT }}>No cards yet.</p>
         ) : sub === "claim" ? (
-          <AttentionPanel rows={attention} />
+          <AttentionPanel rows={attention} onMark={onToggle} />
         ) : (
-          cards.filter((c) => c.id === sub).map((c) => <CardBlock key={c.id} card={c} year={year} />)
+          cards.filter((c) => c.id === sub).map((c) => (
+            <CardBlock key={c.id} card={c} year={year} claimsFor={claims.claimsFor} onToggle={onToggle} />
+          ))
         )}
 
         {sub !== "claim" && (
@@ -1750,7 +2027,9 @@ function Cards() {
               <span style={{ fontFamily: FONT, fontSize: 11.5, letterSpacing: "0.1em", color: "#716a5f" }}>{label}</span>
             </div>
           ))}
-          <span style={{ fontFamily: FONT, fontSize: 11.5, color: "#4a453e", marginLeft: "auto" }}>Hover a row for details</span>
+          <span style={{ fontFamily: FONT, fontSize: 11.5, color: "#4a453e", marginLeft: "auto" }}>
+            {session ? "Tap a period to mark it used or not" : "Hover a row for details"}
+          </span>
         </div>
         )}
 
@@ -2643,12 +2922,6 @@ function ProjectionsTab({ v, set }) {
   );
 }
 
-/* ─── Property cloud sync ───
-   Paste the two values from Supabase → Project Settings → Data API.
-   Left blank, the Property tab still works; only cloud saving is off. */
-const SUPABASE_URL = "https://czysubahmllgjhfgehni.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eXN1YmFobWxsZ2poZmdlaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5ODg5NDcsImV4cCI6MjEwNDU2NDk0N30.ZeeO8bdIn3kCZ584SBQMbzNPCPwqqjvjXY1D3wWK4fg";
-
 const PROP_DEFAULTS = {
   salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
   rent: 1800, propTaxRate: "0.96", interestRate: "7.25", downPct: "25",
@@ -2658,45 +2931,14 @@ const PROP_DEFAULTS = {
 };
 
 const DRAFT_KEY = "property-draft";
-const syncConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-
-/* Built once, and only if the library actually loaded — a blocked CDN or a
-   blank config must leave the rest of the tab working. */
-let _sb;
-function getSb() {
-  if (_sb !== undefined) return _sb;
-  try {
-    _sb = syncConfigured() && window.supabase
-      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-      : null;
-  } catch (e) { _sb = null; }
-  return _sb;
-}
-
 /* Deals live in the cloud; the in-progress draft is cached per browser so
    switching tabs mid-deal doesn't discard it. */
 function useDeals(v, setAll) {
-  const [session, setSession] = useState(null);
-  const [ready, setReady] = useState(!syncConfigured());
+  const { session, ready } = useSession();
   const [deals, setDeals] = useState([]);
   const [currentId, setCurrentId] = useState(null);
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
-
-  useEffect(() => {
-    const sb = getSb();
-    if (!sb) { setReady(true); return; }
-    let alive = true;
-    sb.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      setSession(data.session || null);
-      setReady(true);
-    }).catch(() => alive && setReady(true));
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => {
-      if (alive) setSession(s || null);
-    });
-    return () => { alive = false; sub?.subscription?.unsubscribe(); };
-  }, []);
 
   const refresh = useCallback(async () => {
     const sb = getSb();
@@ -2745,7 +2987,10 @@ function useDeals(v, setAll) {
   return { session, ready, deals, currentId, name, setName, status, save, load, remove, startNew, refresh };
 }
 
-function SignIn() {
+function SignIn({
+  title = "Sign in to sync deals",
+  blurb = "Signing in saves your deals to the cloud so they follow you between your PC, Mac and phone.",
+}) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [mode, setMode] = useState("in");
@@ -2779,9 +3024,9 @@ function SignIn() {
   const wrap = { borderBottom: "1px solid #5a554c", paddingBottom: 6, marginTop: 12 };
 
   return (
-    <PropCard title={mode === "in" ? "Sign in to sync deals" : "Create your account"}>
+    <PropCard title={mode === "in" ? title : "Create your account"}>
       <div style={{ fontSize: 12.5, color: "#8b8477", marginTop: 4, lineHeight: 1.5 }}>
-        Signing in saves your deals to the cloud so they follow you between your PC, Mac and phone.
+        {blurb}
       </div>
       <div style={wrap}>
         <input type="email" placeholder="you@example.com" value={email} autoComplete="username"
@@ -2877,7 +3122,7 @@ function Property() {
       <div>
         <div className="page-head">
           <div>
-            <p className="eyebrow">Rental deal analyzer</p>
+            <p className="eyebrow"><Link to="/tools" style={{ color: "inherit", textDecoration: "none" }}>Tools</Link> · Rental deal analyzer</p>
             <h1 style={{ margin: 0, lineHeight: 1.05 }}>Property</h1>
           </div>
           {syncConfigured() && deals.ready && (
@@ -3172,11 +3417,44 @@ function NetWorth() {
   );
 }
 
+/* ─── Tools ───
+   Odds and ends that don't need a tab of their own. Add an entry to TOOLS
+   (and a page in PAGES) to list another one. */
+
+const TOOLS = [
+  { to: "/property", name: "Property", blurb: "Rental deal analyzer: cash needed, cash flow, cash-on-cash ROI, DSCR and 3/5/10-year projections. Saved deals sync when signed in.",
+    icon: <path d="M3 11l9-7 9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5" /> },
+];
+
+function Tools() {
+  return (
+    <div className="nw-page" style={{ padding: "28px 24px 56px" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
+        <div className="page-head">
+          <div>
+            <p className="eyebrow">Misc</p>
+            <h1 style={{ margin: 0, lineHeight: 1.05 }}>Tools</h1>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+          {TOOLS.map((t) => (
+            <Link key={t.to} to={t.to} className="tool-card">
+              <span style={{ color: "#c9a96e" }}><NavIcon>{t.icon}</NavIcon></span>
+              <span style={{ display: "block", fontSize: 15.5, fontWeight: 600, color: "#f6f1e7", margin: "10px 0 4px" }}>{t.name}</span>
+              <span style={{ display: "block", fontSize: 12.5, color: "#8b8477", lineHeight: 1.5 }}>{t.blurb}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const route = useRouter();
   const { view } = route;
   useEffect(() => {
-    const label = NAV.find(([key]) => key === view)[1];
+    const label = PAGE_TITLES[view] || NAV.find(([key]) => key === view)[1];
     document.title = `${label} · Gill & Co.`;
   }, [view]);
   return (
@@ -3190,7 +3468,7 @@ function App() {
       `}</style>
       <TabBar view={view} />
       <main className="app-main">
-        {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : view === "worth" ? <NetWorth /> : <Calc />}
+        {view === "dash" ? <Dashboard /> : view === "cards" ? <Cards /> : view === "prop" ? <Property /> : view === "tools" ? <Tools /> : view === "worth" ? <NetWorth /> : <Calc />}
       </main>
     </div>
     </RouteContext.Provider>

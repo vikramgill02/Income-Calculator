@@ -17,6 +17,7 @@
           "per": 25,
           "auto": true,
           "detail": "Disney+ paid monthly — credit posts automatically.",
+          "match": "Platinum Digital Entertainment Credit",
           "claimed": [
             "2026-01",
             "2026-02",
@@ -57,6 +58,7 @@
           "per": 12.95,
           "auto": true,
           "detail": "Membership paid monthly — credit reimburses it automatically.",
+          "match": "Platinum Walmart+ Credit",
           "claimed": [
             "2026-01",
             "2026-02",
@@ -76,6 +78,7 @@
           "cadence": "quarterly",
           "per": 100,
           "detail": "US Resy restaurants + Resy-booked reservations.",
+          "match": "Platinum Resy Credit",
           "claimed": [
             "2026-Q1",
             "2026-Q2",
@@ -90,6 +93,7 @@
           "cadence": "quarterly",
           "per": 75,
           "detail": "US Lululemon stores and lululemon.com.",
+          "match": "Platinum Lululemon Credit",
           "claimed": [
             "2026-Q1",
             "2026-Q2",
@@ -104,6 +108,7 @@
           "cadence": "semiannual",
           "per": 300,
           "detail": "Fine Hotels + Resorts or The Hotel Collection, 2+ night stay, prepaid via Amex Travel.",
+          "match": "Platinum Hotel Credit",
           "claimed": [
             "2026-H1",
             "2026-H2"
@@ -116,6 +121,7 @@
           "cadence": "annual",
           "per": 50,
           "detail": "Jan-Jun window only - no second-half credit on this account.",
+          "match": "Platinum Saks Credit",
           "claimed": [
             "2026"
           ]
@@ -127,6 +133,7 @@
           "cadence": "annual",
           "per": 120,
           "detail": "Membership active. Renews Oct 15 annually.",
+          "match": "Platinum Uber One Credit",
           "claimed": [
             "2026"
           ],
@@ -139,6 +146,7 @@
           "cadence": "annual",
           "per": 200,
           "detail": "Incidental fees (bags, seats, lounge day passes) on one pre-selected airline.",
+          "match": "Airline Fee Reimbursement",
           "claimed": [
             "2026"
           ]
@@ -150,6 +158,7 @@
           "cadence": "annual",
           "per": 200,
           "detail": "Oura Ring hardware and membership.",
+          "match": "Platinum Oura Ring Credit",
           "claimed": [
             "2026"
           ]
@@ -161,6 +170,7 @@
           "cadence": "annual",
           "per": 199,
           "detail": "Covers full CLEAR Plus annual membership.",
+          "match": "Clear Plus Credit",
           "claimed": [
             "2026"
           ],
@@ -225,6 +235,7 @@
           "cadence": "monthly",
           "per": 10,
           "detail": "Grubhub, Five Guys, Goldbelly, Wine.com, Milk Bar. Enrollment required.",
+          "match": "AMEX Dining Credit",
           "claimed": [
             "2026-01",
             "2026-02",
@@ -244,6 +255,7 @@
           "cadence": "monthly",
           "per": 7,
           "detail": "$7/mo at Dunkin' on purchases of $7+. Enrollment required.",
+          "match": "AMEX Dunkin' Credit",
           "claimed": [
             "2026-01",
             "2026-02",
@@ -264,6 +276,7 @@
           "cadence": "semiannual",
           "per": 50,
           "detail": "US Resy restaurants. $50 Jan–Jun, $50 Jul–Dec.",
+          "match": "AMEX Resy Credit",
           "claimed": [
             "2026-H1"
           ]

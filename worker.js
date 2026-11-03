@@ -212,8 +212,59 @@ async function netWorthResponse(request, env) {
   });
 }
 
+/* ─── Card credits ───
+   /api/card-credits lists statement credits and refunds on credit-card
+   accounts in YNAB (card payments are left out). The Cards page matches them
+   against the `match` text on each benefit in cards.json and marks those
+   periods used. Covers this year and last, so January still sees December. */
+
+async function cardCreditsResponse(env) {
+  const json = (body, status = 200) => new Response(JSON.stringify(body), {
+    status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+  if (!env.YNABKEY) return json({ ok: false, error: "YNABKEY not set", credits: [] });
+  const since = `${new Date().getUTCFullYear() - 1}-01-01`;
+  const headers = { Authorization: `Bearer ${env.YNABKEY}` };
+  const [accRes, txRes] = await Promise.all([
+    fetch("https://api.ynab.com/v1/budgets/last-used/accounts", { headers }),
+    fetch(`https://api.ynab.com/v1/budgets/last-used/transactions?since_date=${since}`, { headers }),
+  ]);
+  if (!accRes.ok || !txRes.ok) return json({ ok: false, error: `YNAB returned ${accRes.status}/${txRes.status}`, credits: [] });
+  const cards = new Map(((await accRes.json())?.data?.accounts || [])
+    .filter((a) => a.type === "creditCard" && !a.deleted)
+    .map((a) => [a.id, a.name]));
+  const credits = ((await txRes.json())?.data?.transactions || [])
+    .filter((t) => cards.has(t.account_id) && t.amount > 0 && !t.transfer_account_id && !t.deleted)
+    .map((t) => ({
+      id: t.id,
+      date: t.date,
+      account: cards.get(t.account_id),
+      // The bank's own wording ("Platinum Resy Credit") is what gets matched;
+      // the payee name can be renamed in YNAB, so it's only a fallback.
+      name: t.import_payee_name_original || t.import_payee_name || t.payee_name || "",
+      payee: t.payee_name || "",
+      amount: t.amount / 1000,
+    }));
+  return json({ ok: true, since, credits });
+}
+
+/* Free Supabase projects pause after a week without traffic, which stops
+   card claims and saved deals from loading. One tiny read a night keeps it
+   awake. The key is the public one the page already ships with. */
+const SUPABASE_URL = "https://czysubahmllgjhfgehni.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eXN1YmFobWxsZ2poZmdlaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5ODg5NDcsImV4cCI6MjEwNDU2NDk0N30.ZeeO8bdIn3kCZ584SBQMbzNPCPwqqjvjXY1D3wWK4fg";
+
+async function pingSupabase() {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/card_claims?select=period&limit=1`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+  } catch {}
+}
+
 export default {
   async scheduled(event, env, ctx) {
+    ctx.waitUntil(pingSupabase());
     // Cron requests have no origin; ASSETS only needs some absolute URL.
     const data = await buildNetWorth(env, "https://dashboard.local");
     if (data.ynab.ok) await recordSnapshot(env, data);
@@ -258,6 +309,16 @@ export default {
         return await netWorthResponse(request, env);
       } catch (e) {
         return new Response(JSON.stringify({ error: String(e.message || e) }), {
+          status: 500, headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === "/api/card-credits") {
+      try {
+        return await cardCreditsResponse(env);
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: String(e.message || e), credits: [] }), {
           status: 500, headers: { "Content-Type": "application/json" },
         });
       }
