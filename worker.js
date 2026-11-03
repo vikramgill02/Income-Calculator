@@ -212,59 +212,226 @@ async function netWorthResponse(request, env) {
   });
 }
 
-/* ─── Card credits ───
-   /api/card-credits lists statement credits and refunds on credit-card
-   accounts in YNAB (card payments are left out). The Cards page matches them
-   against the `match` text on each benefit in cards.json and marks those
-   periods used. Covers this year and last, so January still sees December. */
+/* ─── Cloud data (Supabase) ───
+   Card claims and saved property deals live in Supabase. Only this worker
+   talks to it, with the SUPABASE_SECRET_KEY secret (Worker → Settings →
+   Variables and Secrets), so the site password is the one login for
+   everything. The tables have row-level security on and no policies, so the
+   public key can't read or write them at all; only the secret key can. */
 
-async function cardCreditsResponse(env) {
-  const json = (body, status = 200) => new Response(JSON.stringify(body), {
-    status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+const SUPABASE_URL = "https://czysubahmllgjhfgehni.supabase.co";
+
+const json = (body, status = 200) => new Response(JSON.stringify(body), {
+  status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+});
+
+async function supabase(env, path, { method = "GET", body, prefer } = {}) {
+  const key = env.SUPABASE_SECRET_KEY;
+  // New sb_secret_ keys go on `apikey` only; an older service_role key is a
+  // JWT and also goes on Authorization.
+  const headers = { apikey: key, "Content-Type": "application/json", "User-Agent": "gill-co-worker" };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+  if (prefer) headers.Prefer = prefer;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method, headers, body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!env.YNABKEY) return json({ ok: false, error: "YNABKEY not set", credits: [] });
-  const since = `${new Date().getUTCFullYear() - 1}-01-01`;
-  const headers = { Authorization: `Bearer ${env.YNABKEY}` };
-  const [accRes, txRes] = await Promise.all([
-    fetch("https://api.ynab.com/v1/budgets/last-used/accounts", { headers }),
-    fetch(`https://api.ynab.com/v1/budgets/last-used/transactions?since_date=${since}`, { headers }),
-  ]);
-  if (!accRes.ok || !txRes.ok) return json({ ok: false, error: `YNAB returned ${accRes.status}/${txRes.status}`, credits: [] });
-  const cards = new Map(((await accRes.json())?.data?.accounts || [])
-    .filter((a) => a.type === "creditCard" && !a.deleted)
-    .map((a) => [a.id, a.name]));
-  const credits = ((await txRes.json())?.data?.transactions || [])
-    .filter((t) => cards.has(t.account_id) && t.amount > 0 && !t.transfer_account_id && !t.deleted)
-    .map((t) => ({
-      id: t.id,
-      date: t.date,
-      account: cards.get(t.account_id),
-      // The bank's own wording ("Platinum Resy Credit") is what gets matched;
-      // the payee name can be renamed in YNAB, so it's only a fallback.
-      name: t.import_payee_name_original || t.import_payee_name || t.payee_name || "",
-      payee: t.payee_name || "",
-      amount: t.amount / 1000,
-    }));
-  return json({ ok: true, since, credits });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${text.slice(0, 200)}`);
+  return text ? JSON.parse(text) : null;
 }
 
-/* Free Supabase projects pause after a week without traffic, which stops
-   card claims and saved deals from loading. One tiny read a night keeps it
-   awake. The key is the public one the page already ships with. */
-const SUPABASE_URL = "https://czysubahmllgjhfgehni.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eXN1YmFobWxsZ2poZmdlaG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5ODg5NDcsImV4cCI6MjEwNDU2NDk0N30.ZeeO8bdIn3kCZ584SBQMbzNPCPwqqjvjXY1D3wWK4fg";
+async function readJson(request) {
+  if (!(request.headers.get("Content-Type") || "").includes("application/json")) return null;
+  try { return await request.json(); } catch { return null; }
+}
 
-async function pingSupabase() {
+/* ─── Card claims ───
+   One row per benefit per period ("2026-03", "2026-Q4", "2026-H1", "2026",
+   "once"). claimed = false means un-marked by hand, which stops a YNAB credit
+   from marking that period again.
+
+   YNAB statement credits on card accounts whose bank wording contains a
+   benefit's `match` text (cards.json) are written in as claimed. That runs
+   every time the Cards page loads and nightly from the cron, so the page is
+   current before you open it. */
+
+async function loadCards(env, origin) {
+  const res = await env.ASSETS.fetch(new Request(origin + "/cards.json"));
+  if (!res.ok) throw new Error("cards.json missing");
+  return (await res.json()).cards || [];
+}
+
+// Inflows on credit-card accounts this year and last (so January still sees
+// December), minus card payments.
+async function fetchCardCredits(env) {
+  if (!env.YNABKEY) return { ok: false, error: "YNABKEY not set", credits: [] };
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/card_claims?select=period&limit=1`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-    });
-  } catch {}
+    const since = `${new Date().getUTCFullYear() - 1}-01-01`;
+    const headers = { Authorization: `Bearer ${env.YNABKEY}` };
+    const [accRes, txRes] = await Promise.all([
+      fetch("https://api.ynab.com/v1/budgets/last-used/accounts", { headers }),
+      fetch(`https://api.ynab.com/v1/budgets/last-used/transactions?since_date=${since}`, { headers }),
+    ]);
+    if (!accRes.ok || !txRes.ok) return { ok: false, error: `YNAB returned ${accRes.status}/${txRes.status}`, credits: [] };
+    const cardAccounts = new Set(((await accRes.json())?.data?.accounts || [])
+      .filter((a) => a.type === "creditCard" && !a.deleted).map((a) => a.id));
+    const credits = ((await txRes.json())?.data?.transactions || [])
+      .filter((t) => cardAccounts.has(t.account_id) && t.amount > 0 && !t.transfer_account_id && !t.deleted)
+      .map((t) => ({
+        id: t.id,
+        date: t.date,
+        // The bank's own wording ("Platinum Resy Credit") is what gets
+        // matched; the payee can be renamed in YNAB, so it's only a fallback.
+        name: t.import_payee_name_original || t.import_payee_name || t.payee_name || "",
+        amount: t.amount / 1000,
+      }));
+    return { ok: true, error: "", credits };
+  } catch {
+    return { ok: false, error: "Could not reach YNAB", credits: [] };
+  }
+}
+
+// The period a credit posted on a given date counts toward.
+function periodKeyFor(cadence, date) {
+  const y = date.slice(0, 4), mm = date.slice(5, 7), m = parseInt(mm, 10);
+  if (cadence === "monthly") return `${y}-${mm}`;
+  if (cadence === "quarterly") return `${y}-Q${Math.ceil(m / 3)}`;
+  if (cadence === "semiannual") return `${y}-H${m <= 6 ? 1 : 2}`;
+  if (cadence === "annual") return y;
+  if (cadence === "multiyear") return "once";
+  return null;
+}
+
+const claimKey = (r) => `${r.card_id}|${r.benefit_id}|${r.period}`;
+const round2 = (x) => Math.round(x * 100) / 100;
+
+// YNAB credits → one entry per benefit per period. Two postings in the same
+// period (Saks often splits $50 in two) add together.
+function matchCredits(cards, credits) {
+  const out = new Map();
+  for (const t of credits) {
+    const name = String(t.name).toLowerCase();
+    for (const c of cards) {
+      for (const b of c.benefits || []) {
+        if (!b.match || !name.includes(b.match.toLowerCase())) continue;
+        const period = periodKeyFor(b.cadence, t.date);
+        if (!period) continue;
+        const m = { card_id: c.id, benefit_id: b.id, period };
+        const k = claimKey(m);
+        const prev = out.get(k);
+        out.set(k, prev
+          ? { ...prev, amount: round2(prev.amount + t.amount), posted_on: t.date > prev.posted_on ? t.date : prev.posted_on }
+          : { ...m, amount: round2(t.amount), posted_on: t.date, ynab_txn_id: t.id });
+      }
+    }
+  }
+  return out;
+}
+
+const CLAIM_COLS = "card_id,benefit_id,period,claimed,source,amount,posted_on";
+
+// Read every claim, write in new YNAB matches, and return the result.
+async function syncClaims(env, origin) {
+  const [cards, ynab] = await Promise.all([loadCards(env, origin), fetchCardCredits(env)]);
+  const matches = matchCredits(cards, ynab.credits);
+  const ynabStatus = { ok: ynab.ok, error: ynab.error };
+  // Not set up, or Supabase is down: show what YNAB found, read-only.
+  const readOnly = (error) => ({
+    saving: false, error, ynab: ynabStatus,
+    rows: [...matches.values()].map((m) => ({ ...m, claimed: true, source: "ynab" })),
+  });
+  if (!env.SUPABASE_SECRET_KEY) return readOnly("SUPABASE_SECRET_KEY is not set on the Worker");
+  let saved;
+  try {
+    saved = await supabase(env, `card_claims?select=${CLAIM_COLS}`);
+  } catch (e) {
+    return readOnly(String(e.message || e));
+  }
+  const byKey = new Map(saved.map((r) => [claimKey(r), r]));
+  const now = new Date().toISOString();
+  const fresh = [], amounts = [];
+  for (const [k, m] of matches) {
+    const r = byKey.get(k);
+    if (!r) fresh.push({ ...m, claimed: true, source: "ynab", updated_at: now });
+    else if (r.claimed && (r.amount == null || Number(r.amount) !== m.amount || r.posted_on !== m.posted_on)) {
+      // Already marked (by hand or from history): just record what posted.
+      amounts.push({ ...m, updated_at: now });
+    }
+  }
+  const upsert = "card_claims?on_conflict=card_id,benefit_id,period";
+  if (fresh.length) {
+    // Never over a row saved meanwhile (e.g. un-marked on another device).
+    await supabase(env, upsert, { method: "POST", body: fresh, prefer: "resolution=ignore-duplicates,return=minimal" });
+    for (const r of fresh) if (!byKey.has(claimKey(r))) byKey.set(claimKey(r), r);
+  }
+  if (amounts.length) {
+    await supabase(env, upsert, { method: "POST", body: amounts, prefer: "resolution=merge-duplicates,return=minimal" });
+    for (const r of amounts) byKey.set(claimKey(r), { ...byKey.get(claimKey(r)), ...r });
+  }
+  const rows = [...byKey.values()].map(({ card_id, benefit_id, period, claimed, source, amount, posted_on }) =>
+    ({ card_id, benefit_id, period, claimed, source, amount, posted_on }));
+  return { saving: true, error: "", ynab: ynabStatus, rows };
+}
+
+const PERIOD_RE = /^(\d{4}(-(0[1-9]|1[0-2]|Q[1-4]|H[12]))?|once)$/;
+
+// POST { card_id, benefit_id, periods: [...], claimed } — mark used or not.
+async function saveClaims(request, env, origin) {
+  if (!env.SUPABASE_SECRET_KEY) return json({ error: "SUPABASE_SECRET_KEY is not set on the Worker" }, 503);
+  const body = await readJson(request);
+  const { card_id, benefit_id, periods, claimed } = body || {};
+  const cards = await loadCards(env, origin);
+  const benefitExists = cards.some((c) => c.id === card_id && (c.benefits || []).some((b) => b.id === benefit_id));
+  if (!benefitExists || typeof claimed !== "boolean" || !Array.isArray(periods) || !periods.length
+      || periods.length > 24 || !periods.every((p) => typeof p === "string" && PERIOD_RE.test(p))) {
+    return json({ error: "Bad request" }, 400);
+  }
+  const now = new Date().toISOString();
+  await supabase(env, "card_claims?on_conflict=card_id,benefit_id,period", {
+    method: "POST",
+    body: periods.map((period) => ({ card_id, benefit_id, period, claimed, source: "manual", updated_at: now })),
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+  return json({ ok: true });
+}
+
+/* ─── Saved property deals ─── */
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function dealsResponse(request, env, url) {
+  if (!env.SUPABASE_SECRET_KEY) return json({ error: "SUPABASE_SECRET_KEY is not set on the Worker" }, 503);
+  if (request.method === "GET") {
+    return json({ deals: await supabase(env, "deals?select=id,name,data,updated_at&order=updated_at.desc") });
+  }
+  if (request.method === "DELETE") {
+    const id = url.searchParams.get("id") || "";
+    if (!UUID_RE.test(id)) return json({ error: "Bad request" }, 400);
+    await supabase(env, `deals?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    return json({ ok: true });
+  }
+  if (request.method === "POST") {
+    // { id?, name, data }: with an id it updates that deal, else adds one.
+    const body = await readJson(request);
+    const name = String(body?.name || "").trim().slice(0, 120) || "Untitled deal";
+    if (!body || typeof body.data !== "object" || body.data === null || (body.id && !UUID_RE.test(body.id))) {
+      return json({ error: "Bad request" }, 400);
+    }
+    const row = { name, data: body.data, updated_at: new Date().toISOString() };
+    const out = body.id
+      ? await supabase(env, `deals?id=eq.${body.id}&select=id`, { method: "PATCH", body: row, prefer: "return=representation" })
+      : await supabase(env, "deals?select=id", { method: "POST", body: row, prefer: "return=representation" });
+    if (!out?.length) return json({ error: "Deal not found" }, 404);
+    return json({ id: out[0].id });
+  }
+  return json({ error: "Method not allowed" }, 405);
 }
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(pingSupabase());
+    // Marks new YNAB card credits used, and the read also keeps the free
+    // Supabase project from pausing after a week with no traffic.
+    ctx.waitUntil(syncClaims(env, "https://dashboard.local").catch(() => {}));
     // Cron requests have no origin; ASSETS only needs some absolute URL.
     const data = await buildNetWorth(env, "https://dashboard.local");
     if (data.ynab.ok) await recordSnapshot(env, data);
@@ -314,13 +481,14 @@ export default {
       }
     }
 
-    if (url.pathname === "/api/card-credits") {
+    if (url.pathname === "/api/claims" || url.pathname === "/api/deals") {
       try {
-        return await cardCreditsResponse(env);
+        if (url.pathname === "/api/deals") return await dealsResponse(request, env, url);
+        if (request.method === "POST") return await saveClaims(request, env, url.origin);
+        if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+        return json(await syncClaims(env, url.origin));
       } catch (e) {
-        return new Response(JSON.stringify({ ok: false, error: String(e.message || e), credits: [] }), {
-          status: 500, headers: { "Content-Type": "application/json" },
-        });
+        return json({ error: String(e.message || e) }, 500);
       }
     }
 

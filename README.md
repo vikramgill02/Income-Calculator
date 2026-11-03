@@ -80,15 +80,13 @@ Only pre-tax 403(b) is tracked; Roth/after-tax contributions are excluded. A `pr
 
 ## Card claims
 
-Which credits you've used is stored in Supabase, in the `card_claims` table: one row per benefit per period (`2026-03`, `2026-Q4`, `2026-H1`, `2026`, or `once`), with `claimed` true or false.
+Which credits you've used is stored in Supabase, in the `card_claims` table: one row per benefit per period (`2026-03`, `2026-Q4`, `2026-H1`, `2026`, or `once`), with `claimed` true or false. The site password is the only login: once a device is unlocked it can mark credits.
 
-- **Tap to mark.** Signed in, tap any month/quarter chip on a card's sub-tab to flip it, or *Used* on the *Claim now* list. It saves straight away and shows on every device you're signed in on.
-- **YNAB fills it in.** `/api/card-credits` (in `worker.js`, behind the password) lists inflows on credit-card accounts in YNAB for this year and last. The page marks a period used when a credit's bank wording contains the benefit's `match` text, and records the amount. It runs each time you open Cards.
+- **Tap to mark.** On a card's sub-tab, tap any month/quarter chip to flip it, or tap *Used* on the *Claim now* list. It saves straight away and shows on every device.
+- **YNAB fills it in.** `/api/claims` (in `worker.js`) reads statement credits on credit-card accounts in YNAB for this year and last. When a credit's bank wording contains a benefit's `match` text, that period is marked used and the amount recorded. This runs each time Cards loads and nightly from the cron, which also keeps the free Supabase project from pausing.
 - **Un-marking sticks.** Tapping a used period off saves `claimed = false`, so a YNAB credit won't mark it again.
-- **Signed out**, the page still shows what YNAB found but can't save anything.
+- **Read-only fallback.** If the database can't be reached, the page still shows what YNAB found, says *Read-only*, and taps are off.
 - **Asking Claude.** With the Supabase connector, Claude can answer questions straight from this table (e.g. "which credits did I leave unused in Q3?").
-
-The worker's nightly cron also makes one tiny read from Supabase, because free projects pause after a week with no traffic.
 
 ## Property tab — how the numbers are calculated
 
@@ -134,32 +132,17 @@ deal loses more than the cash put in, since a compound rate is undefined there.
 
 ## Supabase setup
 
-Card claims and saved deals sync through Supabase (project
-`Income-Calculator`). It's switched on by two values near the top of the
-`Supabase (cloud data)` block in [`index.html`](./index.html):
+Card claims and saved deals live in the Supabase project `Income-Calculator`. Only `worker.js` talks to it, so the browser never holds a database key:
 
-```js
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
-```
-
-Left blank, every page still works with no sign-in prompt and no
-cloud saving. To set up a fresh project:
-
-1. Create a free project at [supabase.com](https://supabase.com).
-2. Run [`supabase-setup.sql`](./supabase-setup.sql) in **SQL Editor → New query**.
-3. Copy the **Project URL** and the **anon / public** key from
-   **Project Settings → API** into the two constants above.
-
-The anon key is designed to be published; Row Level Security is what confines
-each account to its own rows. Never paste the `service_role` key here — it
-bypasses those policies.
+- **`SUPABASE_SECRET_KEY`** — a secret on the `dashboard` Worker (Settings → Variables and Secrets). Copy it from Supabase → Project Settings → API Keys → *Secret keys* (an older `service_role` key works too). Without it, Cards is read-only and saved deals are off.
+- The tables have row-level security on, no policies, and no grants for the public roles, so the publishable/anon key can't read or write them. The secret key bypasses that, which is why it stays on the Worker.
+- To rebuild from scratch, run [`supabase-setup.sql`](./supabase-setup.sql) in **SQL Editor → New query**. The project URL is set at the top of the *Cloud data* section in `worker.js`.
 
 ## Property tab — saved deals
 
 The in-progress deal is cached in the browser (`localStorage`), so switching
 tabs or reloading never loses it. Named deals sync across devices through
-Supabase once you sign in (the same account as the Cards tab).
+Supabase (`/api/deals` in `worker.js`), behind the same site password.
 
 ## Property tab — reading the charts
 

@@ -55,10 +55,12 @@ check "no cookie -> login" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/
 check "login keeps the page" "/cards" "$(curl -s -o /dev/null -w '%{redirect_url}' -d 'password=smoke-test&next=/cards' "$BASE/__login" | sed "s#$BASE##")"
 check "login refuses other sites" "/" "$(curl -s -o /dev/null -w '%{redirect_url}' -d 'password=smoke-test&next=//evil.example' "$BASE/__login" | sed "s#$BASE##")"
 check "/api/version answers" 200 "$(status /api/version)"
-# No YNABKEY locally, so it should answer with an empty list rather than fail.
-check "/api/card-credits answers JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/api/card-credits" | grep -q '"credits":\[' && echo yes || echo no)"
-check "/api/card-credits is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/card-credits")"
-
+# No YNABKEY or SUPABASE_SECRET_KEY locally: claims answer read-only, deals refuse.
+check "/api/claims answers read-only" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/api/claims" | grep -q '"saving":false' && echo yes || echo no)"
+check "/api/claims is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/claims")"
+check "/api/claims POST without key" 503 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{}' "$BASE/api/claims")"
+check "/api/deals without key" 503 "$(status /api/deals)"
+check "/api/deals is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/deals")"
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || { echo "--- wrangler log ---"; tail -20 "$LOG"; exit 1; }

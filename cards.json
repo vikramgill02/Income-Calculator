@@ -1,5 +1,4 @@
 {
-  "last_updated": "2026-11-02",
   "year": 2026,
   "cards": [
     {
@@ -17,18 +16,7 @@
           "per": 25,
           "auto": true,
           "detail": "Disney+ paid monthly — credit posts automatically.",
-          "match": "Platinum Digital Entertainment Credit",
-          "claimed": [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09"
-          ]
+          "match": "Platinum Digital Entertainment Credit"
         },
         {
           "id": "plat-uber-cash",
@@ -36,19 +24,7 @@
           "value": 200,
           "cadence": "monthly",
           "per": 15,
-          "detail": "$15/mo + $20 bonus in December. Expires end of each month.",
-          "claimed": [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09",
-            "2026-10"
-          ]
+          "detail": "$15/mo + $20 bonus in December. Expires end of each month."
         },
         {
           "id": "plat-walmart",
@@ -58,18 +34,7 @@
           "per": 12.95,
           "auto": true,
           "detail": "Membership paid monthly — credit reimburses it automatically.",
-          "match": "Platinum Walmart+ Credit",
-          "claimed": [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09"
-          ]
+          "match": "Platinum Walmart+ Credit"
         },
         {
           "id": "plat-resy",
@@ -78,13 +43,7 @@
           "cadence": "quarterly",
           "per": 100,
           "detail": "US Resy restaurants + Resy-booked reservations.",
-          "match": "Platinum Resy Credit",
-          "claimed": [
-            "2026-Q1",
-            "2026-Q2",
-            "2026-Q3",
-            "2026-Q4"
-          ]
+          "match": "Platinum Resy Credit"
         },
         {
           "id": "plat-lulu",
@@ -93,13 +52,7 @@
           "cadence": "quarterly",
           "per": 75,
           "detail": "US Lululemon stores and lululemon.com.",
-          "match": "Platinum Lululemon Credit",
-          "claimed": [
-            "2026-Q1",
-            "2026-Q2",
-            "2026-Q3",
-            "2026-Q4"
-          ]
+          "match": "Platinum Lululemon Credit"
         },
         {
           "id": "plat-hotel",
@@ -108,11 +61,7 @@
           "cadence": "semiannual",
           "per": 300,
           "detail": "Fine Hotels + Resorts or The Hotel Collection, 2+ night stay, prepaid via Amex Travel.",
-          "match": "Platinum Hotel Credit",
-          "claimed": [
-            "2026-H1",
-            "2026-H2"
-          ]
+          "match": "Platinum Hotel Credit"
         },
         {
           "id": "plat-saks",
@@ -121,10 +70,7 @@
           "cadence": "annual",
           "per": 50,
           "detail": "Jan-Jun window only - no second-half credit on this account.",
-          "match": "Platinum Saks Credit",
-          "claimed": [
-            "2026"
-          ]
+          "match": "Platinum Saks Credit"
         },
         {
           "id": "plat-uber-one",
@@ -134,9 +80,6 @@
           "per": 120,
           "detail": "Membership active. Renews Oct 15 annually.",
           "match": "Platinum Uber One Credit",
-          "claimed": [
-            "2026"
-          ],
           "auto": true
         },
         {
@@ -146,10 +89,7 @@
           "cadence": "annual",
           "per": 200,
           "detail": "Incidental fees (bags, seats, lounge day passes) on one pre-selected airline.",
-          "match": "Airline Fee Reimbursement",
-          "claimed": [
-            "2026"
-          ]
+          "match": "Airline Fee Reimbursement"
         },
         {
           "id": "plat-oura",
@@ -158,10 +98,7 @@
           "cadence": "annual",
           "per": 200,
           "detail": "Oura Ring hardware and membership.",
-          "match": "Platinum Oura Ring Credit",
-          "claimed": [
-            "2026"
-          ]
+          "match": "Platinum Oura Ring Credit"
         },
         {
           "id": "plat-clear",
@@ -171,9 +108,6 @@
           "per": 199,
           "detail": "Covers full CLEAR Plus annual membership.",
           "match": "Clear Plus Credit",
-          "claimed": [
-            "2026"
-          ],
           "auto": true
         },
         {
@@ -183,9 +117,6 @@
           "cadence": "multiyear",
           "per": 120,
           "detail": "Global Entry + TSA PreCheck already active. Renews every 4 years.",
-          "claimed": [
-            "once"
-          ],
           "auto": true
         }
       ],
@@ -214,19 +145,7 @@
           "value": 120,
           "cadence": "monthly",
           "per": 10,
-          "detail": "US Uber rides & Uber Eats. Card must be selected in Uber app.",
-          "claimed": [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09",
-            "2026-10"
-          ]
+          "detail": "US Uber rides & Uber Eats. Card must be selected in Uber app."
         },
         {
           "id": "gold-dining",
@@ -235,18 +154,7 @@
           "cadence": "monthly",
           "per": 10,
           "detail": "Grubhub, Five Guys, Goldbelly, Wine.com, Milk Bar. Enrollment required.",
-          "match": "AMEX Dining Credit",
-          "claimed": [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-09",
-            "2026-10"
-          ]
+          "match": "AMEX Dining Credit"
         },
         {
           "id": "gold-dunkin",
@@ -255,19 +163,7 @@
           "cadence": "monthly",
           "per": 7,
           "detail": "$7/mo at Dunkin' on purchases of $7+. Enrollment required.",
-          "match": "AMEX Dunkin' Credit",
-          "claimed": [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-            "2026-05",
-            "2026-06",
-            "2026-07",
-            "2026-08",
-            "2026-09",
-            "2026-10"
-          ]
+          "match": "AMEX Dunkin' Credit"
         },
         {
           "id": "gold-resy",
@@ -276,10 +172,7 @@
           "cadence": "semiannual",
           "per": 50,
           "detail": "US Resy restaurants. $50 Jan–Jun, $50 Jul–Dec.",
-          "match": "AMEX Resy Credit",
-          "claimed": [
-            "2026-H1"
-          ]
+          "match": "AMEX Resy Credit"
         }
       ],
       "perks": [
@@ -306,9 +199,6 @@
           "cadence": "annual",
           "per": 300,
           "detail": "Capital One Travel bookings. Resets on card anniversary (Sep 2), not calendar year.",
-          "claimed": [
-            "2026"
-          ],
           "expires": "2027-09-01"
         },
         {
@@ -318,9 +208,6 @@
           "cadence": "annual",
           "per": 100,
           "detail": "10,000 miles deposit automatically each account anniversary. Nothing to do — first one lands Sep 2, 2027.",
-          "claimed": [
-            "2026"
-          ],
           "auto": true
         },
         {
@@ -329,8 +216,7 @@
           "value": 120,
           "cadence": "multiyear",
           "per": 120,
-          "detail": "Already covered by Amex Platinum — save this one for your next renewal.",
-          "claimed": []
+          "detail": "Already covered by Amex Platinum — save this one for your next renewal."
         }
       ],
       "perks": [
