@@ -40,7 +40,7 @@ for p in / /networth/accounts /networth/loans /dashboard /dashboard/employers /d
 done
 
 echo "Files still load as files:"
-for f in /cards.json /paystubs.json /networth.json /favicon.png /logos/gc-seal.png; do
+for f in /cards.json /paystubs.json /networth.json /favicon.png /logos/gc-seal.png /logos/gill-co-wordmark.png; do
   check "$f" 200 "$(status "$f")"
 done
 check "/cards.json is JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/cards.json" | head -c1 | grep -q '{' && echo yes || echo no)"
