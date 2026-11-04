@@ -266,6 +266,10 @@ details.fine[open] summary::before { content: "− "; }
   letter-spacing: 0.01em;
 }
 .wordmark { display: flex; align-items: center; gap: 12px; }
+/* The logo is the home link (Net Worth). */
+a.wordmark { text-decoration: none; -webkit-tap-highlight-color: transparent; transition: opacity 0.13s ease; }
+a.wordmark:hover { opacity: 0.78; }
+a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
 .wordmark .logo { height: 28px; width: auto; display: block; }
 .wordmark em { color: var(--accent); font-style: italic; }
 .topnav-tabs { display: flex; gap: 6px; }
@@ -493,7 +497,9 @@ function TabBar({ view }) {
     <>
       <header className="topnav">
         <div className="topnav-inner">
-          <div className="wordmark"><img src="/logos/gill-co-wordmark.png" alt="Gill &amp; Co." className="logo" /></div>
+          <Link to={pathFor("worth", "")} className="wordmark" aria-label="Gill &amp; Co. home: Net Worth"
+            onNavigate={window.location.pathname === "/" ? () => window.scrollTo({ top: 0, behavior: "smooth" }) : undefined}>
+            <img src="/logos/gill-co-wordmark.png" alt="" className="logo" /></Link>
           <nav className="topnav-tabs">
             {NAV.map(([key, label]) => (
               <Link key={key} to={pathFor(key, "")} className={tab === key ? "active" : ""}

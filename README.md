@@ -2,7 +2,7 @@
 
 # Income-Calculator
 
-Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Four tabs, in this order (opens on Net Worth); Pay Calc and Property live under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
+Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Four tabs, in this order (opens on Net Worth, and the Gill & Co. logo in the top-left goes back there); Pay Calc and Property live under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
 
 Every page and sub-tab has its own address, so the back button, refresh, bookmarks and home-screen shortcuts all land where you expect:
 
