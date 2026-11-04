@@ -3,6 +3,7 @@
 // set, every request is refused, so the site can't be exposed by accident.
 
 const COOKIE = "ic_auth";
+const PUBLIC_FILES = new Set(["/favicon.png", "/apple-touch-icon.png", "/icon.png", "/icon-192.png", "/manifest.json"]);
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 async function tokenFor(password) {
@@ -36,6 +37,7 @@ function loginPage(error, next = "/") {
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#08080a" />
 <title>Locked</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
 <style>
   :root { color-scheme: dark; }
   body { margin: 0; min-height: 100vh; display: grid; place-items: center;
@@ -471,7 +473,10 @@ export default {
       });
     }
 
-    if (readCookie(request, COOKIE) !== expected) {
+    // Icons and the manifest load without the password: browsers fetch the
+    // manifest without cookies, and iOS may fetch the home-screen icon the
+    // same way. They hold only the G&C mark and the app name.
+    if (readCookie(request, COOKIE) !== expected && !PUBLIC_FILES.has(url.pathname)) {
       return html(loginPage("", safeNext(url.pathname + url.search)), 401);
     }
 
