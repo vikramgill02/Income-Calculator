@@ -14,6 +14,7 @@ Every page and sub-tab has its own address, so the back button, refresh, bookmar
 | Cards | `/cards` · `/cards/<card id from cards.json>` (e.g. `/cards/amex-gold`) |
 | Tools | `/tools` (a list of misc tools) |
 | Property (in Tools) | `/property` · `/property/projections` |
+| Travel (in Tools) | `/travel` |
 
 It is still one `index.html`: `not_found_handling: "single-page-application"` in `wrangler.jsonc` serves it for any address that isn't a file, and the app picks the page from the URL. HTML is sent with `Cache-Control: no-cache` so a new deploy shows up immediately. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
 
@@ -21,10 +22,12 @@ It is still one `index.html`: `not_found_handling: "single-page-application"` in
 - **Dashboard** — year-to-date income in four sub-tabs: *Overview* (gross / taxes / net / 403(b) and the year-end projection), *Employers* (split by employer with logos), *Monthly* (bar chart with projections) and *Paystubs* (filterable table). Data lives in [`paystubs.json`](./paystubs.json).
 - **Pay Calc** (under Tools) — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $78.31/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× (~$117.47/hr).
 - **Cards** — credit card credits & perks for Amex Platinum, Amex Gold, and Capital One Venture X: a *Claim now* list of open credits by deadline, then one sub-tab per card. Card and benefit definitions live in [`cards.json`](./cards.json); which credits you've used lives in Supabase and fills in from YNAB on its own — see [Card claims](#card-claims).
-- **Tools** — a small page listing tools that don't need their own tab: Pay Calc and Property.
+- **Tools** — a small page listing tools that don't need their own tab: Pay Calc, Property and Travel.
 - **Property** (under Tools) — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
 Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
+
+- **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens.
 
 ## Hosting & password
 
@@ -79,6 +82,17 @@ Only pre-tax 403(b) is tracked; Roth/after-tax contributions are excluded. A `pr
 ```
 
 `cadence` is one of `monthly`, `quarterly`, `semiannual`, `annual`, `multiyear`. `value` is the annual total; `per` is the amount available each period. `auto: true` counts every period that has come round as used (charges the card reimburses on its own, like Disney+). `match` is text from the bank's own name for the statement credit, as it shows in YNAB; leave it out for credits that never post as one (Uber Cash). Which periods are used is **not** stored here — see below.
+
+### `travel.json`
+
+```json
+{ "visited": [{ "name": "Japan", "flag": "🇯🇵", "iso": "392", "continent": "Asia", "note": "",
+                "cities": [{ "name": "Tokyo", "at": [139.69, 35.68] }] }],
+  "bucket":  [{ "name": "Namibia", "flag": "🇳🇦", "iso": "516", "continent": "Africa",
+                "plans": ["Rent a 4x4 truck and drive to Deadvlei"] }] }
+```
+
+`iso` is the country's ISO 3166 numeric code (it's how the globe finds the shape to colour). `at` is `[longitude, latitude]` for the city dot; leave it out and the city is listed but not dotted. Moving a country from `bucket` to `visited` is all it takes to colour it in.
 
 ## Card claims
 

@@ -1,0 +1,42 @@
+{
+  "visited": [
+    { "name": "United States", "flag": "🇺🇸", "iso": "840", "continent": "North America", "cities": [] },
+    { "name": "United Kingdom", "flag": "🇬🇧", "iso": "826", "continent": "Europe", "note": "Jan 2024",
+      "cities": [{ "name": "London", "at": [-0.128, 51.507] }, { "name": "Nottingham", "at": [-1.158, 52.954] }] },
+    { "name": "India", "flag": "🇮🇳", "iso": "356", "continent": "Asia", "note": "As a kid", "cities": [] },
+    { "name": "Spain", "flag": "🇪🇸", "iso": "724", "continent": "Europe",
+      "cities": [{ "name": "Barcelona", "at": [2.173, 41.385] }, { "name": "Mallorca", "at": [2.65, 39.57] }] },
+    { "name": "France", "flag": "🇫🇷", "iso": "250", "continent": "Europe",
+      "cities": [{ "name": "Paris", "at": [2.352, 48.857] }] },
+    { "name": "Morocco", "flag": "🇲🇦", "iso": "504", "continent": "Africa",
+      "cities": [{ "name": "Marrakech", "at": [-7.99, 31.63] }] },
+    { "name": "Italy", "flag": "🇮🇹", "iso": "380", "continent": "Europe",
+      "cities": [{ "name": "Rome", "at": [12.496, 41.903] }] },
+    { "name": "Iceland", "flag": "🇮🇸", "iso": "352", "continent": "Europe",
+      "cities": [{ "name": "Reykjavík", "at": [-21.94, 64.146] }] },
+    { "name": "Mexico", "flag": "🇲🇽", "iso": "484", "continent": "North America",
+      "cities": [{ "name": "Cancún", "at": [-86.85, 21.16] }, { "name": "CDMX", "at": [-99.133, 19.433] }] },
+    { "name": "Netherlands", "flag": "🇳🇱", "iso": "528", "continent": "Europe",
+      "cities": [{ "name": "Amsterdam", "at": [4.9, 52.37] }] },
+    { "name": "Portugal", "flag": "🇵🇹", "iso": "620", "continent": "Europe",
+      "cities": [{ "name": "Lisbon", "at": [-9.139, 38.722] }] },
+    { "name": "Thailand", "flag": "🇹🇭", "iso": "764", "continent": "Asia",
+      "cities": [{ "name": "Phuket", "at": [98.39, 7.88] }, { "name": "Chiang Mai", "at": [98.98, 18.79] }, { "name": "Bangkok", "at": [100.5, 13.756] }] },
+    { "name": "Guatemala", "flag": "🇬🇹", "iso": "320", "continent": "North America",
+      "cities": [{ "name": "Antigua", "at": [-90.734, 14.557] }] },
+    { "name": "Japan", "flag": "🇯🇵", "iso": "392", "continent": "Asia",
+      "cities": [{ "name": "Tokyo", "at": [139.69, 35.68] }, { "name": "Osaka", "at": [135.5, 34.69] }, { "name": "Kyoto", "at": [135.77, 35.01] }, { "name": "Nara", "at": [135.8, 34.685] }] },
+    { "name": "Egypt", "flag": "🇪🇬", "iso": "818", "continent": "Africa",
+      "cities": [{ "name": "Cairo", "at": [31.236, 30.044] }, { "name": "Sharm El Sheikh", "at": [34.33, 27.915] }] },
+    { "name": "Greece", "flag": "🇬🇷", "iso": "300", "continent": "Europe",
+      "cities": [{ "name": "Athens", "at": [23.728, 37.984] }, { "name": "Hydra", "at": [23.47, 37.35] }, { "name": "Agistri", "at": [23.35, 37.7] }] },
+    { "name": "Canada", "flag": "🇨🇦", "iso": "124", "continent": "North America",
+      "cities": [{ "name": "Banff", "at": [-115.57, 51.178] }] },
+    { "name": "Türkiye", "flag": "🇹🇷", "iso": "792", "continent": "Europe",
+      "cities": [{ "name": "Istanbul", "at": [28.979, 41.015] }] }
+  ],
+  "bucket": [
+    { "name": "Namibia", "flag": "🇳🇦", "iso": "516", "continent": "Africa",
+      "plans": ["Rent a 4x4 truck and drive to Deadvlei"] }
+  ]
+}
