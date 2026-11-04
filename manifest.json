@@ -3,8 +3,8 @@
   "short_name": "Gill & Co.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0c0b0a",
-  "theme_color": "#0c0b0a",
+  "background_color": "#f6f1e7",
+  "theme_color": "#f6f1e7",
   "icons": [
     {
       "src": "/icon-192.png",

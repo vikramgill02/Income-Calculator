@@ -51,7 +51,7 @@ for f in /worker.js /wrangler.jsonc /README.md /tests/smoke.sh; do
 done
 
 echo "Password gate:"
-for f in /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json; do
+for f in /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gill-co-wordmark.png; do
   check "$f loads without password" 200 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE$f")"
 done
 check "/cards.json still needs password" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/cards.json")"

@@ -3,7 +3,8 @@
 // set, every request is refused, so the site can't be exposed by accident.
 
 const COOKIE = "ic_auth";
-const PUBLIC_FILES = new Set(["/favicon.png", "/apple-touch-icon.png", "/icon.png", "/icon-192.png", "/manifest.json"]);
+const PUBLIC_FILES = new Set(["/favicon.png", "/apple-touch-icon.png", "/icon.png", "/icon-192.png", "/manifest.json",
+  "/logos/gill-co-wordmark.png"]);
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 async function tokenFor(password) {
@@ -35,23 +36,26 @@ function loginPage(error, next = "/") {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
-<meta name="theme-color" content="#08080a" />
-<title>Locked</title>
+<meta name="theme-color" content="#f6f1e7" />
+<title>Gill &amp; Co.</title>
 <link rel="icon" type="image/png" href="/favicon.png" />
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: light; }
   body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-         background: #08080a; color: #f4f4f5; font: 16px system-ui, -apple-system, sans-serif; }
+         background: #f6f1e7; color: #1f3a2e; font: 16px system-ui, -apple-system, sans-serif; }
   form { width: min(320px, calc(100vw - 32px)); display: grid; gap: 12px; }
-  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
-  input, button { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid #27272a; }
-  input { background: #18181b; color: inherit; }
-  button { background: #f4f4f5; color: #08080a; font-weight: 600; border: 0; cursor: pointer; }
-  p { margin: 0; color: #f87171; font-size: 14px; }
+  .logo { display: block; width: 210px; height: auto; margin: 0 auto 18px; }
+  h1 { font-size: 15px; font-weight: 500; margin: 0 0 2px; color: #66706a; text-align: center; }
+  input, button { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(31,58,46,0.22); }
+  input { background: #fffdf8; color: inherit; }
+  input:focus { outline: 2px solid rgba(31,58,46,0.35); outline-offset: 1px; }
+  button { background: #1f3a2e; color: #f6f1e7; font-weight: 600; border: 0; cursor: pointer; }
+  p { margin: 0; color: #b5483b; font-size: 14px; }
 </style>
 </head><body>
 <form method="POST" action="/__login">
   <input type="hidden" name="next" value="${escapeAttr(next)}" />
+  <img class="logo" src="/logos/gill-co-wordmark.png" alt="Gill &amp; Co." />
   <h1>Enter password</h1>
   <input type="password" name="password" autocomplete="current-password" autofocus required />
   ${error ? `<p>${error}</p>` : ""}
@@ -475,7 +479,8 @@ export default {
 
     // Icons and the manifest load without the password: browsers fetch the
     // manifest without cookies, and iOS may fetch the home-screen icon the
-    // same way. They hold only the G&C mark and the app name.
+    // same way. They hold only the logo, the G&C mark and the app name; the login page
+    // shows the wordmark.
     if (readCookie(request, COOKIE) !== expected && !PUBLIC_FILES.has(url.pathname)) {
       return html(loginPage("", safeNext(url.pathname + url.search)), 401);
     }

@@ -6,7 +6,7 @@
       "name": "Amex Platinum",
       "issuer": "American Express",
       "annual_fee": 895,
-      "color": "#a8b0b8",
+      "color": "#6f7a86",
       "benefits": [
         {
           "id": "plat-digital",
@@ -137,7 +137,7 @@
       "name": "Amex Gold",
       "issuer": "American Express",
       "annual_fee": 325,
-      "color": "#d4a843",
+      "color": "#a8801f",
       "benefits": [
         {
           "id": "gold-uber",
@@ -189,7 +189,7 @@
       "name": "Venture X",
       "issuer": "Capital One",
       "annual_fee": 395,
-      "color": "#4f8ff7",
+      "color": "#2f6fd0",
       "opened": "2026-09-02",
       "benefits": [
         {
