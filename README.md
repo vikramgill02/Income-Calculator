@@ -144,7 +144,8 @@ are flat dollar amounts.
 
 Repairs & maintenance and capital expenditures are deliberately separate lines:
 R&M is ongoing small work, capex is the reserve for big replacements. R&M
-defaults to 0% so it never silently changes a saved deal — set it yourself.
+defaults to 3%. A new deal starts with sale price, rent, county property tax
+and insurance blank (the price slider appears once there's a price).
 A recently renovated property justifies a later replacement date, not a zero
 capex line.
 

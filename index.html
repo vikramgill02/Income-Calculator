@@ -2847,7 +2847,7 @@ const MARKET_NOTES = [
     "Unemployment ~3.1%; steady population growth",
     "Metro median ~$257–269k; plenty of SFR and duplexes under $200k",
     "Rent ~$1,050–1,150; Indiana is very landlord-friendly",
-    "Indiana taxes rentals at a 2% cap — use 2% in the tax rate field, not 0.96%",
+    "Indiana taxes rentals at a 2% cap — enter 2% in the tax rate field",
   ] },
   { city: "Indianapolis, IN", points: [
     "Among the fastest-growing Midwest metros",
@@ -2917,7 +2917,7 @@ function DealTab({ v, set }) {
 
   return (
     <>
-      <PriceSlider value={v.salePrice} onChange={set("salePrice")} />
+      {n(v.salePrice) > 0 && <PriceSlider value={v.salePrice} onChange={set("salePrice")} />}
 
       {d.hasData && (
         <div className="prop-kpis">
@@ -3159,10 +3159,10 @@ function ProjectionsTab({ v, set }) {
 }
 
 const PROP_DEFAULTS = {
-  salePrice: 150000, misc: "", closingCostPct: "4", rehab: "",
-  rent: 1800, propTaxRate: "0.96", interestRate: "7.25", downPct: "25",
-  insurance: 49.58, hoa: "", utilities: "", lawyer: "",
-  mgmtPct: "8", repairsPct: "0", capexPct: "4", vacancyPct: "5",
+  salePrice: "", misc: "", closingCostPct: "4", rehab: "",
+  rent: "", propTaxRate: "", interestRate: "7.25", downPct: "25",
+  insurance: "", hoa: "", utilities: "", lawyer: "",
+  mgmtPct: "8", repairsPct: "3", capexPct: "4", vacancyPct: "5",
   rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
 };
 
