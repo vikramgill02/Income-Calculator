@@ -435,7 +435,15 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 }
 .globe-wrap { width: 100%; max-width: 460px; margin: 0 auto; aspect-ratio: 1 / 1; position: relative; }
 /* pan-y: on a phone a vertical swipe still scrolls the page; sideways turns the globe. */
-.globe-wrap canvas { display: block; touch-action: pan-y; cursor: grab; }
+.globe-wrap canvas { display: block; touch-action: pan-y; cursor: grab; border-radius: 14px; }
+.globe-zoom { position: absolute; right: 4px; bottom: 4px; display: flex; flex-direction: column; gap: 8px; }
+.globe-zoom button {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; padding: 0; cursor: pointer;
+  border: 1px solid rgba(31,58,46,0.18); background: rgba(255,253,248,0.94); color: #1f3a2e;
+  font: 400 21px/1 var(--font); box-shadow: 0 1px 3px rgba(31,58,46,0.12); -webkit-tap-highlight-color: transparent;
+}
+.globe-zoom button:hover:not(:disabled) { border-color: rgba(31,58,46,0.45); }
+.globe-zoom button:disabled { opacity: 0.4; cursor: default; }
 .globe-wrap canvas:active { cursor: grabbing; }
 .globe-msg {
   position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px;
@@ -3546,6 +3554,10 @@ const GEO_LIBS = [
 ];
 // Country ids are ISO 3166 numeric codes, which is what `iso` in travel.json uses.
 const WORLD_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json";
+const WORLD_50M_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json";
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 12;
+const ZOOM_DETAIL = 2; // at 2x and closer, draw the finer map
 const WORLD_COUNTRIES = 195;
 const TRAVEL_COLORS = {
   ocean: "#d9e4de", land: "#f3ecdc", border: "#fffdf8",
@@ -3564,16 +3576,26 @@ const loadScript = (src) => {
   return loadedScripts[src];
 };
 
+const fetchCountries = (url) => fetch(url)
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error("couldn't load the map"))))
+  .then((topo) => topojson.feature(topo, topo.objects.countries).features);
+
 let worldPromise = null;
 function loadWorld() {
   if (!worldPromise) {
     worldPromise = GEO_LIBS.reduce((p, src) => p.then(() => loadScript(src)), Promise.resolve())
-      .then(() => fetch(WORLD_URL))
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("couldn't load the map"))))
-      .then((topo) => topojson.feature(topo, topo.objects.countries).features)
+      .then(() => fetchCountries(WORLD_URL))
       .catch((e) => { worldPromise = null; throw e; });
   }
   return worldPromise;
+}
+
+/* The 1:50m map (~750 KB) has small countries and islands the 1:110m one
+   drops. It loads only once you zoom in. */
+let detailPromise = null;
+function loadDetail() {
+  if (!detailPromise) detailPromise = fetchCountries(WORLD_50M_URL).catch((e) => { detailPromise = null; throw e; });
+  return detailPromise;
 }
 
 /* Where to turn the globe for a country: the middle of its cities when we
@@ -3589,11 +3611,37 @@ function Globe({ features, visited, bucket, selected, onSelect }) {
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
   const [size, setSize] = useState(0);
-  // Rotation and gesture state change every frame, so they live in a ref
-  // rather than React state. Start over the Atlantic, tilted a little.
-  const st = useRef({ rot: [30, -22, 0], drag: null, anim: null, idleUntil: 0, proj: null });
+  const [zoomed, setZoomed] = useState(false);
+  // Rotation, zoom and gesture state change every frame, so they live in a
+  // ref rather than React state. Start over the Atlantic, tilted a little.
+  const st = useRef({ rot: [30, -22, 0], k: 1, drag: null, pinch: null, pointers: new Map(),
+    anim: null, idleUntil: 0, proj: null, drawn: "" });
+  const detailRef = useRef(null);
   const live = useRef({});
   live.current = { visited, bucket, selected, onSelect };
+
+  // The finer map takes over once you're zoomed in far enough to see the difference.
+  const shapes = () => (st.current.k >= ZOOM_DETAIL && detailRef.current) || features;
+
+  const preloadDetail = (k) => {
+    if (k < ZOOM_DETAIL * 0.75 || detailRef.current) return;
+    loadDetail().then((f) => { detailRef.current = f; st.current.drawn = ""; }).catch(() => {});
+  };
+  const applyZoom = useCallback((k) => {
+    const s = st.current;
+    s.k = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, k));
+    preloadDetail(s.k);
+    setZoomed(s.k > 1.01);
+  }, []);
+
+  // Buttons zoom smoothly; pinch and scroll follow your fingers directly.
+  const animateZoom = (k) => {
+    const s = st.current;
+    const to = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, k));
+    s.anim = { from: [s.rot[0], s.rot[1], s.k], d: [0, 0, to - s.k], t0: performance.now(), ms: 350 };
+    s.idleUntil = performance.now() + 2500;
+    preloadDetail(to);
+  };
 
   useEffect(() => {
     const ro = new ResizeObserver(([e]) => setSize(Math.floor(e.contentRect.width)));
@@ -3617,38 +3665,45 @@ function Globe({ features, visited, bucket, selected, onSelect }) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const r = size / 2 - 1.5;
     const c = size / 2;
-    const proj = d3.geoOrthographic().scale(r).translate([c, c]).clipAngle(90).precision(0.6);
+    const proj = d3.geoOrthographic().translate([c, c]).clipAngle(90)
+      .clipExtent([[-2, -2], [size + 2, size + 2]]).precision(0.6);
     st.current.proj = proj;
-    const path = d3.geoPath(proj, ctx).pointRadius(Math.max(1.8, size / 200));
+    st.current.drawn = "";
+    const path = d3.geoPath(proj, ctx);
     const grat = d3.geoGraticule10();
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const ocean = ctx.createRadialGradient(c - r * 0.35, c - r * 0.4, r * 0.1, c, c, r);
-    ocean.addColorStop(0, "#e9efea");
-    ocean.addColorStop(1, TRAVEL_COLORS.ocean);
-    const shade = ctx.createRadialGradient(c - r * 0.35, c - r * 0.4, r * 0.2, c, c, r * 1.02);
-    shade.addColorStop(0, "rgba(255,255,255,0.18)");
-    shade.addColorStop(0.65, "rgba(255,255,255,0)");
-    shade.addColorStop(1, "rgba(31,58,46,0.16)");
-
     const draw = () => {
       const { visited: v, bucket: b, selected: sel } = live.current;
+      const k = st.current.k;
+      const R = r * k;
+      const lit = [c - R * 0.35, c - R * 0.4];
+      const ocean = ctx.createRadialGradient(lit[0], lit[1], R * 0.1, c, c, R);
+      ocean.addColorStop(0, "#e9efea");
+      ocean.addColorStop(1, TRAVEL_COLORS.ocean);
+      const shade = ctx.createRadialGradient(lit[0], lit[1], R * 0.2, c, c, R * 1.02);
+      shade.addColorStop(0, "rgba(255,255,255,0.18)");
+      shade.addColorStop(0.65, "rgba(255,255,255,0)");
+      shade.addColorStop(1, "rgba(31,58,46,0.16)");
+      const list = shapes();
+
       ctx.clearRect(0, 0, size, size);
       ctx.beginPath(); path({ type: "Sphere" }); ctx.fillStyle = ocean; ctx.fill();
       ctx.beginPath(); path(grat); ctx.strokeStyle = "rgba(31,58,46,0.07)"; ctx.lineWidth = 0.6; ctx.stroke();
-      ctx.lineWidth = 0.6;
+      ctx.lineWidth = k > 2 ? 0.8 : 0.6;
       ctx.strokeStyle = TRAVEL_COLORS.border;
-      for (const f of features) {
+      for (const f of list) {
         ctx.beginPath(); path(f);
         ctx.fillStyle = f.id === sel ? TRAVEL_COLORS.selected : v[f.id] ? TRAVEL_COLORS.visited
           : b[f.id] ? TRAVEL_COLORS.bucket : TRAVEL_COLORS.land;
         ctx.fill(); ctx.stroke();
       }
-      const selFeature = sel && features.find((f) => f.id === sel);
+      const selFeature = sel && list.find((f) => f.id === sel);
       if (selFeature) {
         ctx.beginPath(); path(selFeature);
         ctx.strokeStyle = "#e3c27a"; ctx.lineWidth = 1.4; ctx.stroke();
       }
+      path.pointRadius(Math.max(1.8, size / 200) * Math.min(2, Math.sqrt(k)));
       ctx.beginPath(); path(cities);
       ctx.fillStyle = TRAVEL_COLORS.city; ctx.fill();
       ctx.strokeStyle = "rgba(31,58,46,0.55)"; ctx.lineWidth = 0.8; ctx.stroke();
@@ -3667,71 +3722,130 @@ function Globe({ features, visited, bucket, selected, onSelect }) {
         const t = Math.min(1, (now - s.anim.t0) / s.anim.ms);
         const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         s.rot = [s.anim.from[0] + s.anim.d[0] * e, s.anim.from[1] + s.anim.d[1] * e, 0];
-        if (t >= 1) s.anim = null;
-      } else if (!s.drag && !live.current.selected && !reduceMotion && now > s.idleUntil) {
-        s.rot = [s.rot[0] + dt * 0.008, s.rot[1], 0]; // 8° a second
+        s.k = s.anim.from[2] + s.anim.d[2] * e;
+        if (t >= 1) { s.anim = null; applyZoom(s.k); }
+      } else if (!s.drag && !s.pinch && !live.current.selected && !reduceMotion && s.k <= 1.15 && now > s.idleUntil) {
+        s.rot = [s.rot[0] + dt * 0.008, s.rot[1], 0]; // 8° a second, only when zoomed out
       }
-      proj.rotate(s.rot);
-      draw();
+      // Only repaint when something moved: the finer map is too heavy to
+      // redraw 60 times a second for nothing.
+      const key = `${s.rot[0].toFixed(3)},${s.rot[1].toFixed(3)},${s.k.toFixed(4)},${live.current.selected},${!!detailRef.current}`;
+      if (key !== s.drawn) {
+        proj.rotate(s.rot).scale(r * s.k);
+        draw();
+        s.drawn = key;
+      }
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [size, features, cities]);
+  }, [size, features, cities, applyZoom]);
 
-  // Turn the chosen country to face you.
+  // Turn the chosen country to face you, keeping the zoom you're at.
   useEffect(() => {
     if (!selected) { st.current.idleUntil = performance.now() + 600; return; }
     const feature = features.find((f) => f.id === selected);
     const at = focusPoint(visited[selected] || bucket[selected], feature);
     if (!at) return;
     const s = st.current;
-    const from = [s.rot[0], s.rot[1]];
+    const from = [s.rot[0], s.rot[1], s.k];
     const to = [-at[0], Math.max(-55, Math.min(55, -at[1]))];
     const dLon = ((to[0] - from[0]) % 360 + 540) % 360 - 180;
-    s.anim = { from, d: [dLon, to[1] - from[1]], t0: performance.now(), ms: 900 };
+    s.anim = { from, d: [dLon, to[1] - from[1], 0], t0: performance.now(), ms: 900 };
   }, [selected, features, visited, bucket]);
+
+  // Scroll wheel / trackpad pinch over the globe zooms it. React's onWheel is
+  // passive, so this is a native listener that can stop the page scrolling.
+  useEffect(() => {
+    const el = canvasRef.current;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+      st.current.anim = null;
+      st.current.idleUntil = performance.now() + 2500;
+      applyZoom(st.current.k * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [applyZoom]);
 
   const pointer = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return [e.clientX - rect.left, e.clientY - rect.top];
   };
+  const twoFingers = () => {
+    const [a, b] = [...st.current.pointers.values()];
+    return Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+  };
   const onPointerDown = (e) => {
+    const s = st.current;
     const [x, y] = pointer(e);
-    st.current.drag = { x, y, rot: [...st.current.rot], moved: false };
-    st.current.anim = null;
-    canvasRef.current.setPointerCapture(e.pointerId);
+    s.pointers.set(e.pointerId, [x, y]);
+    s.anim = null;
+    try { canvasRef.current.setPointerCapture(e.pointerId); } catch (_) { /* pointer already gone */ }
+    if (s.pointers.size === 2) {
+      s.pinch = { dist: twoFingers(), k: s.k };
+      if (s.drag) s.drag.moved = true; // a pinch is never a tap
+    } else if (s.pointers.size === 1) {
+      s.drag = { x, y, rot: [...s.rot], moved: false };
+    }
   };
   const onPointerMove = (e) => {
     const s = st.current;
-    if (!s.drag) return;
+    if (!s.pointers.has(e.pointerId)) return;
     const [x, y] = pointer(e);
+    s.pointers.set(e.pointerId, [x, y]);
+    if (s.pinch && s.pointers.size >= 2) { applyZoom(s.pinch.k * twoFingers() / s.pinch.dist); return; }
+    if (!s.drag) return;
     const dx = x - s.drag.x;
     const dy = y - s.drag.y;
     if (Math.hypot(dx, dy) > 5) s.drag.moved = true;
     if (!s.drag.moved) return;
-    const k = 57.3 / (size / 2); // degrees per pixel at the centre
-    s.rot = [s.drag.rot[0] + dx * k, Math.max(-70, Math.min(70, s.drag.rot[1] - dy * k)), 0];
+    const deg = 57.3 / ((size / 2) * s.k); // degrees per pixel at the centre: slower when zoomed in
+    s.rot = [s.drag.rot[0] + dx * deg, Math.max(-80, Math.min(80, s.drag.rot[1] - dy * deg)), 0];
   };
   const onPointerUp = (e) => {
     const s = st.current;
+    s.pointers.delete(e.pointerId);
+    s.idleUntil = performance.now() + 2500;
+    if (s.pinch) {
+      // One finger lifted mid-pinch: carry on dragging with the other from where it is.
+      s.pinch = null;
+      const rest = [...s.pointers.values()][0];
+      s.drag = rest ? { x: rest[0], y: rest[1], rot: [...s.rot], moved: true } : null;
+      return;
+    }
     const drag = s.drag;
     s.drag = null;
-    s.idleUntil = performance.now() + 2500;
     if (!drag || drag.moved || !s.proj) return;
     const [x, y] = pointer(e);
     const c = size / 2;
-    if (Math.hypot(x - c, y - c) > c) return live.current.onSelect(null);
+    if (Math.hypot(x - c, y - c) > (c - 1.5) * s.k) return live.current.onSelect(null);
     const at = s.proj.invert([x, y]);
-    const hit = at && features.find((f) => d3.geoContains(f, at));
+    const hit = at && shapes().find((f) => d3.geoContains(f, at));
     live.current.onSelect(hit ? (hit.id === live.current.selected ? null : hit.id) : null);
+  };
+  const onPointerCancel = (e) => {
+    const s = st.current;
+    s.pointers.delete(e.pointerId);
+    if (!s.pointers.size) { s.drag = null; s.pinch = null; }
+    s.idleUntil = performance.now() + 2500;
   };
 
   return (
     <div ref={wrapRef} className="globe-wrap">
       <canvas ref={canvasRef} role="img" aria-label={`Globe with ${Object.keys(visited).length} visited countries filled in`}
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-        onPointerCancel={() => { st.current.drag = null; st.current.idleUntil = performance.now() + 2500; }} />
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} />
+      <div className="globe-zoom">
+        <button type="button" aria-label="Zoom in" onClick={() => animateZoom(st.current.k * 1.8)}>+</button>
+        <button type="button" aria-label="Zoom out" disabled={!zoomed} onClick={() => animateZoom(st.current.k / 1.8)}>−</button>
+        {zoomed && (
+          <button type="button" aria-label="Zoom all the way out" onClick={() => animateZoom(1)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -3754,7 +3868,7 @@ function PlaceDetail({ iso, place, status, name, onClose }) {
           </span>
         </div>
         <p style={{ fontSize: 12.5, color: "#6e776f", lineHeight: 1.6, margin: "20px 0 0" }}>
-          Drag to turn the globe. Tap a country, on the globe or in the list below, to see where you went.
+          Drag to turn the globe; pinch, scroll or use + and − to zoom. Tap a country, on the globe or in the list below, to see where you went.
         </p>
       </div>
     );
