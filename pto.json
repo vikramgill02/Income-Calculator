@@ -23,7 +23,7 @@
     { "id": "iceland-2027", "name": "Iceland", "on": false, "maybe": true,
       "days": ["2027-06-07", "2027-06-08"] },
     { "id": "oct-2027", "name": "Oct – Nov trip", "on": false, "maybe": true, "start": "2027-10-22", "end": "2027-11-04",
-      "note": "Placeholder nights (3 a week) until the schedule is out; swap in the real ones.",
-      "days": ["2027-10-22", "2027-10-23", "2027-10-24", "2027-10-29", "2027-10-30", "2027-10-31"] }
+      "note": "Nights from the BSN calendar. The Nov 4 night (7 PM) is the day you get back; add it if you won't work it.",
+      "days": ["2027-10-23", "2027-10-24", "2027-10-25", "2027-10-26"] }
   ]
 }
