@@ -2839,6 +2839,78 @@ function StatTile({ label, value, sub, accent }) {
   );
 }
 
+/* Target markets: $100–200k SFR / small multifamily, balanced cash flow +
+   appreciation, landlord-friendly states. Researched Nov 2026 — unemployment
+   is BLS Sep 2026 (US 4.0%); the rest is aggregator data, so verify before buying. */
+const MARKET_NOTES_AS_OF = "Nov 2026";
+const MARKET_NOTES = [
+  { city: "Fort Wayne, IN", tag: "Top pick", points: [
+    "Appreciation +8.5% YoY — led large metros in NAR's Q3 2026 report",
+    "Unemployment ~3.1%; steady population growth",
+    "Metro median ~$257–269k; plenty of SFR and duplexes under $200k",
+    "Rent ~$1,050–1,150; Indiana is very landlord-friendly",
+    "Indiana taxes rentals at a 2% cap — use 2% in the tax rate field, not 0.96%",
+  ] },
+  { city: "Indianapolis, IN", points: [
+    "Among the fastest-growing Midwest metros",
+    "Unemployment 3.4%",
+    "Appreciation soft now (flat to +1%), so entry prices are good; forecasts 3–6%",
+    "Avg value ~$224k; lots of $150–200k SFR and doubles",
+    "Same 2% rental tax cap as Fort Wayne",
+  ] },
+  { city: "Kansas City, MO-KS", points: [
+    "Unemployment 3.4%; population +0.5–0.8%/yr",
+    "Appreciation ~+4% YoY — the most balanced and least volatile of the five",
+    "Avg value ~$240k; rent ~$1,300",
+    "KCMO city limits add tenant protections (right to counsel) — suburbs and the Kansas side are friendlier",
+  ] },
+  { city: "Oklahoma City, OK", points: [
+    "Unemployment 3.7%; strong in-migration",
+    "Appreciation +3–4%/yr; median ~$269k with lots of SFR under $200k",
+    "Very landlord-friendly: 5-day nonpayment notice, no rent control",
+    "Hail risk keeps insurance among the highest in the US — get quotes before running numbers",
+  ] },
+  { city: "Tulsa, OK", points: [
+    "Unemployment 3.9%; population +0.8%/yr",
+    "Appreciation ~+4.6%; rent growth ~6% (date unclear)",
+    "Cheaper than OKC and one of the best for cash flow",
+    "Same insurance caution as OKC",
+  ] },
+];
+const MARKET_NOTES_ALSO = [
+  "Cleveland, OH — lowest unemployment of any large metro (1.9%), ~+8% appreciation, but population still shrinking",
+  "Birmingham, AL — 3.5% unemployment, +4.4% appreciation, very landlord-friendly; slow population growth",
+  "In every market the $100–200k stock is mostly older B/C-class — the neighborhood matters more than the city",
+];
+
+function MarketNotes() {
+  const bullets = { margin: "6px 0 0", paddingLeft: 16, fontSize: 12, color: "#66706a", lineHeight: 1.5 };
+  return (
+    <PropCard title="Market notes" action={<span style={{ fontSize: 11, color: "#a1a59c" }}>{MARKET_NOTES_AS_OF}</span>}>
+      <div style={{ fontSize: 11.5, color: "#858b83", lineHeight: 1.5, margin: "4px 0 6px" }}>
+        $100–200k SFR & small multifamily · balanced cash flow and appreciation · landlord-friendly states
+      </div>
+      {MARKET_NOTES.map((m, i) => (
+        <div key={m.city} style={{ padding: "10px 0", borderTop: "1px solid rgba(31,58,46,0.062)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 11.5, color: "#a1a59c", fontFamily: FONT }}>{i + 1}</span>
+            <span style={{ fontSize: 13.5, color: "#1f3a2e", fontWeight: 550 }}>{m.city}</span>
+            {m.tag && <span style={{ fontSize: 10.5, color: "#2f7a4e", background: "rgba(47,122,78,0.12)", borderRadius: 999, padding: "1px 8px" }}>{m.tag}</span>}
+          </div>
+          <ul style={bullets}>{m.points.map((p) => <li key={p}>{p}</li>)}</ul>
+        </div>
+      ))}
+      <div style={{ paddingTop: 10, borderTop: "1px solid rgba(31,58,46,0.062)" }}>
+        <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#a1a59c" }}>ALSO CONSIDERED</div>
+        <ul style={bullets}>{MARKET_NOTES_ALSO.map((p) => <li key={p}>{p}</li>)}</ul>
+      </div>
+      <div style={{ fontSize: 11, color: "#a1a59c", marginTop: 10, lineHeight: 1.5 }}>
+        US unemployment 4.0% (BLS, Sep 2026). Prices and rents come from aggregators — verify before you offer.
+      </div>
+    </PropCard>
+  );
+}
+
 const HORIZONS = [["3", "3 yr"], ["5", "5 yr"], ["10", "10 yr"]];
 const SCENARIOS = [["Poor", 1], ["Average", 2], ["Great", 4]];
 
@@ -2915,6 +2987,8 @@ function DealTab({ v, set }) {
             <MoneyInput label="Lawyer" note="monthly" value={v.lawyer} onChange={set("lawyer")} />
             <TotalRow label="Total monthly expenses" value={fmt(d.totalExpWithLoan)} accent="#b5483b" />
           </PropCard>
+
+          <MarketNotes />
         </div>
 
         <div>
