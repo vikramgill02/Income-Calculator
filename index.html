@@ -181,6 +181,11 @@ input { font-family: var(--font); }
   gap: 12px;
   margin-bottom: 14px;
 }
+.lookup-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(31,58,46,0.062);
+}
+@media (max-width: 700px) { .lookup-grid { grid-template-columns: 1fr; } }
 .prop-cols {
   display: grid;
   grid-template-columns: minmax(300px, 350px) 1fr;
@@ -2912,11 +2917,142 @@ function MarketNotes() {
 const HORIZONS = [["3", "3 yr"], ["5", "5 yr"], ["10", "10 yr"]];
 const SCENARIOS = [["Poor", 1], ["Average", 2], ["Great", 4]];
 
+/* ─── Listing lookup ───
+   Paste a Zillow link (or just a ZIP). The ZIP comes out of the link itself —
+   Zillow is never fetched — and /api/lookup in worker.js returns a
+   conservative tax rate (higher of ZIP or county, Census) and HUD Fair Market
+   Rents (Section 8) for it. The tax rate fills in on its own; rents wait for
+   you to pick one. */
+
+function parseListing(text) {
+  const t = String(text || "").trim();
+  if (!t) return null;
+  const slug = (t.match(/homedetails\/([^/?#]+)/i) || [])[1];
+  if (slug) {
+    const m = slug.match(/^(.*)-([A-Za-z]{2})-(\d{5})$/);
+    if (m) return { zip: m[3], address: `${m[1].replace(/-/g, " ")}, ${m[2].toUpperCase()} ${m[3]}` };
+  }
+  const zip = (t.match(/\b(\d{5})(?:-\d{4})?\b(?!.*\b\d{5}\b)/) || [])[1];
+  return zip ? { zip, address: /^\d{5}$/.test(t) ? "" : t.replace(/^https?:\/\/\S+$/, "") } : null;
+}
+
+const BED_LABEL = ["Studio", "1 bed", "2 bed", "3 bed", "4 bed"];
+
+function ListingLookup({ v, set }) {
+  const [text, setText] = useState(v.listingUrl || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => { setText(v.listingUrl || ""); }, [v.listingUrl]);
+  const res = v.lookup;
+
+  const run = async () => {
+    const parsed = parseListing(text);
+    if (!parsed) { setErr("Couldn't find a ZIP in that — paste a Zillow home link or a 5-digit ZIP."); return; }
+    setErr(""); setBusy(true);
+    try {
+      const r = await fetch(`/api/lookup?zip=${parsed.zip}`, { cache: "no-store" });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.error || `error ${r.status}`);
+      set("listingUrl")(text.trim());
+      set("lookup")({ ...body, address: parsed.address, at: new Date().toISOString().slice(0, 10) });
+      if (body.tax && body.tax.ok) set("propTaxRate")(String(body.tax.rate));
+    } catch (e) { setErr("Lookup failed — " + e.message); }
+    setBusy(false);
+  };
+
+  const smallBtn = {
+    background: "transparent", border: "1px solid rgba(31,58,46,0.15)", borderRadius: 6,
+    padding: "3px 9px", color: "#4f5d55", fontFamily: FONT, fontSize: 11.5, cursor: "pointer",
+  };
+  const sub = { fontSize: 11.5, color: "#858b83", lineHeight: 1.5 };
+  const zillow = /^https?:\/\/(www\.)?zillow\.com\//i.test(v.listingUrl || "") ? v.listingUrl : null;
+
+  return (
+    <PropCard title="Listing lookup">
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+        <input value={text} onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") run(); }}
+          placeholder="Paste a Zillow link or a ZIP"
+          style={{
+            flex: "1 1 260px", minWidth: 0, background: "transparent", border: "none",
+            borderBottom: "1px solid #a1a59c", outline: "none", color: "#1f3a2e",
+            fontFamily: FONT, fontSize: 14, padding: "6px 2px",
+          }} />
+        <button onClick={run} disabled={busy} style={{
+          background: "rgba(47,122,78,0.14)", border: "1px solid rgba(47,122,78,0.35)", borderRadius: 7,
+          padding: "0 14px", minHeight: 36, color: "#2f7a4e", fontFamily: FONT, fontSize: 12.5,
+          cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
+        }}>{busy ? "Looking up…" : "Look up"}</button>
+      </div>
+      {err && <div style={{ fontSize: 12, color: "#b5483b", marginTop: 8 }}>{err}</div>}
+
+      {res && (
+        <div className="lookup-grid">
+          <div>
+            <div style={{ fontSize: 13.5, color: "#1f3a2e", fontWeight: 550 }}>
+              {res.address || `ZIP ${res.zip}`}
+              {zillow && <a href={zillow} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: 11.5, color: "#9a7128", marginLeft: 8, fontWeight: 450 }}>Zillow ↗</a>}
+            </div>
+            <div style={sub}>{res.county ? `${res.county.city ? res.county.city.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) + ", " : ""}${res.county.state} · county ${res.county.fips}` : `ZIP ${res.zip}`} · looked up {res.at}</div>
+
+            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#a1a59c", margin: "12px 0 4px" }}>PROPERTY TAX</div>
+            {res.tax && res.tax.ok ? (
+              <>
+                <div style={{ fontFamily: FONT, fontSize: 20, fontWeight: 600, color: "#1f3a2e" }}>
+                  {res.tax.rate.toFixed(2)}%
+                  <span style={{ fontSize: 11.5, color: "#858b83", fontWeight: 450, marginLeft: 8 }}>
+                    {res.tax.from === "zip" ? "ZIP" : "county"} rate, filled in
+                  </span>
+                </div>
+                <div style={sub}>
+                  ZIP {res.tax.zip && res.tax.zip.rate != null ? res.tax.zip.rate.toFixed(2) + "%" : "n/a"}
+                  {" · "}county {res.tax.county && res.tax.county.rate != null ? res.tax.county.rate.toFixed(2) + "%" : "n/a"}
+                  {" · "}higher of the two. Census ACS {(res.tax.zip || res.tax.county || {}).year}: median taxes paid ÷ median value.
+                </div>
+              </>
+            ) : <div style={{ fontSize: 12, color: "#b5483b" }}>No tax rate — {res.tax ? res.tax.error : "not returned"}</div>}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#a1a59c", margin: "0 0 4px" }}>
+              SECTION 8 FAIR MARKET RENT{res.rent && res.rent.year ? ` · FY${res.rent.year}` : ""}
+            </div>
+            {res.rent && res.rent.ok ? (
+              <>
+                {res.rent.rents.map((r) => (
+                  <div key={r.beds} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid rgba(31,58,46,0.062)" }}>
+                    <span style={{ fontSize: 12.5, color: "#66706a", width: 52 }}>{BED_LABEL[r.beds]}</span>
+                    <span style={{ fontFamily: FONT, fontSize: 14, color: "#22362c", flex: 1 }}>{fmt0(r.rent)}</span>
+                    <button style={smallBtn} onClick={() => set("rent")(r.rent)}>Use</button>
+                    <button style={smallBtn} title="Add to Monthly Rent — for a second unit"
+                      onClick={() => set("rent")(n(v.rent) + r.rent)}>+ Add</button>
+                  </div>
+                ))}
+                <div style={{ ...sub, marginTop: 6 }}>
+                  {res.rent.smallArea ? `Small Area FMR for ZIP ${res.zip}` : `Area FMR for ${res.rent.area || "this county"} (no ZIP-level figure)`}.
+                  HUD sets these near the 40th percentile of local rents, so treat them as a floor. Use "+ Add" to total a duplex's units.
+                </div>
+              </>
+            ) : <div style={{ fontSize: 12, color: "#b5483b" }}>No rents — {res.rent ? res.rent.error : "not returned"}</div>}
+          </div>
+        </div>
+      )}
+      {!res && !err && (
+        <div style={{ ...sub, marginTop: 8 }}>
+          Fills in a conservative county property tax rate and shows Section 8 rents by bedroom count for the ZIP. Enter the price yourself.
+        </div>
+      )}
+    </PropCard>
+  );
+}
+
 function DealTab({ v, set }) {
   const d = analyzeDeal(v);
 
   return (
     <>
+      <ListingLookup v={v} set={set} />
       {n(v.salePrice) > 0 && <PriceSlider value={v.salePrice} onChange={set("salePrice")} />}
 
       {d.hasData && (
@@ -3164,6 +3300,7 @@ const PROP_DEFAULTS = {
   insurance: "", hoa: "", utilities: "", lawyer: "",
   mgmtPct: "8", repairsPct: "3", capexPct: "4", vacancyPct: "5",
   rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
+  listingUrl: "", lookup: null,
 };
 
 const DRAFT_KEY = "property-draft";

@@ -502,6 +502,116 @@ async function shiftsResponse(env) {
   }
 }
 
+/* ─── Property lookup by ZIP ───
+   /api/lookup?zip=15210 → a conservative property-tax rate and HUD Fair Market
+   Rents (what Section 8 pays) for that ZIP. The Property page pulls the ZIP
+   out of a pasted Zillow link; nothing here talks to Zillow.
+
+   Tax: Census ACS 5-year median real-estate taxes paid ÷ median home value,
+   for the ZIP (ZCTA) and for its county. The higher of the two is returned.
+   Needs the CENSUS_KEY secret (free: api.census.gov/data/key_signup.html).
+
+   Rent: HUD's Small Area FMR for the ZIP where HUD publishes one, otherwise
+   the metro/county FMR. Needs the HUD_TOKEN secret (free: huduser.gov →
+   Datasets → APIs → create a token). The ZIP → county step uses the same
+   token (HUD's USPS crosswalk). */
+
+const HUD = "https://www.huduser.gov/hudapi/public";
+const ACS_YEARS = [2024, 2023];
+const DAY = 86400;
+
+async function hud(env, path) {
+  const res = await fetch(HUD + path, {
+    headers: { Authorization: `Bearer ${env.HUD_TOKEN}` },
+    cf: { cacheTtl: DAY, cacheEverything: true },
+  });
+  if (!res.ok) throw new Error(`HUD ${res.status}`);
+  return (await res.json()).data;
+}
+
+// ZIP → the county holding most of its homes.
+async function zipCounty(env, zip) {
+  const data = await hud(env, `/usps?type=2&query=${zip}`);
+  const rows = (data && data.results) || [];
+  if (!rows.length) throw new Error("HUD has no county for that ZIP");
+  rows.sort((a, b) => Number(b.res_ratio || 0) - Number(a.res_ratio || 0));
+  const top = rows[0];
+  return { fips: String(top.geoid), city: top.city || "", state: top.state || "" };
+}
+
+async function acs(env, geo) {
+  for (const year of ACS_YEARS) {
+    const q = `https://api.census.gov/data/${year}/acs/acs5?get=NAME,B25103_001E,B25077_001E&${geo}&key=${encodeURIComponent(env.CENSUS_KEY)}`;
+    const res = await fetch(q, { cf: { cacheTtl: DAY * 7, cacheEverything: true } });
+    if (!res.ok) continue;            // that vintage isn't out yet → try the one before
+    const rows = await res.json().catch(() => null);
+    if (!rows || rows.length < 2) continue;
+    const [name, taxes, value] = rows[1];
+    const t = Number(taxes), v = Number(value);
+    // ACS uses large negative numbers for "no estimate".
+    if (!(t > 0 && v > 0)) return { name, year, rate: null };
+    return { name, year, taxes: t, value: v, rate: Math.round((t / v) * 10000) / 100 };
+  }
+  throw new Error("Census returned no data (check CENSUS_KEY)");
+}
+
+async function taxLookup(env, zip, countyFips) {
+  if (!env.CENSUS_KEY) return { ok: false, error: "CENSUS_KEY not set" };
+  const [z, c] = await Promise.allSettled([
+    acs(env, `for=zip%20code%20tabulation%20area:${zip}`),
+    countyFips ? acs(env, `for=county:${countyFips.slice(2, 5)}&in=state:${countyFips.slice(0, 2)}`)
+      : Promise.reject(new Error("no county")),
+  ]);
+  const zipT = z.status === "fulfilled" ? z.value : null;
+  const cty = c.status === "fulfilled" ? c.value : null;
+  const candidates = [zipT && zipT.rate != null && { ...zipT, from: "zip" },
+    cty && cty.rate != null && { ...cty, from: "county" }].filter(Boolean);
+  if (!candidates.length) {
+    const why = [z, c].find((r) => r.status === "rejected");
+    return { ok: false, error: why ? String(why.reason.message || why.reason) : "No tax data for this ZIP" };
+  }
+  const pick = candidates.reduce((a, b) => (b.rate > a.rate ? b : a));
+  return { ok: true, rate: pick.rate, from: pick.from, zip: zipT, county: cty };
+}
+
+const FMR_KEYS = [["Efficiency", 0], ["One-Bedroom", 1], ["Two-Bedroom", 2], ["Three-Bedroom", 3], ["Four-Bedroom", 4]];
+
+async function rentLookup(env, zip, countyFips) {
+  if (!env.HUD_TOKEN) return { ok: false, error: "HUD_TOKEN not set" };
+  if (!countyFips) return { ok: false, error: "No county for that ZIP" };
+  const d = await hud(env, `/fmr/data/${countyFips}99999`);
+  const basic = d && d.basicdata;
+  let row = null, smallArea = false;
+  if (Array.isArray(basic)) {
+    row = basic.find((r) => String(r.zip_code) === zip);
+    smallArea = Boolean(row);
+    if (!row) row = basic.find((r) => /msa/i.test(String(r.zip_code || ""))) || basic[0];
+  } else row = basic;
+  if (!row) return { ok: false, error: "HUD returned no rents for this area" };
+  const rents = FMR_KEYS.map(([k, beds]) => ({ beds, rent: Number(row[k]) || null })).filter((r) => r.rent);
+  return {
+    ok: true, smallArea, rents,
+    year: (d && d.year) || row.year || null,
+    area: (d && (d.area_name || d.metro_name || d.county_name)) || "",
+  };
+}
+
+async function lookupResponse(env, url) {
+  const zip = String(url.searchParams.get("zip") || "").trim();
+  if (!/^\d{5}$/.test(zip)) return json({ error: "Need a 5-digit ZIP" }, 400);
+  let county = null, countyError = null;
+  if (env.HUD_TOKEN) {
+    try { county = await zipCounty(env, zip); } catch (e) { countyError = String(e.message || e); }
+  } else countyError = "HUD_TOKEN not set";
+  const fips = county && county.fips;
+  const [tax, rent] = await Promise.all([
+    taxLookup(env, zip, fips).catch((e) => ({ ok: false, error: String(e.message || e) })),
+    rentLookup(env, zip, fips).catch((e) => ({ ok: false, error: String(e.message || e) })),
+  ]);
+  if (!fips && rent.ok === false && rent.error === "No county for that ZIP") rent.error = countyError;
+  return json({ zip, county, tax, rent });
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Marks new YNAB card credits used, and the read also keeps the free
@@ -571,6 +681,11 @@ export default {
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }
+    }
+
+    if (url.pathname === "/api/lookup") {
+      try { return await lookupResponse(env, url); }
+      catch (e) { return json({ error: String(e.message || e) }, 500); }
     }
 
     // Which deploy is live: compare `id` with the Version ID on Cloudflare's
