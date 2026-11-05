@@ -1,0 +1,29 @@
+{
+  "rules": {
+    "shift_hours": 12,
+    "accrual_per_check": 7.2,
+    "floor": -24,
+    "first_payday": "2026-10-28",
+    "payday_every_days": 14,
+    "through_year": 2027
+  },
+  "balances": [
+    { "date": "2026-10-27", "when": "start", "hours": 69.13, "note": "Kronos, before the call-out and the Oct 28 check" }
+  ],
+  "checks": {
+    "2026-10-28": { "accrual": 8.0, "done": true }
+  },
+  "trips": [
+    { "id": "callout-2026-10", "name": "Call-out", "on": true,
+      "days": ["2026-10-27"] },
+    { "id": "nov-2026", "name": "November trip", "on": true,
+      "days": ["2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09", "2026-11-11"] },
+    { "id": "apr-2027", "name": "April trip", "on": true, "start": "2027-04-12", "end": "2027-04-27",
+      "days": ["2027-04-12", "2027-04-13", "2027-04-22", "2027-04-23", "2027-04-24", "2027-04-25", "2027-04-26"] },
+    { "id": "iceland-2027", "name": "Iceland", "on": false, "maybe": true,
+      "days": ["2027-06-07", "2027-06-08"] },
+    { "id": "oct-2027", "name": "Oct – Nov trip", "on": false, "maybe": true, "start": "2027-10-22", "end": "2027-11-04",
+      "note": "Placeholder nights (3 a week) until the schedule is out; swap in the real ones.",
+      "days": ["2027-10-22", "2027-10-23", "2027-10-24", "2027-10-29", "2027-10-30", "2027-10-31"] }
+  ]
+}

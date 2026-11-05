@@ -35,12 +35,12 @@ is_app() { curl -s -H "Cookie: $COOKIE" "$BASE$1" | grep -q 'id="root"' && echo 
 
 echo "Pages serve the app:"
 for p in / /networth/accounts /networth/loans /dashboard /dashboard/employers /dashboard/monthly \
-         /dashboard/paystubs /pay /cards /cards/amex-gold /tools /property /property/projections /travel /nope; do
+         /dashboard/paystubs /pay /cards /cards/amex-gold /tools /property /property/projections /travel /pto /nope; do
   check "$p" "200 app" "$(status "$p") $(is_app "$p")"
 done
 
 echo "Files still load as files:"
-for f in /cards.json /paystubs.json /networth.json /travel.json /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gc-seal.png /logos/gc-circle.png /logos/gill-co-wordmark.png; do
+for f in /cards.json /paystubs.json /networth.json /travel.json /pto.json /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gc-seal.png /logos/gc-circle.png /logos/gill-co-wordmark.png; do
   check "$f" 200 "$(status "$f")"
 done
 check "/cards.json is JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/cards.json" | head -c1 | grep -q '{' && echo yes || echo no)"
@@ -65,6 +65,9 @@ check "/api/claims answers read-only" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE
 check "/api/claims is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/claims")"
 check "/api/claims POST without key" 503 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{}' "$BASE/api/claims")"
 check "/api/deals without key" 503 "$(status /api/deals)"
+check "/api/pto falls back to pto.json" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/api/pto" | grep -q '"source":"default"' && echo yes || echo no)"
+check "/api/pto POST without key" 503 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{}' "$BASE/api/pto")"
+check "/api/pto is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/pto")"
 check "/api/deals is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/deals")"
 echo
 echo "$PASS passed, $FAIL failed"

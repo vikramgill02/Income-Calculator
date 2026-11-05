@@ -219,7 +219,7 @@ async function netWorthResponse(request, env) {
 }
 
 /* ─── Cloud data (Supabase) ───
-   Card claims and saved property deals live in Supabase. Only this worker
+   Card claims, saved property deals and the PTO plan live in Supabase. Only this worker
    talks to it, with the SupabaseKey secret (Worker → Settings →
    Variables and Secrets), so the site password is the one login for
    everything. The tables have row-level security on and no policies, so the
@@ -437,6 +437,45 @@ async function dealsResponse(request, env, url) {
   return json({ error: "Method not allowed" }, 405);
 }
 
+/* ─── PTO plan ───
+   One row (id "main") in pto_plan holding the whole PTO page: Kronos
+   balances, paycheck checklist and trips. Until the first Save there is no
+   row, and the page starts from pto.json. */
+
+async function loadPtoDefault(env, origin) {
+  const res = await env.ASSETS.fetch(new Request(origin + "/pto.json"));
+  if (!res.ok) throw new Error("pto.json missing");
+  return res.json();
+}
+
+async function ptoResponse(request, env, origin) {
+  if (request.method === "GET") {
+    if (!supabaseKey(env)) return json({ data: await loadPtoDefault(env, origin), source: "default", saving: false, error: NO_KEY });
+    try {
+      const rows = await supabase(env, "pto_plan?id=eq.main&select=data,updated_at");
+      if (rows?.length) return json({ data: rows[0].data, source: "saved", saving: true, updated_at: rows[0].updated_at });
+      return json({ data: await loadPtoDefault(env, origin), source: "default", saving: true });
+    } catch (e) {
+      return json({ data: await loadPtoDefault(env, origin), source: "default", saving: false, error: String(e.message || e) });
+    }
+  }
+  if (request.method === "POST") {
+    if (!supabaseKey(env)) return json({ error: NO_KEY }, 503);
+    const body = await readJson(request);
+    const data = body?.data;
+    if (!data || typeof data !== "object" || Array.isArray(data) || !Array.isArray(data.trips) || !Array.isArray(data.balances)
+        || JSON.stringify(data).length > 100000) {
+      return json({ error: "Bad request" }, 400);
+    }
+    await supabase(env, "pto_plan?on_conflict=id", {
+      method: "POST", body: [{ id: "main", data, updated_at: new Date().toISOString() }],
+      prefer: "resolution=merge-duplicates,return=minimal",
+    });
+    return json({ ok: true });
+  }
+  return json({ error: "Method not allowed" }, 405);
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Marks new YNAB card credits used, and the read also keeps the free
@@ -495,9 +534,10 @@ export default {
       }
     }
 
-    if (url.pathname === "/api/claims" || url.pathname === "/api/deals") {
+    if (url.pathname === "/api/claims" || url.pathname === "/api/deals" || url.pathname === "/api/pto") {
       try {
         if (url.pathname === "/api/deals") return await dealsResponse(request, env, url);
+        if (url.pathname === "/api/pto") return await ptoResponse(request, env, url.origin);
         if (request.method === "POST") return await saveClaims(request, env, url.origin);
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
         return json(await syncClaims(env, url.origin));

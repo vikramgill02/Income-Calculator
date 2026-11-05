@@ -1,4 +1,5 @@
--- Cloud data for the site: card claims (Cards tab) and saved deals (Tools → Property).
+-- Cloud data for the site: card claims (Cards tab), saved deals (Tools → Property)
+-- and the PTO plan (Tools → PTO).
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 -- Safe to run again; it only creates what's missing.
 --
@@ -37,3 +38,14 @@ create table if not exists public.deals (
 create index if not exists deals_updated_idx on public.deals (updated_at desc);
 alter table public.deals enable row level security;
 revoke all on public.deals from anon, authenticated;
+
+-- ─── PTO plan ───
+-- One row, id 'main': the whole PTO page (Kronos balances, paycheck
+-- checklist, trips) as JSON. No row yet means the page starts from pto.json.
+create table if not exists public.pto_plan (
+  id         text primary key,
+  data       jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.pto_plan enable row level security;
+revoke all on public.pto_plan from anon, authenticated;

@@ -2,7 +2,7 @@
 
 # Income-Calculator
 
-Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Four tabs, in this order (opens on Net Worth, and the Gill & Co. logo in the top-left goes back there); Pay Calc and Property live under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
+Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Four tabs, in this order (opens on Net Worth, and the Gill & Co. logo in the top-left goes back there); Pay Calc, Property, Travel and PTO live under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
 
 Every page and sub-tab has its own address, so the back button, refresh, bookmarks and home-screen shortcuts all land where you expect:
 
@@ -15,6 +15,7 @@ Every page and sub-tab has its own address, so the back button, refresh, bookmar
 | Tools | `/tools` (a list of misc tools) |
 | Property (in Tools) | `/property` · `/property/projections` |
 | Travel (in Tools) | `/travel` |
+| PTO (in Tools) | `/pto` |
 
 It is still one `index.html`: `not_found_handling: "single-page-application"` in `wrangler.jsonc` serves it for any address that isn't a file, and the app picks the page from the URL. HTML is sent with `Cache-Control: no-cache` so a new deploy shows up immediately. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
 
@@ -22,12 +23,25 @@ It is still one `index.html`: `not_found_handling: "single-page-application"` in
 - **Dashboard** — year-to-date income in four sub-tabs: *Overview* (gross / taxes / net / 403(b) and the year-end projection), *Employers* (split by employer with logos), *Monthly* (bar chart with projections) and *Paystubs* (filterable table). Data lives in [`paystubs.json`](./paystubs.json).
 - **Pay Calc** (under Tools) — estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours. Uses the straight day-shift rate of $78.31/hr with no shift differentials, so the estimate reflects pay you can count on. OT applies per week: first 40 hrs at base, anything over at 1.5× (~$117.47/hr).
 - **Cards** — credit card credits & perks for Amex Platinum, Amex Gold, and Capital One Venture X: a *Claim now* list of open credits by deadline, then one sub-tab per card. Card and benefit definitions live in [`cards.json`](./cards.json); which credits you've used lives in Supabase and fills in from YNAB on its own — see [Card claims](#card-claims).
-- **Tools** — a small page listing tools that don't need their own tab: Pay Calc, Property and Travel.
+- **Tools** — a small page listing tools that don't need their own tab: Pay Calc, Property, Travel and PTO.
 - **Property** (under Tools) — rental deal analyzer, full-width. *Deal* sizes up a purchase (cash needed, monthly cash flow, cash-on-cash ROI, DSCR) with a price slider and donuts for where the rent goes and what you wire at closing; *Projections* compounds rent, expenses and appreciation over 3 / 5 / 10 years and charts where the return actually comes from. Deals sync across devices once Supabase is configured — see below.
 
 Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
 
 - **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens.
+
+- **PTO** (under Tools) — running Sutter PTO balance as Kronos counts it, projected through the end of next year. See [PTO tracker](#pto-tracker).
+
+## PTO tracker
+
+The page starts from [`pto.json`](./pto.json); after the first **Save** it reads and writes one row (`id = 'main'`) in the Supabase table `pto_plan` through `/api/pto`, and `pto.json` is only the fallback. Without the database it still works, but changes are what-ifs that reset on reload.
+
+**Rules** (`rules` in the plan): each PTO night is −12 hrs on the day it's worked; every other Wednesday from `first_payday` adds +7.2 (0.1 per paid hour, capped at 80 hrs → 8.0 max); the balance may go down to −24. On a day with both, the check posts before that night's PTO.
+
+- **Kronos balances** reset the running total. One read at the *start* of a day comes before that day's check and PTO; one typed into a paycheck row (the balance on the stub) sits right after that check. Everything later is projected from the latest one, and the ledger shows how far Kronos was from the projection.
+- **Paychecks** is the checklist: tick each check as it lands, change its accrual if it wasn't 7.2, and type the stub's PTO balance.
+- **Trips** each have a *Counting* switch. A trip that's off still shows what it would do: balance going in, after, the lowest point from then on, and how many more nights fit above −24.
+- The lowest point and the end-of-year figure count only trips that are switched on.
 
 ## Hosting & password
 
