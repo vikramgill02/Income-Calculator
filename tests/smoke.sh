@@ -46,8 +46,8 @@ done
 check "/cards.json is JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/cards.json" | head -c1 | grep -q '{' && echo yes || echo no)"
 
 echo "Private files are not served:"
-for f in /worker.js /wrangler.jsonc /README.md /tests/smoke.sh; do
-  check "$f not the file" no "$(curl -s -H "Cookie: $COOKIE" "$BASE$f" | grep -qE 'export default|\"main\"|^# Income|smoke-test' && echo yes || echo no)"
+for f in /worker.js /ical.js /wrangler.jsonc /README.md /tests/smoke.sh; do
+  check "$f not the file" no "$(curl -s -H "Cookie: $COOKIE" "$BASE$f" | grep -qE 'export default|export function|\"main\"|^# Income|smoke-test' && echo yes || echo no)"
 done
 
 echo "Password gate:"
@@ -67,6 +67,8 @@ check "/api/claims POST without key" 503 "$(curl -s -o /dev/null -w '%{http_code
 check "/api/deals without key" 503 "$(status /api/deals)"
 check "/api/pto falls back to pto.json" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/api/pto" | grep -q '"source":"default"' && echo yes || echo no)"
 check "/api/pto POST without key" 503 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{}' "$BASE/api/pto")"
+check "/api/shifts without secret" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/api/shifts" | grep -q '"source":"none"' && echo yes || echo no)"
+check "/api/shifts is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/shifts")"
 check "/api/pto is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/pto")"
 check "/api/deals is gated" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/deals")"
 echo

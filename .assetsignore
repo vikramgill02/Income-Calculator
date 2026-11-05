@@ -2,6 +2,7 @@
 .git/
 .wrangler/
 worker.js
+ical.js
 wrangler.jsonc
 README.md
 supabase-setup.sql

@@ -30,30 +30,34 @@ Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cor
 
 - **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens.
 
-- **PTO** (under Tools) — running Sutter PTO balance as Kronos counts it, projected through the end of next year. See [PTO tracker](#pto-tracker).
+- **PTO** (under Tools) — running Sutter PTO balance check by check, and a calendar of your work schedule (live from Google Calendar) where highlighting days shows the PTO they'd use. See [PTO tracker](#pto-tracker).
 
 ## PTO tracker
 
-The page starts from [`pto.json`](./pto.json); after the first **Save** it reads and writes one row (`id = 'main'`) in the Supabase table `pto_plan` through `/api/pto`, and `pto.json` is only the fallback. Without the database it still works, but changes are what-ifs that reset on reload.
+The page starts from [`pto.json`](./pto.json); after the first **Save** it reads and writes one row (`id = 'main'`) in the Supabase table `pto_plan` through `/api/pto`, and `pto.json` is only the fallback.
 
-**Rules** (`rules` in the plan): each PTO night is −12 hrs on the day it's worked; every other Wednesday from `first_payday` adds +7.2 (0.1 per paid hour, capped at 80 hrs → 8.0 max); the balance may go down to −24. On a day with both, the check posts before that night's PTO.
+**Rules** (`rules` in the plan): each PTO night is −12 hrs on the day it's worked; every other Wednesday from `first_payday` adds +7.2 (0.1 per paid hour, capped at 80 hrs → 8.0 max; a different amount for one check goes in `checks`); the balance may go down to −24. On a day with both, the check posts before that night's PTO. Booked PTO lives in `trips`.
 
-- **Kronos balances** reset the running total. One read at the *start* of a day comes before that day's check and PTO; one typed into a paycheck row (the balance on the stub) sits right after that check. Everything later is projected from the latest one, and the ledger shows how far Kronos was from the projection.
-- **Paychecks** is the checklist: tick each check as it lands, change its accrual if it wasn't 7.2, and type the stub's PTO balance.
-- **Trips** each have a *Counting* switch. A trip that's off still shows what it would do: balance going in, after, the lowest point from then on, and how many more nights fit above −24.
-- The lowest point and the end-of-year figure count only trips that are switched on.
-- **Calendar** (`/pto/calendar`) shows a month at a time with the balance at the end of each day. Work nights are bold: tap one to take it as PTO (it joins the trip whose dates it falls in, or a *Planned* list), tap a PTO day to give it back. The side panel says how many more nights you could take from that month on and stay above −24.
+- **Overview** — the balance chart and **Every check**: one row per payday with hours earned, PTO used since the previous check (and which trip), and the balance right after the check. **Kronos balance** takes what Kronos or a stub shows and resets the running total from that day; on a payday it counts as the balance right after that check.
+- **Calendar** (`/pto/calendar`) — your work nights (green), booked PTO (gold) and the balance at the end of each day. Tap days to highlight them: each highlighted work night counts 12 hrs, days off count 0, and the side panel shows the balance after, the lowest point from then on, whether it stays above −24, and how many more nights would fit. Highlighting is a preview only; nothing is saved.
 
-### `shifts.json`
+### Work schedule sync
 
-Your CVICU nights, copied from the BSN Calendar (Google Calendar) by date the shift starts. It's a snapshot (`pulled`), not live: when the schedule changes, ask Claude to re-pull it from the BSN Calendar.
+`/api/shifts` (in `worker.js`, parsed by `ical.js`) reads the BSN Google Calendar live through its secret iCal address and returns only the shifts: timed events whose title has "shift" in it (CVICU Shift, OT Shift, [SWAP] …), not all-day "Request shift" reminders. Repeating events, skipped dates and moved or cancelled single shifts are handled. Nothing else from that calendar leaves the Worker.
+
+To connect it:
+
+1. In Google Calendar on the web, signed in as the BSN calendar's owner: **Settings → Settings for my calendars → BSN Calendar → Integrate calendar → Secret address in iCal format**. Copy it.
+2. In Cloudflare: **Workers & Pages → dashboard → Settings → Variables and Secrets → Add**, type **Secret**, name `BSN_ICAL`, paste the address, **Deploy**.
+
+The address is a key to the whole calendar: keep it out of the repo and chat. Resetting it in Google breaks the sync until the secret is updated. Without the secret the page falls back to [`shifts.json`](./shifts.json), a copy taken on its `pulled` date, and says so at the top.
 
 ## Hosting & password
 
 Cloudflare builds and deploys the site on every push to `main`. `worker.js` sits in front of every file and shows a password page; a correct password sets a cookie that keeps that device unlocked for a year. After unlocking you land on the address you originally opened. The only files served without the password are the app icons (`favicon.png`, `apple-touch-icon.png`, `icon.png`, `icon-192.png`), `manifest.json` and the wordmark (`logos/gill-co-wordmark.png`, shown on the password page), because browsers and iOS fetch the icons without the cookie; they hold just the logo, the G&C mark and the app name. The password is the `PASSWORD` secret on the `dashboard` Worker (Settings → Variables and Secrets) — it is never stored in this repo. If the secret is missing, the site refuses every request.
 
 - `wrangler.jsonc` — Worker config. `name` must match the Worker's name in Cloudflare.
-- `.assetsignore` — files that are never served (the worker code, config, this README, the SQL).
+- `.assetsignore` — files that are never served (the worker code and `ical.js`, config, this README, the SQL).
 - Changing the password logs out every device.
 - **Is my change live?** Open `/api/version` on the site. Its `id` should match the top Version ID on the Worker's *Deployments* tab.
 - **Before pushing,** run `bash tests/smoke.sh`. It starts the site in Cloudflare's local runtime (`wrangler dev`) and checks every page address, the data files, that private files aren't served, and the password gate.

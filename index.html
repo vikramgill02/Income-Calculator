@@ -340,48 +340,12 @@ a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4
   .nw-subtabs button { flex: 1; padding: 0 6px !important; }
 }
 /* ─── PTO ─── */
-.pto-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
-@media (max-width: 900px) { .pto-cols { grid-template-columns: 1fr; } }
-.pto-trip {
-  background: #fffdf8; border: 1px solid rgba(31,58,46,0.1); border-radius: 14px; padding: 16px; margin-bottom: 12px;
-}
-.pto-trip.off { background: transparent; border-style: dashed; border-color: rgba(31,58,46,0.22); }
-.pto-switch {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; background: transparent; border: none;
-  padding: 0; cursor: pointer; font: inherit; flex-shrink: 0;
-}
-.pto-switch-track {
-  width: 34px; height: 20px; border-radius: 10px; background: #d8d0bf; position: relative; transition: background 0.15s ease;
-}
-.pto-switch-track.on { background: #2f7a4e; }
-.pto-switch-knob {
-  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 8px; background: #fffdf8;
-  transition: transform 0.15s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.15);
-}
-.pto-switch-track.on .pto-switch-knob { transform: translateX(14px); }
-.pto-switch:focus-visible .pto-switch-track { outline: 1.5px solid var(--accent); outline-offset: 2px; }
+.pto-split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .pto-split { grid-template-columns: 1fr; } }
 .pto-verdict { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; line-height: 1.5; }
-.pto-badge {
-  display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 600;
-}
+.pto-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 600; }
 .pto-badge.ok { background: rgba(47,122,78,0.12); color: #2f7a4e; }
 .pto-badge.bad { background: rgba(181,72,59,0.12); color: #b5483b; }
-.pto-badge.done { background: rgba(31,58,46,0.07); color: #66706a; }
-.pto-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; }
-.pto-chip {
-  display: inline-flex; align-items: center; gap: 2px; min-height: 30px; padding: 0 2px 0 10px; border-radius: 999px;
-  background: rgba(154,113,40,0.1); color: #1f3a2e; font-size: 12.5px; position: relative;
-}
-.pto-chip.past { background: rgba(31,58,46,0.06); color: #66706a; }
-.pto-chip button {
-  background: transparent; border: none; cursor: pointer; color: #66706a; font-size: 16px; line-height: 1;
-  width: 28px; height: 30px; border-radius: 999px; font-family: inherit;
-}
-.pto-chip button:hover { color: #b5483b; }
-.pto-add { padding: 0 12px; background: transparent; border: 1px dashed rgba(31,58,46,0.3); color: #1f3a2e; cursor: pointer; overflow: hidden; }
-.pto-add:hover { border-color: rgba(31,58,46,0.55); }
-/* The date picker sits invisibly over the "+ Night" chip so a tap opens it. */
-.pto-add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 .pto-link {
   background: transparent; border: none; padding: 0 4px; min-height: 30px; cursor: pointer; font: inherit;
   font-size: 12.5px; color: #66706a; text-decoration: underline; text-underline-offset: 2px;
@@ -393,75 +357,77 @@ a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4
 }
 .pto-x:hover { color: #b5483b; }
 .pto-row-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
-.pto-row-form input[type=text], .pto-row-form input[type=date], .pto-row-form input[type=number], .pto-mini input {
+.pto-row-form input {
   font: inherit; font-size: 14px; color: #1f3a2e; background: #fffdf8; border: 1px solid rgba(31,58,46,0.18);
   border-radius: 8px; min-height: 38px; padding: 0 10px; outline: none;
 }
-.pto-row-form input:focus, .pto-mini input:focus { border-color: rgba(31,58,46,0.5); }
-.pto-row-form input[type=text] { flex: 1 1 160px; min-width: 0; }
-.pto-check {
-  display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(31,58,46,0.062); flex-wrap: wrap;
-}
-.pto-check:first-child { border-top: none; }
-.pto-box {
-  width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid rgba(31,58,46,0.35); background: transparent;
-  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #fffdf8; padding: 0; flex-shrink: 0;
-  position: relative;
-}
-.pto-box::after { content: ""; position: absolute; inset: -11px; }
-.pto-check.done .pto-box { background: #2f7a4e; border-color: #2f7a4e; }
-.pto-check.due .pto-box { border-color: #9a7128; }
-.pto-box:disabled { cursor: default; }
-.pto-mini { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #66706a; }
-.pto-mini input { width: 58px; min-height: 34px; padding: 0 7px; font-size: 13.5px; text-align: right; }
-.pto-kronos input { width: 76px; }
-@media (max-width: 560px) {
-  .pto-check > div { flex-basis: calc(100% - 32px) !important; }
-  .pto-mini { margin-left: 32px; }
-  .pto-kronos { margin-left: 0; }
-}
-.pto-ledger { width: 100%; border-collapse: collapse; font-size: 13px; }
-.pto-ledger th {
+.pto-row-form input:focus { border-color: rgba(31,58,46,0.5); }
+/* Every-check table */
+.pto-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.pto-table th {
   text-align: left; font-weight: 500; color: #66706a; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
   padding: 10px 6px 8px;
 }
-.pto-ledger td { padding: 7px 6px; border-top: 1px solid rgba(31,58,46,0.062); color: #1f3a2e; }
-.pto-ledger th:nth-child(n+3), .pto-ledger td:nth-child(n+3) { text-align: right; white-space: nowrap; }
-.pto-ledger tr.past td { color: #66706a; }
-.pto-ledger tr.today td { border-bottom: 1.5px solid rgba(31,58,46,0.45); }
-@media (max-width: 480px) { .pto-ledger { font-size: 12px; } .pto-ledger td, .pto-ledger th { padding-left: 3px; padding-right: 3px; } }
-.pto-cal-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
-@media (max-width: 900px) { .pto-cal-wrap { grid-template-columns: 1fr; } }
+.pto-table td { padding: 9px 6px; border-top: 1px solid rgba(31,58,46,0.062); color: #1f3a2e; vertical-align: top; }
+.pto-table th:nth-child(n+2), .pto-table td:nth-child(n+2) { text-align: right; white-space: nowrap; }
+.pto-table tr.past td { color: #8a918a; }
+.pto-table tr.past td:last-child { color: #8a918a !important; }
+.pto-table tr.next td { background: rgba(47,122,78,0.06); }
+.pto-table tr.pto-year td {
+  font-size: 11px; letter-spacing: 0.14em; color: #9a7128; font-weight: 600; padding-top: 16px; border-top: none;
+}
+.pto-sub { display: block; font-size: 11.5px; color: #8a918a; margin-top: 2px; white-space: normal; }
+.pto-next {
+  display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 600; color: #2f7a4e; background: rgba(47,122,78,0.12);
+  border-radius: 999px; padding: 1px 7px; vertical-align: 1px;
+}
+@media (max-width: 480px) {
+  .pto-table { font-size: 12.5px; }
+  .pto-table td, .pto-table th { padding-left: 3px; padding-right: 3px; }
+  .pto-next { display: none; }
+}
+/* Calendar */
 .pto-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .pto-cal-dow { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #66706a; text-align: center; padding: 4px 0 6px; }
 .pto-cal-cell {
-  min-height: 64px; border-radius: 10px; padding: 7px 4px 6px; display: flex; flex-direction: column; align-items: center;
-  justify-content: space-between; gap: 4px; background: rgba(31,58,46,0.025); border: 1px solid transparent;
-  font: inherit; color: #1f3a2e; min-width: 0;
+  min-height: 70px; border-radius: 10px; padding: 6px 3px; display: flex; flex-direction: column; align-items: center;
+  justify-content: space-between; gap: 2px; background: rgba(31,58,46,0.025); border: 1px solid transparent;
+  font: inherit; color: #1f3a2e; min-width: 0; position: relative;
 }
 .pto-cal-cell.blank { background: transparent; }
-button.pto-cal-cell { cursor: pointer; border-color: rgba(31,58,46,0.14); background: #fffdf8; }
-button.pto-cal-cell:hover { border-color: rgba(31,58,46,0.45); }
+button.pto-cal-cell { cursor: pointer; }
+button.pto-cal-cell:hover { border-color: rgba(31,58,46,0.4); }
 button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 1px; }
-.pto-cal-cell.pto { background: rgba(154,113,40,0.2); border-color: rgba(154,113,40,0.45); }
-.pto-cal-cell.past { opacity: 0.55; }
-.pto-cal-cell.today { box-shadow: inset 0 0 0 1.5px #1f3a2e; }
-.pto-cal-d { font-size: 13px; font-weight: 400; color: #66706a; }
-.pto-cal-cell.work .pto-cal-d { font-weight: 700; color: #1f3a2e; }
+.pto-cal-cell.work { background: #fffdf8; border-color: rgba(47,122,78,0.3); box-shadow: inset 0 3px 0 #2f7a4e; }
+.pto-cal-cell.pto { background: rgba(154,113,40,0.18); border-color: rgba(154,113,40,0.45); box-shadow: inset 0 3px 0 #9a7128; }
+.pto-cal-cell.sel { background: #1f3a2e; border-color: #1f3a2e; color: #f6f1e7; }
+.pto-cal-cell.sel .pto-cal-d, .pto-cal-cell.sel .pto-cal-tag, .pto-cal-cell.sel .pto-cal-b { color: #f6f1e7 !important; }
+.pto-cal-cell.past { opacity: 0.5; }
+.pto-cal-cell.today::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 12px; border: 1.5px solid #1f3a2e; pointer-events: none;
+}
+.pto-cal-d { font-size: 13px; color: #66706a; }
+.pto-cal-cell.work .pto-cal-d, .pto-cal-cell.pto .pto-cal-d { font-weight: 700; color: #1f3a2e; }
+.pto-cal-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #2f7a4e; min-height: 12px; }
+.pto-cal-cell.pto .pto-cal-tag { color: #9a7128; }
 .pto-cal-b { font-size: 12px; font-weight: 500; color: #34483e; white-space: nowrap; }
 .pto-cal-nav {
   width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(31,58,46,0.15); background: transparent;
   color: #1f3a2e; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
 }
 .pto-cal-nav:disabled { opacity: 0.3; cursor: default; }
-.pto-cal-key { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 12px; color: #66706a; }
+.pto-cal-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 12px; color: #66706a; }
 .pto-cal-key span { display: inline-flex; align-items: center; gap: 6px; }
-.pto-cal-sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: rgba(154,113,40,0.2); border: 1px solid rgba(154,113,40,0.45); }
+.pto-sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+.pto-sw.work { background: #fffdf8; border: 1px solid rgba(47,122,78,0.3); box-shadow: inset 0 3px 0 #2f7a4e; }
+.pto-sw.pto { background: rgba(154,113,40,0.18); border: 1px solid rgba(154,113,40,0.45); box-shadow: inset 0 3px 0 #9a7128; }
+.pto-sw.sel { background: #1f3a2e; }
 @media (max-width: 560px) {
   .pto-cal-grid { gap: 3px; }
-  .pto-cal-cell { min-height: 54px; padding: 6px 1px 5px; border-radius: 8px; }
+  .pto-cal-cell { min-height: 60px; padding: 5px 1px; border-radius: 8px; }
   .pto-cal-b { font-size: 10.5px; letter-spacing: -0.02em; }
   .pto-cal-d { font-size: 12px; }
+  .pto-cal-tag { font-size: 8.5px; letter-spacing: 0; }
 }
 /* ─── travel ─── */
 .travel-grid {
@@ -4001,7 +3967,8 @@ function ptoNormalize(d) {
 
 function ptoHorizon(plan, today) {
   const last = plan.trips.flatMap((t) => t.days).concat(today).sort().pop();
-  return `${Math.max(Number(last.slice(0, 4)), plan.rules.through_year)}-12-31`;
+  // Through the end of next year at least, so the table never runs out.
+  return `${Math.max(Number(last.slice(0, 4)), plan.rules.through_year, Number(today.slice(0, 4)) + 1)}-12-31`;
 }
 
 function ptoPaydays(plan, until) {
@@ -4053,20 +4020,6 @@ function ptoLowest(rows, from) {
   let low = null;
   for (const r of rows) if (r.date >= from && (low == null || r.balance < low.balance)) low = r;
   return low;
-}
-
-// What a trip does to the plan, as if it were on. `room` is how many more
-// nights it could take before the lowest point from the trip on hits the floor.
-function ptoTripCheck(plan, trip, today) {
-  if (!trip.days.length) return null;
-  const { rows } = ptoLedger(plan, today, { [trip.id]: true });
-  const first = trip.days[0], last = trip.days[trip.days.length - 1];
-  const before = ptoBalanceOn(rows, ptoAddDays(first, -1));
-  const after = ptoBalanceOn(rows, last);
-  const low = ptoLowest(rows, first);
-  const R = plan.rules;
-  const room = low ? Math.floor((low.balance - R.floor) / R.shift_hours + 1e-9) : 0;
-  return { before, after, low, room, fits: !low || low.balance >= R.floor };
 }
 
 function usePto() {
@@ -4234,184 +4187,182 @@ function PtoChart({ rows, end, floor, trips, today }) {
   );
 }
 
-function PtoSwitch({ on, onChange, label }) {
+/* Work nights: live from the BSN Google Calendar through /api/shifts, or the
+   shifts.json copy when that isn't connected. */
+function useShifts() {
+  const [st, setSt] = useState({ loading: true, shifts: [], source: "", fetched: "", error: "" });
+  useEffect(() => {
+    let live = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/shifts", { cache: "no-store" });
+        const d = await r.json();
+        if (d.source === "google" && Array.isArray(d.shifts)) {
+          live = true;
+          return setSt({ loading: false, shifts: d.shifts, source: "google", fetched: d.fetched, error: "" });
+        }
+        throw new Error(d.error || "Not connected");
+      } catch (e) {
+        if (live) return;
+        try {
+          const r = await fetch("/shifts.json", { cache: "no-store" });
+          const d = await r.json();
+          const shifts = (Array.isArray(d.nights) ? d.nights : []).filter((x) => PTO_ISO.test(x))
+            .map((date) => ({ date, time: "19:00", summary: "CVICU Shift" }));
+          setSt({ loading: false, shifts, source: "copy", fetched: d.pulled || "", error: String(e.message || e) });
+        } catch (e2) {
+          setSt({ loading: false, shifts: [], source: "", fetched: "", error: String(e2.message || e2) });
+        }
+      }
+    })();
+  }, []);
+  return st;
+}
+
+function PtoSyncNote({ sync }) {
+  const live = sync.source === "google";
   return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className="pto-switch">
-      <span className={"pto-switch-track" + (on ? " on" : "")}><span className="pto-switch-knob" /></span>
-      <span style={{ fontSize: 12.5, color: on ? "#1f3a2e" : "#66706a" }}>{on ? "Counting" : "Not counting"}</span>
-    </button>
+    <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#6e776f", display: "inline-flex", alignItems: "center" }}
+      title={live ? "Work nights read from your BSN Google Calendar each time this page opens" : sync.error}>
+      <span style={{ width: 6, height: 6, borderRadius: 3, display: "inline-block", marginRight: 6, background: live ? PTO_GREEN : "#c9973a" }} />
+      {sync.loading ? "Loading schedule…" : live ? "Schedule synced with Google Calendar"
+        : `Schedule copied ${sync.fetched ? ptoDay(sync.fetched) : ""} · Google sync not connected`}
+    </span>
   );
 }
 
-function PtoTrip({ trip, plan, today, onChange, onRemove }) {
-  const chk = useMemo(() => ptoTripCheck(plan, trip, today), [plan, trip, today]);
-  const R = plan.rules;
-  const done = trip.days.length > 0 && trip.days[trip.days.length - 1] < today;
-  const hours = trip.days.length * R.shift_hours;
-  const range = trip.start && trip.end ? `${ptoDay(trip.start)} – ${ptoDayY(trip.end)}`
-    : trip.days.length ? `${ptoDay(trip.days[0])}${trip.days.length > 1 ? ` – ${ptoDayY(trip.days[trip.days.length - 1])}` : `, ${trip.days[0].slice(0, 4)}`}` : "No nights yet";
-  const add = (d) => { if (PTO_ISO.test(d) && !trip.days.includes(d)) onChange({ ...trip, days: [...trip.days, d].sort() }); };
+/* One row per payday: hours earned, PTO used since the last check, and the
+   balance right after the check. */
+function PtoCheckTable({ rows, today, floor }) {
+  const checks = [];
+  let used = 0, nights = 0, adj = 0, labels = new Set();
+  for (const r of rows) {
+    if (r.kind === "pto") { used += r.change; nights++; labels.add(r.label); }
+    else if ((r.kind === "start" || r.kind === "check") && r.change) adj += r.change;
+    if (r.kind === "payday") {
+      checks.push({ date: r.date, earned: r.change, used, nights, adj: ptoR2(adj), labels: [...labels], balance: r.balance });
+      used = 0; nights = 0; adj = 0; labels = new Set();
+    }
+  }
+  const start = rows[0];
+  const nextIdx = checks.findIndex((c) => c.date > today);
+  let year = "";
   return (
-    <div className={"pto-trip" + (trip.on ? "" : " off")}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 15.5, fontWeight: 600, color: "#1f3a2e" }}>{trip.name}</div>
-          <div style={{ fontSize: 12.5, color: "#66706a", marginTop: 3 }}>
-            {range} · {trip.days.length} night{trip.days.length === 1 ? "" : "s"} · {hours} hrs
-          </div>
-        </div>
-        <PtoSwitch on={trip.on} onChange={(on) => onChange({ ...trip, on })} label={`Count ${trip.name}`} />
-      </div>
-
-      {chk && !done && (
-        <div className="pto-verdict">
-          <span className={"pto-badge " + (chk.fits ? "ok" : "bad")}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {chk.fits ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M6 6l12 12M18 6L6 18" />}
-            </svg>
-            {chk.fits ? (trip.on ? "Fits" : "Would fit") : `Short ${ptoHrs(R.floor - chk.low.balance)} hrs`}
-          </span>
-          <span style={{ color: "#4f5d55" }}>
-            {!trip.on && "If added: "}
-            {chk.before != null && <>{ptoHrs(chk.before)} going in → </>}
-            <strong style={{ fontWeight: 600, color: chk.after < 0 ? PTO_RED : "#1f3a2e" }}>{ptoHrs(chk.after)}</strong> after
-            {chk.low && chk.low.date > trip.days[trip.days.length - 1] && chk.low.balance < chk.after
-              ? <> · low {ptoHrs(chk.low.balance)} on {ptoDay(chk.low.date)}</> : null}
-            {chk.fits && <> · room for {chk.room} more night{chk.room === 1 ? "" : "s"}</>}
-          </span>
-        </div>
-      )}
-      {done && <div className="pto-verdict"><span className="pto-badge done">Taken</span></div>}
-      {trip.note && <div style={{ fontSize: 12.5, color: "#9a7128", marginTop: 8 }}>{trip.note}</div>}
-
-      <div className="pto-chips">
-        {trip.days.map((d) => (
-          <span key={d} className={"pto-chip" + (d < today ? " past" : "")}>
-            {ptoDay(d)}
-            <button type="button" aria-label={`Remove ${ptoDayY(d)}`} onClick={() => onChange({ ...trip, days: trip.days.filter((x) => x !== d) })}>×</button>
-          </span>
-        ))}
-        <label className="pto-chip pto-add">
-          + Night
-          <input type="date" value="" onChange={(e) => add(e.target.value)} aria-label={`Add a PTO night to ${trip.name}`} />
-        </label>
-        {onRemove && (
-          <button type="button" className="pto-link" onClick={() => {
-            if (window.confirm(`Remove ${trip.name}? (Nothing is saved until you tap Save.)`)) onRemove();
-          }}>Remove trip</button>
-        )}
-      </div>
+    <div style={{ ...panel, padding: "6px 16px 10px" }}>
+      <table className="pto-table">
+        <thead><tr><th>Payday</th><th>Earned</th><th>PTO used</th><th>Balance</th></tr></thead>
+        <tbody>
+          {start && (
+            <tr className="past">
+              <td>{ptoDayY(start.date)}</td>
+              <td colSpan={2} style={{ textAlign: "left" }}>Starting balance from Kronos</td>
+              <td>{ptoHrs(start.balance)}</td>
+            </tr>
+          )}
+          {checks.map((c, i) => {
+            const yr = c.date.slice(0, 4);
+            const head = yr !== year && i > 0 ? yr : null;
+            year = yr;
+            return (
+              <React.Fragment key={c.date}>
+                {head && <tr className="pto-year"><td colSpan={4}>{head}</td></tr>}
+                <tr className={(c.date <= today ? "past" : "") + (i === nextIdx ? " next" : "")}>
+                  <td>
+                    {ptoDay(c.date)}
+                    {i === nextIdx && <span className="pto-next">Next</span>}
+                    {c.adj ? <span className="pto-sub">Kronos {ptoChange(c.adj)}</span> : null}
+                  </td>
+                  <td style={{ color: c.date > today ? PTO_GREEN : undefined }}>{ptoChange(c.earned)}</td>
+                  <td>
+                    {c.nights ? <>{ptoChange(c.used)}<span className="pto-sub">{c.nights} night{c.nights === 1 ? "" : "s"} · {c.labels.join(", ")}</span></> : "—"}
+                  </td>
+                  <td style={{ fontWeight: 600, color: c.balance < floor ? PTO_RED : c.balance < 0 ? "#9a4452" : "#1f3a2e" }}>{ptoHrs(c.balance)}</td>
+                </tr>
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-// One payday on the checklist. Tick it once the check has landed; type the
-// PTO balance off the stub and it becomes the new starting point.
-function PtoPaycheck({ date, row, anchor, check, accrualDefault, today, onTick, onAccrual, onKronos }) {
-  const [val, setVal] = useState(anchor ? String(anchor.hours) : "");
-  useEffect(() => { setVal(anchor ? String(anchor.hours) : ""); }, [anchor && anchor.hours]);
-  const done = !!check.done || !!anchor;
-  const past = date <= today;
-  const commit = () => {
-    const t = val.trim();
-    if (t === "") { if (anchor) onKronos(null); return; }
-    const v = Number(t);
-    if (Number.isFinite(v) && (!anchor || v !== anchor.hours)) onKronos(ptoR2(v));
-  };
-  const acc = check.accrual != null ? check.accrual : accrualDefault;
-  const diff = anchor && row ? ptoR2(anchor.hours - row.balance) : null;
-  return (
-    <div className={"pto-check" + (done ? " done" : "") + (past && !done ? " due" : "")}>
-      <button type="button" className="pto-box" role="checkbox" aria-checked={done}
-        aria-label={`${ptoDayY(date)} check landed`} onClick={() => onTick(!done)} disabled={!!anchor}>
-        {done && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
-      </button>
-      <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-        <div style={{ fontSize: 14, color: "#1f3a2e", fontWeight: 500 }}>{ptoDay(date)}{date.slice(0, 4) !== today.slice(0, 4) ? `, ${date.slice(0, 4)}` : ""}</div>
-        <div style={{ fontSize: 12, color: "#66706a", marginTop: 2 }}>
-          {row ? <>Projected {ptoHrs(row.balance)} after the check</> : "—"}
-          {diff != null && diff !== 0 && <> · Kronos {diff > 0 ? "+" : "−"}{Math.abs(diff).toFixed(2)} vs projected</>}
-          {past && !done && <span style={{ color: "#9a7128" }}> · check Kronos</span>}
-        </div>
-      </div>
-      <label className="pto-mini" title="Hours this check added (0.1 per paid hour, 8.0 max)">
-        <span>+</span>
-        <input type="number" step="0.1" min="0" max="8" inputMode="decimal" value={acc}
-          onChange={(e) => onAccrual(e.target.value === "" ? null : Math.min(8, Math.max(0, Number(e.target.value))))} />
-      </label>
-      <label className="pto-mini pto-kronos" title="PTO balance on the stub, right after this check">
-        <span>Kronos</span>
-        <input type="number" step="0.01" inputMode="decimal" placeholder="—" value={val}
-          onChange={(e) => setVal(e.target.value)} onBlur={commit}
-          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-      </label>
-    </div>
-  );
-}
-
-/* Month view: each day shows the projected balance at the end of that day.
-   Work nights (from shifts.json, copied from the BSN calendar) are bold and
-   tappable: tap one to take it as PTO, tap a PTO day to give it back. */
+/* Month calendar of work nights. Tap days to highlight them: it counts the
+   work nights in them × 12 hrs and shows where the balance would land. A
+   preview only; the plan doesn't change. */
 const PTO_DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function PtoCalendar({ plan, rows, end, nights, today, onToggle }) {
-  const first = rows.length ? rows[0].date.slice(0, 7) : today.slice(0, 7);
-  const last = end.slice(0, 7);
+function PtoCalendar({ plan, base, shifts, today }) {
+  const R = plan.rules;
+  const first = base.rows.length ? base.rows[0].date.slice(0, 7) : today.slice(0, 7);
+  const last = base.end.slice(0, 7);
   const [month, setMonth] = useState(() => (today.slice(0, 7) < first ? first : today.slice(0, 7) > last ? last : today.slice(0, 7)));
-  const shiftDay = (ym, k) => {
-    const [y, m] = ym.split("-").map(Number);
-    const d = new Date(y, m - 1 + k, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const [sel, setSel] = useState(() => new Set());
+  const stepMonth = (k) => {
+    const [yy, mm] = month.split("-").map(Number);
+    const d = new Date(yy, mm - 1 + k, 1);
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   };
   const [y, m] = month.split("-").map(Number);
   const daysIn = new Date(y, m, 0).getDate();
   const lead = new Date(y, m - 1, 1).getDay();
   const iso = (d) => `${month}-${String(d).padStart(2, "0")}`;
-  const work = useMemo(() => new Set(nights), [nights]);
-  const ptoOn = useMemo(() => {
+
+  const work = useMemo(() => {
+    const map = {};
+    for (const s of shifts) (map[s.date] = map[s.date] || []).push(s);
+    return map;
+  }, [shifts]);
+  const booked = useMemo(() => {
     const map = {};
     for (const t of plan.trips) if (t.on) for (const d of t.days) map[d] = t.name;
     return map;
   }, [plan]);
 
-  const R = plan.rules;
-  const monthStart = iso(1), monthEnd = iso(daysIn);
-  const from = today > monthStart ? today : monthStart;
-  const startBal = ptoBalanceOn(rows, ptoAddDays(monthStart, -1));
-  const endBal = ptoBalanceOn(rows, monthEnd);
-  const lowAhead = from <= end ? ptoLowest(rows, from) : null;
+  const picked = [...sel].sort();
+  const extra = picked.filter((d) => work[d] && !booked[d]);
+  const already = picked.filter((d) => booked[d]);
+  const led = useMemo(() => (extra.length
+    ? ptoLedger({ ...plan, trips: [...plan.trips, { id: "__preview", name: "Highlighted", on: true, days: extra }] }, today)
+    : base), [plan, base, today, extra.join()]);
+  const rows = led.rows;
+
+  const after = extra.length ? ptoBalanceOn(rows, extra[extra.length - 1]) : null;
+  const low = extra.length ? ptoLowest(rows, extra[0]) : null;
+  const fits = !low || low.balance >= R.floor;
+  const from = today > iso(1) ? today : iso(1);
+  const lowAhead = from <= led.end ? ptoLowest(rows, from) : null;
   const room = lowAhead ? Math.max(0, Math.floor((lowAhead.balance - R.floor) / R.shift_hours + 1e-9)) : null;
-  const ptoThisMonth = Object.keys(ptoOn).filter((d) => d >= monthStart && d <= monthEnd).sort();
-  const workLeft = nights.filter((d) => d >= from && d <= monthEnd && !ptoOn[d]).length;
   const monthName = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const workThisMonth = Object.keys(work).filter((d) => d.startsWith(month)).length;
+
+  const toggle = (d) => setSel((s) => { const n = new Set(s); n.has(d) ? n.delete(d) : n.add(d); return n; });
 
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push(<div key={`b${i}`} className="pto-cal-cell blank" />);
   for (let d = 1; d <= daysIn; d++) {
     const day = iso(d);
-    const bal = day >= (rows[0] && rows[0].date) ? ptoBalanceOn(rows, day) : null;
-    const isWork = work.has(day);
-    const isPto = !!ptoOn[day];
-    const can = day >= today && (isWork || isPto);
-    const cls = "pto-cal-cell" + (isPto ? " pto" : "") + (isWork ? " work" : "") + (day < today ? " past" : "")
-      + (day === today ? " today" : "") + (can ? " can" : "");
-    const label = `${ptoDayY(day)}${isWork ? ", work night" : ""}${isPto ? `, PTO (${ptoOn[day]})` : ""}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}`;
+    const bal = rows[0] && day >= rows[0].date && day <= led.end ? ptoBalanceOn(rows, day) : null;
+    const isWork = !!work[day], isBooked = !!booked[day], isSel = sel.has(day);
+    const can = day >= today;
+    const cls = "pto-cal-cell" + (isWork ? " work" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
+      + (day < today ? " past" : "") + (day === today ? " today" : "");
+    const what = isBooked ? `PTO (${booked[day]})` : isWork ? work[day].map((s) => `${s.summary} ${s.time}`).join(", ") : "Off";
+    const label = `${ptoDayY(day)}: ${what}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}${isSel ? ", highlighted" : ""}`;
     const body = (
       <>
         <span className="pto-cal-d">{d}</span>
-        {bal != null && (
-          <span className="pto-cal-b" style={{ color: bal < R.floor ? PTO_RED : bal < 0 ? "#9a4452" : undefined }}>{ptoHrs(bal)}</span>
-        )}
+        <span className="pto-cal-tag">{isBooked ? "PTO" : isWork ? "Work" : ""}</span>
+        {bal != null && <span className="pto-cal-b" style={{ color: isSel ? undefined : bal < R.floor ? PTO_RED : bal < 0 ? "#9a4452" : undefined }}>{ptoHrs(bal)}</span>}
       </>
     );
     cells.push(can
-      ? <button key={day} type="button" className={cls} aria-label={label} aria-pressed={isPto} onClick={() => onToggle(day)}
-          title={isPto ? `PTO · ${ptoOn[day]} — tap to work it instead` : "Work night — tap to take it as PTO"}>{body}</button>
-      : <div key={day} className={cls} aria-label={label} title={isPto ? `PTO · ${ptoOn[day]}` : undefined}>{body}</div>);
+      ? <button key={day} type="button" className={cls} aria-label={label} aria-pressed={isSel} onClick={() => toggle(day)} title={what}>{body}</button>
+      : <div key={day} className={cls} aria-label={label} title={what}>{body}</div>);
   }
 
   const navBtn = (k, lbl, dis) => (
-    <button type="button" className="pto-cal-nav" onClick={() => setMonth(shiftDay(month, k))} disabled={dis} aria-label={lbl}>
+    <button type="button" className="pto-cal-nav" onClick={() => stepMonth(k)} disabled={dis} aria-label={lbl}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d={k < 0 ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
       </svg>
@@ -4420,12 +4371,12 @@ function PtoCalendar({ plan, rows, end, nights, today, onToggle }) {
   const fact = (k, v, color) => (
     <div style={{ ...rowLine, alignItems: "baseline" }}>
       <span style={{ color: "#4f5d55" }}>{k}</span>
-      <strong style={{ fontWeight: 600, color: color || "#1f3a2e" }}>{v}</strong>
+      <strong style={{ fontWeight: 600, color: color || "#1f3a2e", textAlign: "right" }}>{v}</strong>
     </div>
   );
 
   return (
-    <div className="pto-cal-wrap">
+    <div className="pto-split">
       <div style={{ ...panel, padding: "14px 14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           {navBtn(-1, "Previous month", month <= first)}
@@ -4437,44 +4388,67 @@ function PtoCalendar({ plan, rows, end, nights, today, onToggle }) {
           {cells}
         </div>
         <div className="pto-cal-key">
-          <span><strong style={{ fontWeight: 700, color: "#1f3a2e" }}>Bold</strong> = work night, tap to take it as PTO</span>
-          <span><i className="pto-cal-sw" /> PTO, tap to give it back</span>
-          <span>Numbers = hrs at the end of that day</span>
+          <span><i className="pto-sw work" /> Work night</span>
+          <span><i className="pto-sw pto" /> PTO booked</span>
+          <span><i className="pto-sw sel" /> Highlighted</span>
+          <span>Numbers = hrs at the end of the day</span>
         </div>
       </div>
 
       <div>
         <div style={{ ...panel, padding: "16px 18px" }}>
-          <div style={{ ...panelTitle, marginBottom: 8 }}>{monthName}</div>
-          {fact("Starts at", startBal == null ? "—" : `${ptoHrs(startBal)} hrs`)}
-          {fact("Ends at", endBal == null ? "—" : `${ptoHrs(endBal)} hrs`, endBal < 0 ? PTO_RED : undefined)}
-          {fact("PTO nights this month", ptoThisMonth.length)}
-          {fact("Work nights left", workLeft)}
-        </div>
-        <div style={{ ...panel, padding: "16px 18px", marginTop: 14 }}>
-          <div style={{ ...panelTitle, marginBottom: 8 }}>How much can I use?</div>
-          {room == null ? <p style={{ fontSize: 13, color: "#66706a", margin: 0 }}>This month is past.</p> : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+            <div style={{ ...panelTitle, marginBottom: 8 }}>Highlighted</div>
+            {picked.length > 0 && <button type="button" className="pto-link" onClick={() => setSel(new Set())}>Clear</button>}
+          </div>
+          {!picked.length ? (
+            <p style={{ fontSize: 13, color: "#66706a", lineHeight: 1.55, margin: 0 }}>
+              Tap days on the calendar. Each work night you highlight uses {R.shift_hours} hrs of PTO; days off use none. Nothing is saved.
+            </p>
+          ) : (
             <>
-              <div style={{ fontSize: 30, fontWeight: 600, color: room > 0 ? PTO_GREEN : PTO_RED, lineHeight: 1.1 }}>
-                {room} more night{room === 1 ? "" : "s"}
+              <div style={{ fontSize: 30, fontWeight: 600, lineHeight: 1.1, color: "#1f3a2e" }}>
+                {extra.length * R.shift_hours} hrs
               </div>
-              <p style={{ fontSize: 12.5, color: "#66706a", lineHeight: 1.55, margin: "8px 0 0" }}>
-                {room * R.shift_hours} hrs you could add from {ptoDay(from)} on, on top of what's planned, and stay above {ptoChange(R.floor)}.
-                Tightest point: {ptoHrs(lowAhead.balance)} on {ptoDayY(lowAhead.date)}. Nights after that have more room.
-              </p>
+              <div style={{ fontSize: 12.5, color: "#66706a", margin: "4px 0 10px" }}>
+                {extra.length} work night{extra.length === 1 ? "" : "s"} in {picked.length} day{picked.length === 1 ? "" : "s"}
+                {already.length ? ` · ${already.length} already PTO` : ""}
+              </div>
+              {extra.length > 0 && (
+                <>
+                  {fact("Balance after", `${ptoHrs(after)} hrs`, after < 0 ? PTO_RED : undefined)}
+                  {fact("Lowest from then on", `${ptoHrs(low.balance)} · ${ptoDay(low.date)}`, low.balance < R.floor ? PTO_RED : undefined)}
+                  <div className="pto-verdict">
+                    <span className={"pto-badge " + (fits ? "ok" : "bad")}>
+                      {fits ? "Fits" : `Short ${ptoHrs(R.floor - low.balance)} hrs`}
+                    </span>
+                    <span style={{ color: "#4f5d55" }}>
+                      {fits ? `stays above ${ptoChange(R.floor)}` : `goes below ${ptoChange(R.floor)}`}
+                    </span>
+                  </div>
+                </>
+              )}
+              <div style={{ marginTop: 10 }}>
+                {picked.map((d) => (
+                  <div key={d} style={{ ...rowLine, fontSize: 12.5 }}>
+                    <span style={{ color: "#4f5d55" }}>{ptoDay(d)}</span>
+                    <span style={{ color: "#66706a" }}>
+                      {booked[d] ? `already PTO · ${booked[d]}` : work[d] ? `work · −${R.shift_hours}` : "off · 0"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </div>
-        {ptoThisMonth.length > 0 && (
-          <div style={{ ...panel, padding: "12px 18px", marginTop: 14 }}>
-            {ptoThisMonth.map((d) => (
-              <div key={d} style={{ ...rowLine }}>
-                <span style={{ color: "#4f5d55" }}>{ptoDay(d)}</span>
-                <span style={{ color: "#66706a" }}>{ptoOn[d]} · −{R.shift_hours}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        <div style={{ ...panel, padding: "16px 18px", marginTop: 14 }}>
+          <div style={{ ...panelTitle, marginBottom: 8 }}>{monthName}</div>
+          {fact("Work nights", workThisMonth)}
+          {room != null && fact(picked.length ? "Room left after highlight" : "Room from here on", `${room} night${room === 1 ? "" : "s"} · ${room * R.shift_hours} hrs`, room > 0 ? PTO_GREEN : PTO_RED)}
+          {lowAhead && <p style={{ fontSize: 12, color: "#66706a", lineHeight: 1.5, margin: "8px 0 0" }}>
+            Tightest point ahead: {ptoHrs(lowAhead.balance)} on {ptoDayY(lowAhead.date)}.
+          </p>}
+        </div>
       </div>
     </div>
   );
@@ -4482,21 +4456,14 @@ function PtoCalendar({ plan, rows, end, nights, today, onToggle }) {
 
 function Pto() {
   const pto = usePto();
+  const sync = useShifts();
   const [tab, setTab, tabHref] = useSubRoute("pto", "overview", ["overview", "calendar"]);
-  const [nights, setNights] = useState([]);
-  useEffect(() => {
-    fetch("/shifts.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {}))
-      .then((d) => setNights(Array.isArray(d.nights) ? d.nights.filter((x) => PTO_ISO.test(x)) : [])).catch(() => {});
-  }, []);
   const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
   const [saveErr, setSaveErr] = useState("");
-  const [allChecks, setAllChecks] = useState(false);
-  const [newTrip, setNewTrip] = useState("");
   const today = ptoToday();
   const [kDate, setKDate] = useState(today);
   const [kHours, setKHours] = useState("");
-  const [kWithCheck, setKWithCheck] = useState(true);
 
   useEffect(() => { if (pto.saved) setDraft(pto.saved); }, [pto.saved]);
   const plan = draft;
@@ -4510,38 +4477,11 @@ function Pto() {
 
   const led = useMemo(() => (plan ? ptoLedger(plan, today) : null), [plan, today]);
   const update = (fn) => setDraft((p) => { const n = JSON.parse(JSON.stringify(p)); fn(n); return ptoNormalize(n); });
-  const setCheck = (date, patch) => update((n) => {
-    const c = { ...(n.checks[date] || {}), ...patch };
-    if (c.accrual == null || c.accrual === n.rules.accrual_per_check) delete c.accrual;
-    if (!c.done) delete c.done;
-    if (Object.keys(c).length) n.checks[date] = c; else delete n.checks[date];
-  });
   const setAnchor = (date, when, hours, note) => update((n) => {
     const rest = n.balances.filter((b) => !(b.date === date && b.when === when));
     if (hours == null && !rest.length) return; // keep at least one starting balance
     n.balances = hours == null ? rest : [...rest, { date, when, hours, note }];
     n.balances.sort((a, b) => a.date.localeCompare(b.date) || PTO_ORDER[a.when] - PTO_ORDER[b.when]);
-  });
-  // Calendar tap: a PTO day goes back to work; a work night joins the trip
-  // whose dates it falls in, or the "Planned" list.
-  const toggleNight = (d) => update((n) => {
-    const holders = n.trips.filter((t) => t.on && t.days.includes(d));
-    if (holders.length) {
-      holders.forEach((t) => { t.days = t.days.filter((x) => x !== d); });
-      n.trips = n.trips.filter((t) => !(t.id === "planned" && !t.days.length));
-      return;
-    }
-    const inside = (t) => {
-      const a = t.start || t.days[0], z = t.end || t.days[t.days.length - 1];
-      return a && z && d >= a && d <= z;
-    };
-    let host = n.trips.find((t) => t.on && inside(t));
-    if (!host) {
-      host = n.trips.find((t) => t.id === "planned");
-      if (!host) { host = { id: "planned", name: "Planned", on: true, days: [] }; n.trips.push(host); }
-      host.on = true;
-    }
-    host.days.push(d);
   });
   const doSave = async () => {
     setBusy(true); setSaveErr("");
@@ -4566,12 +4506,6 @@ function Pto() {
   const low = ptoLowest(rows, today);
   const last = rows[rows.length - 1];
   const lastK = [...plan.balances].sort((a, b) => a.date.localeCompare(b.date) || PTO_ORDER[a.when] - PTO_ORDER[b.when]).pop();
-
-  const firstAnchor = rows.length ? rows[0].date : today;
-  const paydays = led.paydays.filter((d) => d >= firstAnchor);
-  const pastDays = paydays.filter((d) => d <= today);
-  const shownPaydays = allChecks ? paydays
-    : [...pastDays.slice(-3), ...paydays.filter((d) => d > today).slice(0, 5)];
   const kIsPayday = led.paydays.includes(kDate);
 
   return (
@@ -4582,11 +4516,7 @@ function Pto() {
             <p className="eyebrow"><Link to="/tools" style={{ color: "inherit", textDecoration: "none" }}>Tools</Link> · Sutter Kronos</p>
             <h1 style={{ margin: 0, lineHeight: 1.05 }}>PTO</h1>
           </div>
-          <span style={{ fontFamily: FONT, fontSize: 12.5, color: "#6e776f", display: "inline-flex", alignItems: "center" }}
-            title={pto.error || (pto.source === "default" ? "Showing pto.json until the first Save" : "Saved changes show on every device")}>
-            <span style={{ width: 6, height: 6, borderRadius: 3, display: "inline-block", marginRight: 6, background: pto.saving ? PTO_GREEN : PTO_RED }} />
-            {pto.saving ? "Saving on" : "Read-only — changes are what-ifs"}
-          </span>
+          <PtoSyncNote sync={sync} />
         </div>
 
         <SubTabs options={[["overview", "Overview"], ["calendar", "Calendar"]]} value={tab} onChange={setTab} href={tabHref} />
@@ -4599,85 +4529,52 @@ function Pto() {
           <StatCard label="Lowest ahead" value={low ? ptoHrs(low.balance) : "—"}
             sub={low ? `${ptoDayY(low.date)} · ${low.balance >= R.floor ? `${ptoHrs(low.balance - R.floor)} above the ${ptoChange(R.floor)} floor` : "below the floor"}` : ""}
             accent={low && low.balance < R.floor ? PTO_RED : low && low.balance < 0 ? "#9a7128" : "#1f3a2e"} />
-          <StatCard label={`End of ${led.end.slice(0, 4)}`} value={last ? ptoHrs(last.balance) : "—"} sub="hrs, with what's counting now" accent="#1f3a2e" />
+          <StatCard label={`End of ${led.end.slice(0, 4)}`} value={last ? ptoHrs(last.balance) : "—"} sub="hrs, with PTO booked so far" accent="#1f3a2e" />
         </div>
 
         {tab === "calendar" ? (
-          <PtoCalendar plan={plan} rows={rows} end={led.end} nights={nights} today={today} onToggle={toggleNight} />
+          <PtoCalendar plan={plan} base={led} shifts={sync.shifts} today={today} />
         ) : (<>
-        <div style={{ ...panel, marginBottom: 28, padding: "18px 18px 10px" }}>
-          <div style={{ ...panelTitle, marginBottom: 6 }}>Balance (hrs)</div>
-          <PtoChart rows={rows} end={led.end} floor={R.floor} trips={plan.trips} today={today} />
-        </div>
+          <div style={{ ...panel, marginBottom: 28, padding: "18px 18px 10px" }}>
+            <div style={{ ...panelTitle, marginBottom: 6 }}>Balance (hrs)</div>
+            <PtoChart rows={rows} end={led.end} floor={R.floor} trips={plan.trips} today={today} />
+          </div>
 
-        <div className="pto-cols">
-          <section>
-            <div style={{ ...panelTitle, marginBottom: 12 }}>Trips</div>
-            {plan.trips.map((t) => (
-              <PtoTrip key={t.id} trip={t} plan={plan} today={today}
-                onChange={(nt) => update((n) => { n.trips = n.trips.map((x) => (x.id === t.id ? nt : x)); })}
-                onRemove={t.days.some((d) => d < today) ? null : () => update((n) => { n.trips = n.trips.filter((x) => x.id !== t.id); })} />
-            ))}
-            <form className="pto-row-form" onSubmit={(e) => {
-              e.preventDefault();
-              const name = newTrip.trim();
-              if (!name) return;
-              update((n) => { n.trips.push({ id: `trip-${Date.now().toString(36)}`, name, on: true, days: [] }); });
-              setNewTrip("");
-            }}>
-              <input type="text" value={newTrip} onChange={(e) => setNewTrip(e.target.value)} placeholder="New trip name" aria-label="New trip name" />
-              <button type="submit" className="refresh-btn edit-btn" disabled={!newTrip.trim()}>Add trip</button>
-            </form>
-          </section>
-
-          <section>
-            <div style={{ ...panelTitle, marginBottom: 12 }}>Paychecks</div>
-            <div style={{ ...panel, padding: "4px 16px" }}>
-              {shownPaydays.map((d) => (
-                <PtoPaycheck key={d} date={d} today={today} accrualDefault={R.accrual_per_check}
-                  row={rows.find((r) => r.date === d && r.kind === "payday")}
-                  anchor={plan.balances.find((b) => b.date === d && b.when === "check")}
-                  check={plan.checks[d] || {}}
-                  onTick={(v) => setCheck(d, { done: v })}
-                  onAccrual={(v) => setCheck(d, { accrual: v })}
-                  onKronos={(v) => { setAnchor(d, "check", v, "Paystub"); if (v != null) setCheck(d, { done: true }); }} />
-              ))}
-              <button type="button" className="pto-link" style={{ padding: "12px 0" }} onClick={() => setAllChecks(!allChecks)}>
-                {allChecks ? "Show fewer" : `Show all ${paydays.length} paydays`}
-              </button>
-            </div>
-
-            <div style={{ ...panelTitle, margin: "28px 0 12px" }}>Kronos balance</div>
-            <div style={{ ...panel, padding: 16 }}>
-              <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#66706a", lineHeight: 1.5 }}>
-                Read your balance off Kronos on any day. It replaces the running total from that point and everything after recalculates.
+          <div className="pto-split">
+            <section>
+              <div style={{ ...panelTitle, marginBottom: 12 }}>Every check</div>
+              <PtoCheckTable rows={rows} today={today} floor={R.floor} />
+              <p style={{ fontSize: 12, color: "#66706a", lineHeight: 1.5, margin: "10px 2px 0" }}>
+                +{R.accrual_per_check} per check (0.1 per paid hour, 8.0 max) · {R.shift_hours} hrs per PTO night · may go to {ptoChange(R.floor)}.
+                PTO used counts the nights since the previous check; on a payday the check posts first.
               </p>
-              <form className="pto-row-form" style={{ margin: 0 }} onSubmit={(e) => {
-                e.preventDefault();
-                const v = Number(kHours);
-                if (kHours.trim() === "" || !Number.isFinite(v) || !PTO_ISO.test(kDate)) return;
-                const when = kIsPayday && kWithCheck ? "check" : "start";
-                setAnchor(kDate, when, ptoR2(v), "Kronos");
-                if (when === "check") setCheck(kDate, { done: true });
-                setKHours("");
-              }}>
-                <input type="date" value={kDate} onChange={(e) => setKDate(e.target.value)} aria-label="Date read from Kronos" />
-                <input type="number" step="0.01" inputMode="decimal" value={kHours} onChange={(e) => setKHours(e.target.value)}
-                  placeholder="Hours" aria-label="PTO hours in Kronos" style={{ width: 96 }} />
-                <button type="submit" className="refresh-btn edit-btn" disabled={kHours.trim() === ""}>Set</button>
-              </form>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#4f5d55", marginTop: 10, minHeight: 32 }}>
-                {kIsPayday ? (
-                  <><input type="checkbox" checked={kWithCheck} onChange={(e) => setKWithCheck(e.target.checked)} />
-                    Includes the {ptoDay(kDate)} check</>
-                ) : <span style={{ color: "#66706a" }}>Counts as the balance at the start of that day, before that night's PTO.</span>}
-              </label>
-              <div style={{ marginTop: 6 }}>
+            </section>
+
+            <section>
+              <div style={{ ...panelTitle, marginBottom: 12 }}>Kronos balance</div>
+              <div style={{ ...panel, padding: 16 }}>
+                <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#66706a", lineHeight: 1.5 }}>
+                  Enter what Kronos or your stub shows. It replaces the running total from that day on.
+                </p>
+                <form className="pto-row-form" style={{ margin: 0 }} onSubmit={(e) => {
+                  e.preventDefault();
+                  const v = Number(kHours);
+                  if (kHours.trim() === "" || !Number.isFinite(v) || !PTO_ISO.test(kDate)) return;
+                  setAnchor(kDate, kIsPayday ? "check" : "start", ptoR2(v), kIsPayday ? "Paystub" : "Kronos");
+                  setKHours("");
+                }}>
+                  <input type="date" value={kDate} onChange={(e) => setKDate(e.target.value)} aria-label="Date read from Kronos" />
+                  <input type="number" step="0.01" inputMode="decimal" value={kHours} onChange={(e) => setKHours(e.target.value)}
+                    placeholder="Hours" aria-label="PTO hours in Kronos" style={{ width: 96 }} />
+                  <button type="submit" className="refresh-btn edit-btn" disabled={kHours.trim() === ""}>Set</button>
+                </form>
+                <p style={{ fontSize: 12, color: "#66706a", margin: "8px 0 4px", lineHeight: 1.5 }}>
+                  {kIsPayday ? "A payday: counts as the balance right after that check." : "Counts as the balance at the start of that day."}
+                </p>
                 {[...plan.balances].reverse().map((b) => (
                   <div key={b.date + b.when} style={{ ...rowLine, alignItems: "center" }}>
                     <span style={{ color: "#4f5d55" }}>
                       {ptoDayY(b.date)}{b.when === "check" ? " · after check" : ""}
-                      {b.note ? <span style={{ color: "#66706a" }}> · {b.note}</span> : null}
                     </span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <strong style={{ fontWeight: 600 }}>{ptoHrs(b.hours)}</strong>
@@ -4689,37 +4586,8 @@ function Pto() {
                   </div>
                 ))}
               </div>
-            </div>
-          </section>
-        </div>
-
-        <details className="fine" style={{ marginTop: 32 }}>
-          <summary>Full ledger · {rows.length} entries</summary>
-          <div style={{ ...panel, padding: "6px 16px", marginTop: 12 }}>
-            <table className="pto-ledger">
-              <thead><tr><th>Date</th><th>Event</th><th>Change</th><th>Balance</th></tr></thead>
-              <tbody>
-                {rows.map((r, i) => {
-                  const isK = r.kind === "start" || r.kind === "check";
-                  return (
-                    <tr key={i} className={(r.date <= today ? "past " : "") + (rows[i + 1] && r.date <= today && rows[i + 1].date > today ? "today" : "")}>
-                      <td>{ptoDayY(r.date)}</td>
-                      <td>{isK ? `Kronos balance${r.note ? ` · ${r.note}` : ""}` : r.kind === "payday" ? "Payday" : `PTO · ${r.label}`}</td>
-                      <td>{isK ? (r.change ? ptoChange(r.change) : "") : ptoChange(r.change)}</td>
-                      <td style={{ color: r.balance < R.floor ? PTO_RED : r.balance < 0 ? "#9a4452" : undefined, fontWeight: 600 }}>
-                        {ptoHrs(r.balance)}{r.balance < R.floor ? " ⚠" : ""}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <p style={{ fontSize: 12, color: "#66706a", lineHeight: 1.5 }}>
-              {R.shift_hours} hrs per PTO night · +{R.accrual_per_check} per check unless changed above · may go to {ptoChange(R.floor)}.
-              On a day with both, the check posts before that night's PTO.
-            </p>
+            </section>
           </div>
-        </details>
         </>)}
 
         {(dirty || saveErr) && (
@@ -4755,7 +4623,7 @@ const TOOLS = [
     icon: <path d="M3 11l9-7 9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5" /> },
   { to: "/travel", name: "Travel", blurb: "A spinning globe with every country you've been to filled in, the cities you visited, and the bucket list.",
     icon: <g><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z" /></g> },
-  { to: "/pto", name: "PTO", blurb: "Running Kronos PTO balance: tick off each paycheck, plan trips on a calendar of your work nights, and see how much PTO you can still use.",
+  { to: "/pto", name: "PTO", blurb: "Running Kronos PTO balance check by check, and a calendar of your work schedule: highlight days to see how much PTO they'd use.",
     icon: <g><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M8.5 15l2.3 2.3 4.7-4.6" /></g> },
 ];
 

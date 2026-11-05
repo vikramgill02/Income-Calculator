@@ -2,6 +2,8 @@
 // PASSWORD secret on the Cloudflare Worker, never in this repo. Without it
 // set, every request is refused, so the site can't be exposed by accident.
 
+import { listShifts, HOME_TZ } from "./ical.js";
+
 const COOKIE = "ic_auth";
 const PUBLIC_FILES = new Set(["/favicon.png", "/apple-touch-icon.png", "/icon.png", "/icon-192.png", "/manifest.json",
   "/logos/gill-co-wordmark.png"]);
@@ -476,6 +478,30 @@ async function ptoResponse(request, env, origin) {
   return json({ error: "Method not allowed" }, 405);
 }
 
+/* ─── Work schedule ───
+   /api/shifts reads the BSN calendar live from Google (its secret iCal
+   address, in the BSN_ICAL Worker secret) and returns only the work shifts:
+   date, start time and title. Nothing else on that calendar leaves the
+   Worker. Without the secret it says so and the page uses shifts.json. */
+
+async function shiftsResponse(env) {
+  const url = env.BSN_ICAL || env.BSN_CALENDAR_ICAL || "";
+  if (!url) return json({ source: "none", error: "The BSN_ICAL secret is not set on the Worker" });
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: HOME_TZ }).format(new Date());
+  const y = Number(today.slice(0, 4));
+  const from = `${y - 1}-07-01`, to = `${y + 2}-12-31`;
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": "gill-co-worker" }, cf: { cacheTtl: 300, cacheEverything: true } });
+    // Never echo the URL: it is the key to the whole calendar.
+    if (!res.ok) return json({ source: "error", error: `Google Calendar answered ${res.status}` });
+    const text = await res.text();
+    if (!text.includes("BEGIN:VCALENDAR")) return json({ source: "error", error: "That link isn't an iCal feed" });
+    return json({ source: "google", fetched: new Date().toISOString(), shifts: listShifts(text, from, to) });
+  } catch (e) {
+    return json({ source: "error", error: "Couldn't reach Google Calendar" });
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Marks new YNAB card credits used, and the read also keeps the free
@@ -534,8 +560,9 @@ export default {
       }
     }
 
-    if (url.pathname === "/api/claims" || url.pathname === "/api/deals" || url.pathname === "/api/pto") {
+    if (url.pathname === "/api/claims" || url.pathname === "/api/deals" || url.pathname === "/api/pto" || url.pathname === "/api/shifts") {
       try {
+        if (url.pathname === "/api/shifts") return await shiftsResponse(env);
         if (url.pathname === "/api/deals") return await dealsResponse(request, env, url);
         if (url.pathname === "/api/pto") return await ptoResponse(request, env, url.origin);
         if (request.method === "POST") return await saveClaims(request, env, url.origin);
