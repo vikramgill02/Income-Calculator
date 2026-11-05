@@ -2405,7 +2405,6 @@ function analyzeDeal(inp) {
   const annualProfit = monthlyProfit * 12;
   const cashNeeded = downAmt + closingCost + miscV + rehabV;
   const cashOnCash = cashNeeded > 0 ? annualProfit / cashNeeded : null;
-  const dscr = pAndI > 0 ? (rentV - totalExpNoLoan) / pAndI : null;
 
   /* Remaining balance after m payments (closed form, clamped at payoff). */
   const balanceAfter = (m) => {
@@ -2422,7 +2421,7 @@ function analyzeDeal(inp) {
     mgmt, repairs, capex, vac, ptRate,
     ccPct, dp, ir, downAmt, loanAmt, pAndI, rentBasedExp, fixedMonthlyExp,
     totalExpNoLoan, totalExpWithLoan, monthlyProfit, annualProfit, cashNeeded,
-    cashOnCash, dscr, balanceAfter,
+    cashOnCash, balanceAfter,
     hasData: sp > 0 && rentV > 0,
   };
 }
@@ -2464,7 +2463,6 @@ function totalReturn(d, rentGrowth, expInflation, apprRate, years) {
 
 const pctLabel = (v, dp = 2) => v == null ? "—" : `${(v * 100).toFixed(dp)}%`;
 const gradeCoc = (v) => v == null ? "#6e776f" : v >= 0.08 ? "#2f7a4e" : v >= 0.04 ? "#9a7128" : "#b5483b";
-const gradeDscr = (v) => v >= 1.25 ? "#2f7a4e" : v >= 1.0 ? "#9a7128" : "#b5483b";
 
 /* ─── Property charts ───
    Palette: the documented categorical hues, validated for this dark surface
@@ -2927,8 +2925,6 @@ function DealTab({ v, set }) {
             accent={d.monthlyProfit >= 0 ? "#2f7a4e" : "#b5483b"} />
           <StatTile label="Cash-on-cash" value={pctLabel(d.cashOnCash)} sub="cash flow ÷ cash in"
             accent={gradeCoc(d.cashOnCash)} />
-          <StatTile label="DSCR" value={d.dscr == null ? "—" : d.dscr.toFixed(2)}
-            sub={d.dscr == null ? "no loan" : "NOI ÷ P&I"} accent={d.dscr == null ? "#6e776f" : gradeDscr(d.dscr)} />
           <StatTile label="Cash needed" value={fmt0(d.cashNeeded)} sub="to close" />
         </div>
       )}
@@ -3016,21 +3012,6 @@ function DealTab({ v, set }) {
                 </div>
               </PropCard>
 
-              {d.dscr != null && (
-                <PropCard title="Debt service coverage">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, marginTop: 6 }}>
-                    <div>
-                      <div style={{ fontSize: 12.5, color: gradeDscr(d.dscr) }}>
-                        {d.dscr >= 1.25 ? "Strong — on a conservative basis" : d.dscr >= 1.0 ? "Borderline" : "Below 1.0 — negative coverage"}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: "#a1a59c", marginTop: 4, maxWidth: 330, lineHeight: 1.5 }}>
-                        NOI ÷ P&amp;I, counting capex and vacancy — stricter than the rent ÷ PITIA most DSCR lenders underwrite on.
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: FONT, fontSize: 30, fontWeight: 600, color: gradeDscr(d.dscr) }}>{d.dscr.toFixed(2)}</div>
-                  </div>
-                </PropCard>
-              )}
             </>
           ) : (
             <PropCard>
@@ -4892,7 +4873,7 @@ function Pto() {
 const TOOLS = [
   { to: "/pay", name: "Pay Calc", blurb: "Estimate a Sutter biweekly paycheck from Week 1 / Week 2 hours, with overtime past 40 hours a week.",
     icon: <g><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></g> },
-  { to: "/property", name: "Property", blurb: "Rental deal analyzer: cash needed, cash flow, cash-on-cash ROI, DSCR and 3/5/10-year projections. Saved deals sync across devices.",
+  { to: "/property", name: "Property", blurb: "Rental deal analyzer: cash needed, cash flow, cash-on-cash ROI and 3/5/10-year projections. Saved deals sync across devices.",
     icon: <path d="M3 11l9-7 9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5" /> },
   { to: "/travel", name: "Travel", blurb: "A spinning globe with every country you've been to filled in, the cities you visited, and the bucket list.",
     icon: <g><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z" /></g> },
