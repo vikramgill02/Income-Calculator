@@ -410,6 +410,17 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 }
 .pto-cal-d { font-size: 13px; color: #66706a; white-space: nowrap; }
 .pto-cal-cell.m1 .pto-cal-d { color: #9a7128 !important; font-weight: 700; }
+/* Month boundaries in the 8-week view: alternate months are warmer, and a
+   gold line sits in the gap between squares where the month changes. */
+.pto-cal-cell.alt { background: rgba(154,113,40,0.085); }
+.pto-cal-cell.alt.work { background: rgba(3,155,229,0.14); }
+.pto-cal-line { position: absolute; background: #9a7128; pointer-events: none; }
+.pto-cal-line.top { left: -3px; right: -3px; top: -4px; height: 2px; }
+.pto-cal-line.left { top: -4px; bottom: -3px; left: -4px; width: 2px; }
+@media (max-width: 560px) {
+  .pto-cal-line.top { top: -3.5px; left: -2.5px; right: -2.5px; }
+  .pto-cal-line.left { left: -3.5px; top: -3.5px; bottom: -2.5px; }
+}
 .pto-seg { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(31,58,46,0.06); }
 .pto-seg button {
   border: none; background: transparent; font: inherit; font-size: 12.5px; color: #4f5d55; cursor: pointer;
@@ -4510,7 +4521,13 @@ function PtoCalendar({ plan, base, shifts, today }) {
     const bal = rows[0] && day >= rows[0].date && day <= led.end ? ptoBalanceOn(rows, day) : null;
     const isWork = !!work[day], isBooked = !!booked[day], isSel = sel.has(day);
     const can = day >= today;
-    const cls = "pto-cal-cell" + (view === "8w" && d === 1 ? " m1" : "") + (isWork ? " work" : "") + (pays[day] != null ? " pay" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
+    // 8 weeks: every other month gets a warm tint, and a gold line steps
+    // along each month boundary (above the first week, left of the 1st).
+    const mo = day.slice(0, 7);
+    const alt = view === "8w" && (Number(mo.slice(0, 4)) * 12 + Number(mo.slice(5))) % 2 === 1;
+    const lineTop = view === "8w" && ptoAddDays(day, -7) >= start && ptoAddDays(day, -7).slice(0, 7) !== mo;
+    const lineLeft = view === "8w" && parseDay(day).getDay() !== 0 && d === 1 && day !== start;
+    const cls = "pto-cal-cell" + (alt ? " alt" : "") + (view === "8w" && d === 1 ? " m1" : "") + (isWork ? " work" : "") + (pays[day] != null ? " pay" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
       + (day < today ? " past" : "") + (day === today ? " today" : "");
     const pay = pays[day];
     const tag = isBooked ? "PTO" : isWork ? (/\bOT\b/i.test(work[day][0].summary) ? "OT" : /swap/i.test(work[day][0].summary) ? "Swap" : "CVICU") : "";
@@ -4519,6 +4536,8 @@ function PtoCalendar({ plan, base, shifts, today }) {
     const label = `${ptoDayY(day)}: ${what}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}${isSel ? ", highlighted" : ""}`;
     const body = (
       <>
+        {lineTop && <i className="pto-cal-line top" aria-hidden="true" />}
+        {lineLeft && <i className="pto-cal-line left" aria-hidden="true" />}
         <span className="pto-cal-d">{dayLabel}</span>
         <span className="pto-cal-tag">{tag}</span>
         <span className="pto-cal-pay">{pay != null ? ptoChange(pay) : ""}</span>
