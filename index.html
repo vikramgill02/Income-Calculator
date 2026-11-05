@@ -390,7 +390,7 @@ a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4
 .pto-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .pto-cal-dow { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #66706a; text-align: center; padding: 4px 0 6px; }
 .pto-cal-cell {
-  min-height: 70px; border-radius: 10px; padding: 6px 3px; display: flex; flex-direction: column; align-items: center;
+  min-height: 82px; border-radius: 10px; padding: 6px 3px; display: flex; flex-direction: column; align-items: center;
   justify-content: space-between; gap: 2px; background: rgba(31,58,46,0.025); border: 1px solid transparent;
   font: inherit; color: #1f3a2e; min-width: 0; position: relative;
 }
@@ -398,7 +398,9 @@ a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4
 button.pto-cal-cell { cursor: pointer; }
 button.pto-cal-cell:hover { border-color: rgba(31,58,46,0.4); }
 button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 1px; }
-.pto-cal-cell.work { background: #fffdf8; border-color: rgba(47,122,78,0.3); box-shadow: inset 0 3px 0 #2f7a4e; }
+/* Shifts wear Google Calendar's Peacock blue, paydays its Sage green, so the
+   page reads like the BSN calendar. Text stays dark enough to read. */
+.pto-cal-cell.work { background: rgba(3,155,229,0.1); border-color: rgba(3,155,229,0.45); box-shadow: inset 0 3px 0 #039be5; }
 .pto-cal-cell.pto { background: rgba(154,113,40,0.18); border-color: rgba(154,113,40,0.45); box-shadow: inset 0 3px 0 #9a7128; }
 .pto-cal-cell.sel { background: #1f3a2e; border-color: #1f3a2e; color: #f6f1e7; }
 .pto-cal-cell.sel .pto-cal-d, .pto-cal-cell.sel .pto-cal-tag, .pto-cal-cell.sel .pto-cal-b { color: #f6f1e7 !important; }
@@ -408,7 +410,12 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 }
 .pto-cal-d { font-size: 13px; color: #66706a; }
 .pto-cal-cell.work .pto-cal-d, .pto-cal-cell.pto .pto-cal-d { font-weight: 700; color: #1f3a2e; }
-.pto-cal-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #2f7a4e; min-height: 12px; }
+.pto-cal-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #01679a; min-height: 12px; }
+.pto-cal-pay {
+  font-size: 10.5px; font-weight: 700; color: #1d7a4f; min-height: 15px; line-height: 15px;
+}
+.pto-cal-cell.pay .pto-cal-pay { background: rgba(51,182,121,0.18); border-radius: 999px; padding: 0 6px; }
+.pto-cal-cell.sel .pto-cal-pay { color: #f6f1e7 !important; background: rgba(246,241,231,0.18) !important; }
 .pto-cal-cell.pto .pto-cal-tag { color: #9a7128; }
 .pto-cal-b { font-size: 12px; font-weight: 500; color: #34483e; white-space: nowrap; }
 .pto-cal-nav {
@@ -419,12 +426,15 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 .pto-cal-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 12px; color: #66706a; }
 .pto-cal-key span { display: inline-flex; align-items: center; gap: 6px; }
 .pto-sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
-.pto-sw.work { background: #fffdf8; border: 1px solid rgba(47,122,78,0.3); box-shadow: inset 0 3px 0 #2f7a4e; }
+.pto-sw.work { background: rgba(3,155,229,0.1); border: 1px solid rgba(3,155,229,0.45); box-shadow: inset 0 3px 0 #039be5; }
+.pto-sw.pay { background: rgba(51,182,121,0.3); border-radius: 999px; }
 .pto-sw.pto { background: rgba(154,113,40,0.18); border: 1px solid rgba(154,113,40,0.45); box-shadow: inset 0 3px 0 #9a7128; }
 .pto-sw.sel { background: #1f3a2e; }
 @media (max-width: 560px) {
   .pto-cal-grid { gap: 3px; }
-  .pto-cal-cell { min-height: 60px; padding: 5px 1px; border-radius: 8px; }
+  .pto-cal-cell { min-height: 72px; padding: 5px 1px; border-radius: 8px; }
+  .pto-cal-pay { font-size: 9px; }
+  .pto-cal-cell.pay .pto-cal-pay { padding: 0 3px; }
   .pto-cal-b { font-size: 10.5px; letter-spacing: -0.02em; }
   .pto-cal-d { font-size: 12px; }
   .pto-cal-tag { font-size: 8.5px; letter-spacing: 0; }
@@ -4427,6 +4437,12 @@ function PtoCalendar({ plan, base, shifts, today }) {
     for (const s of shifts) (map[s.date] = map[s.date] || []).push(s);
     return map;
   }, [shifts]);
+  // Paydays and what each adds, from the plan (the same Wednesdays as PAYDAY💸 on the calendar).
+  const pays = useMemo(() => {
+    const map = {};
+    for (const r of base.rows) if (r.kind === "payday") map[r.date] = r.change;
+    return map;
+  }, [base]);
   const booked = useMemo(() => {
     const map = {};
     for (const t of plan.trips) if (t.on) for (const d of t.days) map[d] = t.name;
@@ -4459,14 +4475,18 @@ function PtoCalendar({ plan, base, shifts, today }) {
     const bal = rows[0] && day >= rows[0].date && day <= led.end ? ptoBalanceOn(rows, day) : null;
     const isWork = !!work[day], isBooked = !!booked[day], isSel = sel.has(day);
     const can = day >= today;
-    const cls = "pto-cal-cell" + (isWork ? " work" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
+    const cls = "pto-cal-cell" + (isWork ? " work" : "") + (pays[day] != null ? " pay" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
       + (day < today ? " past" : "") + (day === today ? " today" : "");
-    const what = isBooked ? `PTO (${booked[day]})` : isWork ? work[day].map((s) => `${s.summary} ${s.time}`).join(", ") : "Off";
+    const pay = pays[day];
+    const tag = isBooked ? "PTO" : isWork ? (/\bOT\b/i.test(work[day][0].summary) ? "OT" : /swap/i.test(work[day][0].summary) ? "Swap" : "CVICU") : "";
+    const what = (isBooked ? `PTO (${booked[day]})` : isWork ? work[day].map((s) => `${s.summary} ${s.time}`).join(", ") : "Off")
+      + (pay != null ? ` · Payday ${ptoChange(pay)} hrs` : "");
     const label = `${ptoDayY(day)}: ${what}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}${isSel ? ", highlighted" : ""}`;
     const body = (
       <>
         <span className="pto-cal-d">{d}</span>
-        <span className="pto-cal-tag">{isBooked ? "PTO" : isWork ? "Work" : ""}</span>
+        <span className="pto-cal-tag">{tag}</span>
+        <span className="pto-cal-pay">{pay != null ? ptoChange(pay) : ""}</span>
         {bal != null && <span className="pto-cal-b" style={{ color: isSel ? undefined : bal < R.floor ? PTO_RED : bal < 0 ? "#9a4452" : undefined }}>{ptoHrs(bal)}</span>}
       </>
     );
@@ -4502,7 +4522,8 @@ function PtoCalendar({ plan, base, shifts, today }) {
           {cells}
         </div>
         <div className="pto-cal-key">
-          <span><i className="pto-sw work" /> Work night</span>
+          <span><i className="pto-sw work" /> CVICU shift</span>
+          <span><i className="pto-sw pay" /> Payday (+hrs)</span>
           <span><i className="pto-sw pto" /> PTO booked</span>
           <span><i className="pto-sw sel" /> Highlighted</span>
           <span>Numbers = hrs at the end of the day</span>
