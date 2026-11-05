@@ -15,7 +15,7 @@ Every page and sub-tab has its own address, so the back button, refresh, bookmar
 | Tools | `/tools` (a list of misc tools) |
 | Property (in Tools) | `/property` · `/property/projections` |
 | Travel (in Tools) | `/travel` |
-| PTO (in Tools) | `/pto` |
+| PTO (in Tools) | `/pto` · `/pto/calendar` |
 
 It is still one `index.html`: `not_found_handling: "single-page-application"` in `wrangler.jsonc` serves it for any address that isn't a file, and the app picks the page from the URL. HTML is sent with `Cache-Control: no-cache` so a new deploy shows up immediately. An unknown page goes to `/`; an unknown sub-tab shows that page's first one. Asset paths in `index.html` are absolute (`/logos/…`, `/cards.json`) so they load from any address.
 
@@ -42,6 +42,11 @@ The page starts from [`pto.json`](./pto.json); after the first **Save** it reads
 - **Paychecks** is the checklist: tick each check as it lands, change its accrual if it wasn't 7.2, and type the stub's PTO balance.
 - **Trips** each have a *Counting* switch. A trip that's off still shows what it would do: balance going in, after, the lowest point from then on, and how many more nights fit above −24.
 - The lowest point and the end-of-year figure count only trips that are switched on.
+- **Calendar** (`/pto/calendar`) shows a month at a time with the balance at the end of each day. Work nights are bold: tap one to take it as PTO (it joins the trip whose dates it falls in, or a *Planned* list), tap a PTO day to give it back. The side panel says how many more nights you could take from that month on and stay above −24.
+
+### `shifts.json`
+
+Your CVICU nights, copied from the BSN Calendar (Google Calendar) by date the shift starts. It's a snapshot (`pulled`), not live: when the schedule changes, ask Claude to re-pull it from the BSN Calendar.
 
 ## Hosting & password
 

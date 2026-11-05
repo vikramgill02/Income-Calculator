@@ -35,12 +35,12 @@ is_app() { curl -s -H "Cookie: $COOKIE" "$BASE$1" | grep -q 'id="root"' && echo 
 
 echo "Pages serve the app:"
 for p in / /networth/accounts /networth/loans /dashboard /dashboard/employers /dashboard/monthly \
-         /dashboard/paystubs /pay /cards /cards/amex-gold /tools /property /property/projections /travel /pto /nope; do
+         /dashboard/paystubs /pay /cards /cards/amex-gold /tools /property /property/projections /travel /pto /pto/calendar /nope; do
   check "$p" "200 app" "$(status "$p") $(is_app "$p")"
 done
 
 echo "Files still load as files:"
-for f in /cards.json /paystubs.json /networth.json /travel.json /pto.json /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gc-seal.png /logos/gc-circle.png /logos/gill-co-wordmark.png; do
+for f in /cards.json /paystubs.json /networth.json /travel.json /pto.json /shifts.json /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gc-seal.png /logos/gc-circle.png /logos/gill-co-wordmark.png; do
   check "$f" 200 "$(status "$f")"
 done
 check "/cards.json is JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/cards.json" | head -c1 | grep -q '{' && echo yes || echo no)"
