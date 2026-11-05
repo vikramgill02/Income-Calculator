@@ -408,7 +408,14 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 .pto-cal-cell.today::after {
   content: ""; position: absolute; inset: -3px; border-radius: 12px; border: 1.5px solid #1f3a2e; pointer-events: none;
 }
-.pto-cal-d { font-size: 13px; color: #66706a; }
+.pto-cal-d { font-size: 13px; color: #66706a; white-space: nowrap; }
+.pto-cal-cell.m1 .pto-cal-d { color: #9a7128 !important; font-weight: 700; }
+.pto-seg { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(31,58,46,0.06); }
+.pto-seg button {
+  border: none; background: transparent; font: inherit; font-size: 12.5px; color: #4f5d55; cursor: pointer;
+  min-height: 32px; padding: 0 14px; border-radius: 999px;
+}
+.pto-seg button.on { background: #fffdf8; color: #1f3a2e; font-weight: 600; box-shadow: 0 1px 3px rgba(31,58,46,0.15); }
 .pto-cal-cell.work .pto-cal-d, .pto-cal-cell.pto .pto-cal-d { font-weight: 700; color: #1f3a2e; }
 .pto-cal-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #01679a; min-height: 12px; }
 .pto-cal-pay {
@@ -4415,22 +4422,48 @@ function PtoCheckTable({ rows, today, floor }) {
    work nights in them × 12 hrs and shows where the balance would land. A
    preview only; the plan doesn't change. */
 const PTO_DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const PTO_VIEW_KEY = "pto-calendar-view";
 
 function PtoCalendar({ plan, base, shifts, today }) {
   const R = plan.rules;
-  const first = base.rows.length ? base.rows[0].date.slice(0, 7) : today.slice(0, 7);
-  const last = base.end.slice(0, 7);
-  const [month, setMonth] = useState(() => (today.slice(0, 7) < first ? first : today.slice(0, 7) > last ? last : today.slice(0, 7)));
+  const firstDay = base.rows.length ? base.rows[0].date : today;
+  const lastDay = base.end;
+  // "8w" (eight weeks from the Sunday of the week shown) or "month". The
+  // choice is remembered on this device.
+  const [view, setViewRaw] = useState(() => {
+    try { return window.localStorage.getItem(PTO_VIEW_KEY) === "month" ? "month" : "8w"; } catch (e) { return "8w"; }
+  });
+  const setView = (v) => { setViewRaw(v); try { window.localStorage.setItem(PTO_VIEW_KEY, v); } catch (e) {} };
+  const home = today < firstDay ? firstDay : today > lastDay ? lastDay : today;
+  const [focus, setFocus] = useState(home); // any date inside the period shown
   const [sel, setSel] = useState(() => new Set());
-  const stepMonth = (k) => {
-    const [yy, mm] = month.split("-").map(Number);
-    const d = new Date(yy, mm - 1 + k, 1);
-    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+
+  let start, end, lead;
+  if (view === "month") {
+    start = `${focus.slice(0, 7)}-01`;
+    const [yy, mm] = focus.split("-").map(Number);
+    end = `${focus.slice(0, 7)}-${String(new Date(yy, mm, 0).getDate()).padStart(2, "0")}`;
+    lead = parseDay(start).getDay();
+  } else {
+    start = ptoAddDays(focus, -parseDay(focus).getDay());
+    end = ptoAddDays(start, 55);
+    lead = 0;
+  }
+  const step = (k) => {
+    if (view === "month") {
+      const d = parseDay(start);
+      d.setMonth(d.getMonth() + k);
+      setFocus(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`);
+    } else {
+      setFocus(ptoAddDays(start, 56 * k));
+    }
   };
-  const [y, m] = month.split("-").map(Number);
-  const daysIn = new Date(y, m, 0).getDate();
-  const lead = new Date(y, m - 1, 1).getDay();
-  const iso = (d) => `${month}-${String(d).padStart(2, "0")}`;
+  const days = [];
+  for (let d = start; d <= end; d = ptoAddDays(d, 1)) days.push(d);
+  const sameYear = start.slice(0, 4) === end.slice(0, 4);
+  const periodName = view === "month"
+    ? parseDay(start).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : `${parseDay(start).toLocaleDateString("en-US", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) })} – ${ptoDayY(end)}`;
 
   const work = useMemo(() => {
     const map = {};
@@ -4460,22 +4493,24 @@ function PtoCalendar({ plan, base, shifts, today }) {
   const after = extra.length ? ptoBalanceOn(rows, extra[extra.length - 1]) : null;
   const low = extra.length ? ptoLowest(rows, extra[0]) : null;
   const fits = !low || low.balance >= R.floor;
-  const from = today > iso(1) ? today : iso(1);
+  const from = today > start ? today : start;
   const lowAhead = from <= led.end ? ptoLowest(rows, from) : null;
   const room = lowAhead ? Math.max(0, Math.floor((lowAhead.balance - R.floor) / R.shift_hours + 1e-9)) : null;
-  const monthName = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const workThisMonth = Object.keys(work).filter((d) => d.startsWith(month)).length;
+  const workInPeriod = Object.keys(work).filter((d) => d >= start && d <= end).length;
 
   const toggle = (d) => setSel((s) => { const n = new Set(s); n.has(d) ? n.delete(d) : n.add(d); return n; });
 
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push(<div key={`b${i}`} className="pto-cal-cell blank" />);
-  for (let d = 1; d <= daysIn; d++) {
-    const day = iso(d);
+  for (const day of days) {
+    const d = Number(day.slice(8));
+    // In the 8-week view the 1st of each month (and the first square) says which month it is.
+    const dayLabel = view === "8w" && (d === 1 || day === start)
+      ? parseDay(day).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : d;
     const bal = rows[0] && day >= rows[0].date && day <= led.end ? ptoBalanceOn(rows, day) : null;
     const isWork = !!work[day], isBooked = !!booked[day], isSel = sel.has(day);
     const can = day >= today;
-    const cls = "pto-cal-cell" + (isWork ? " work" : "") + (pays[day] != null ? " pay" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
+    const cls = "pto-cal-cell" + (view === "8w" && d === 1 ? " m1" : "") + (isWork ? " work" : "") + (pays[day] != null ? " pay" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
       + (day < today ? " past" : "") + (day === today ? " today" : "");
     const pay = pays[day];
     const tag = isBooked ? "PTO" : isWork ? (/\bOT\b/i.test(work[day][0].summary) ? "OT" : /swap/i.test(work[day][0].summary) ? "Swap" : "CVICU") : "";
@@ -4484,7 +4519,7 @@ function PtoCalendar({ plan, base, shifts, today }) {
     const label = `${ptoDayY(day)}: ${what}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}${isSel ? ", highlighted" : ""}`;
     const body = (
       <>
-        <span className="pto-cal-d">{d}</span>
+        <span className="pto-cal-d">{dayLabel}</span>
         <span className="pto-cal-tag">{tag}</span>
         <span className="pto-cal-pay">{pay != null ? ptoChange(pay) : ""}</span>
         {bal != null && <span className="pto-cal-b" style={{ color: isSel ? undefined : bal < R.floor ? PTO_RED : bal < 0 ? "#9a4452" : undefined }}>{ptoHrs(bal)}</span>}
@@ -4496,7 +4531,7 @@ function PtoCalendar({ plan, base, shifts, today }) {
   }
 
   const navBtn = (k, lbl, dis) => (
-    <button type="button" className="pto-cal-nav" onClick={() => stepMonth(k)} disabled={dis} aria-label={lbl}>
+    <button type="button" className="pto-cal-nav" onClick={() => step(k)} disabled={dis} aria-label={lbl}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d={k < 0 ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
       </svg>
@@ -4512,10 +4547,20 @@ function PtoCalendar({ plan, base, shifts, today }) {
   return (
     <div className="pto-split">
       <div style={{ ...panel, padding: "14px 14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          {navBtn(-1, "Previous month", month <= first)}
-          <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontWeight: 500, color: "#1f3a2e" }}>{monthName}</div>
-          {navBtn(1, "Next month", month >= last)}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <div className="pto-seg" role="group" aria-label="Calendar view">
+            {[["8w", "8 weeks"], ["month", "Month"]].map(([k, l]) => (
+              <button key={k} type="button" aria-pressed={view === k} className={view === k ? "on" : ""} onClick={() => setView(k)}>{l}</button>
+            ))}
+          </div>
+          {(today < start || today > end) && today >= firstDay && today <= lastDay && (
+            <button type="button" className="refresh-btn" onClick={() => setFocus(today)}>Today</button>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+          {navBtn(-1, view === "month" ? "Previous month" : "Previous 8 weeks", start <= firstDay)}
+          <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontWeight: 500, color: "#1f3a2e", textAlign: "center" }}>{periodName}</div>
+          {navBtn(1, view === "month" ? "Next month" : "Next 8 weeks", end >= lastDay)}
         </div>
         <div className="pto-cal-grid">
           {PTO_DOW.map((d) => <div key={d} className="pto-cal-dow">{d}</div>)}
@@ -4577,8 +4622,8 @@ function PtoCalendar({ plan, base, shifts, today }) {
           )}
         </div>
         <div style={{ ...panel, padding: "16px 18px", marginTop: 14 }}>
-          <div style={{ ...panelTitle, marginBottom: 8 }}>{monthName}</div>
-          {fact("Work nights", workThisMonth)}
+          <div style={{ ...panelTitle, marginBottom: 8 }}>{periodName}</div>
+          {fact("Work nights", workInPeriod)}
           {room != null && fact(picked.length ? "Room left after highlight" : "Room from here on", `${room} night${room === 1 ? "" : "s"} · ${room * R.shift_hours} hrs`, room > 0 ? PTO_GREEN : PTO_RED)}
           {lowAhead && <p style={{ fontSize: 12, color: "#66706a", lineHeight: 1.5, margin: "8px 0 0" }}>
             Tightest point ahead: {ptoHrs(lowAhead.balance)} on {ptoDayY(lowAhead.date)}.
