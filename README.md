@@ -27,7 +27,7 @@ It is still one `index.html`: `not_found_handling: "single-page-application"` in
 
 Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
 
-- **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens.
+- **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; pinch, scroll or use the + / − buttons to zoom (up to 12×; it stops spinning while zoomed, and past 2× the finer 1:50m map loads so small countries and islands show). Tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens.
 
 ## Hosting & password
 
