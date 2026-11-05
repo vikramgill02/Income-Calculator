@@ -181,6 +181,13 @@ input { font-family: var(--font); }
   gap: 12px;
   margin-bottom: 14px;
 }
+.prop-inputs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px; margin-bottom: 12px; align-items: start;
+}
+.market-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); column-gap: 20px;
+}
 .lookup-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
   margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(31,58,46,0.062);
@@ -2893,6 +2900,7 @@ function MarketNotes() {
       <div style={{ fontSize: 11.5, color: "#858b83", lineHeight: 1.5, margin: "4px 0 6px" }}>
         $100–200k SFR & small multifamily · balanced cash flow and appreciation · landlord-friendly states
       </div>
+      <div className="market-grid">
       {MARKET_NOTES.map((m, i) => (
         <div key={m.city} style={{ padding: "10px 0", borderTop: "1px solid rgba(31,58,46,0.062)" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -2903,6 +2911,7 @@ function MarketNotes() {
           <ul style={bullets}>{m.points.map((p) => <li key={p}>{p}</li>)}</ul>
         </div>
       ))}
+      </div>
       <div style={{ paddingTop: 10, borderTop: "1px solid rgba(31,58,46,0.062)" }}>
         <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#a1a59c" }}>ALSO CONSIDERED</div>
         <ul style={bullets}>{MARKET_NOTES_ALSO.map((p) => <li key={p}>{p}</li>)}</ul>
@@ -3047,117 +3056,107 @@ function ListingLookup({ v, set }) {
   );
 }
 
+/* Small subtotal line at the foot of an input card. */
+function CardFoot({ label, value, accent = "#22362c" }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+      paddingTop: 10, marginTop: 4, borderTop: "1px solid #a1a59c",
+    }}>
+      <span style={{ fontSize: 12, color: "#4f5d55", fontWeight: 550 }}>{label}</span>
+      <span style={{ fontFamily: FONT, fontSize: 14.5, fontWeight: 600, color: accent }}>{value}</span>
+    </div>
+  );
+}
+
 function DealTab({ v, set }) {
   const d = analyzeDeal(v);
+  const perMo = (x) => `${fmt0(x)}/mo`;
+  const red = "#b5483b";
 
   return (
     <>
       <ListingLookup v={v} set={set} />
+
+      {/* Every input in one band so nothing needs scrolling to reach. */}
+      <div className="prop-inputs">
+        <PropCard title="Purchase" style={{ marginBottom: 0 }}>
+          <MoneyInput label="Monthly Rent" value={v.rent} onChange={set("rent")} />
+          <MoneyInput label="Sale Price" value={v.salePrice} onChange={set("salePrice")} />
+          <RateInput label="Closing Cost" note={fmt0(d.closingCost)} value={v.closingCostPct} onChange={set("closingCostPct")} />
+          <MoneyInput label="Misc" note="furniture, inspection" value={v.misc} onChange={set("misc")} />
+          <MoneyInput label="Rehab" note="out of pocket" value={v.rehab} onChange={set("rehab")} />
+          <CardFoot label="Total cost" value={fmt0(d.totalCost)} />
+        </PropCard>
+
+        <PropCard title="Mortgage · 30 yr fixed" style={{ marginBottom: 0 }}>
+          <RateInput label="Interest Rate" value={v.interestRate} onChange={set("interestRate")} />
+          <RateInput label="Down Payment" note={fmt0(d.downAmt)} value={v.downPct} onChange={set("downPct")} />
+          <DerivedRow label="Loan amount" value={fmt0(d.loanAmt)} />
+          <CardFoot label="Principal + interest" value={perMo(d.pAndI)} accent={red} />
+        </PropCard>
+
+        <PropCard title="Expenses · % of rent" style={{ marginBottom: 0 }}>
+          <RateInput label="Management" note={perMo(d.mgmtFee)} value={v.mgmtPct} onChange={set("mgmtPct")} />
+          <RateInput label="Repairs & maint." note={perMo(d.repairAmt)} value={v.repairsPct} onChange={set("repairsPct")} />
+          <RateInput label="CapEx" note={`${perMo(d.capexAmt)} · roof, HVAC`} value={v.capexPct} onChange={set("capexPct")} />
+          <RateInput label="Vacancy" note={perMo(d.vacancyLoss)} value={v.vacancyPct} onChange={set("vacancyPct")} />
+          <CardFoot label="Subtotal" value={perMo(d.rentBasedExp)} accent={red} />
+        </PropCard>
+
+        <PropCard title="Fixed costs · monthly" style={{ marginBottom: 0 }}>
+          <RateInput label="Property Tax" note={`annual rate · ${perMo(d.monthlyPropTax)}`} value={v.propTaxRate} onChange={set("propTaxRate")} />
+          <MoneyInput label="Insurance" value={v.insurance} onChange={set("insurance")} />
+          <MoneyInput label="HOA" value={v.hoa} onChange={set("hoa")} />
+          <MoneyInput label="Utilities" value={v.utilities} onChange={set("utilities")} />
+          <MoneyInput label="Lawyer" value={v.lawyer} onChange={set("lawyer")} />
+          <CardFoot label="Subtotal" value={perMo(d.fixedMonthlyExp)} accent={red} />
+        </PropCard>
+      </div>
+
       {n(v.salePrice) > 0 && <PriceSlider value={v.salePrice} onChange={set("salePrice")} />}
 
-      {d.hasData && (
-        <div className="prop-kpis">
-          <StatTile label="Monthly profit" value={fmt(d.monthlyProfit)} sub="after every expense"
-            accent={d.monthlyProfit >= 0 ? "#2f7a4e" : "#b5483b"} />
-          <StatTile label="Cash-on-cash" value={pctLabel(d.cashOnCash)} sub="cash flow ÷ cash in"
-            accent={gradeCoc(d.cashOnCash)} />
-          <StatTile label="Cash needed" value={fmt0(d.cashNeeded)} sub="to close" />
-        </div>
-      )}
+      {d.hasData ? (
+        <>
+          <div className="prop-kpis">
+            <StatTile label="Monthly profit" value={fmt(d.monthlyProfit)} sub="after every expense"
+              accent={d.monthlyProfit >= 0 ? "#2f7a4e" : red} />
+            <StatTile label="Cash-on-cash" value={pctLabel(d.cashOnCash)} sub="cash flow ÷ cash in"
+              accent={gradeCoc(d.cashOnCash)} />
+            <StatTile label="Cash needed" value={fmt0(d.cashNeeded)} sub="to close" />
+          </div>
 
-      <div className="prop-cols">
-        <div>
-          <PropCard title="Income">
-            <MoneyInput label="Monthly Rent" value={v.rent} onChange={set("rent")} />
-          </PropCard>
-
-          <PropCard title="Acquisition">
-            <MoneyInput label="Sale Price" value={v.salePrice} onChange={set("salePrice")} />
-            <MoneyInput label="Misc" note="Furniture, inspection, etc." value={v.misc} onChange={set("misc")} />
-            <MoneyInput label="Out of Pocket Rehab" value={v.rehab} onChange={set("rehab")} />
-            <RateInput label="Closing Cost" value={v.closingCostPct} onChange={set("closingCostPct")} />
-            <div style={{ marginTop: 6 }}>
-              <DerivedRow label="Closing cost" note={`${v.closingCostPct || 0}% of price`} value={fmt(d.closingCost)} />
-              <DerivedRow label="Total cost" value={fmt(d.totalCost)} />
-            </div>
-          </PropCard>
-
-          <PropCard title="Mortgage · 30 yr fixed">
-            <RateInput label="Interest Rate" value={v.interestRate} onChange={set("interestRate")} />
-            <RateInput label="Down Payment" value={v.downPct} onChange={set("downPct")} />
-            <div style={{ marginTop: 6 }}>
-              <DerivedRow label="Down payment" note={`${v.downPct || 0}% of price`} value={fmt(d.downAmt)} />
-              <DerivedRow label="Loan amount" value={fmt(d.loanAmt)} />
-              <DerivedRow label="Principal + interest" note="monthly" value={fmt(d.pAndI)} />
-            </div>
-          </PropCard>
-
-          <PropCard title="Monthly Expenses">
-            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#a1a59c", padding: "8px 0 2px" }}>% OF RENT</div>
-            <RateInput label="Management fee" value={v.mgmtPct} onChange={set("mgmtPct")} />
-            <RateInput label="Repairs & maintenance" note="ongoing fixes, not big replacements"
-              value={v.repairsPct} onChange={set("repairsPct")} />
-            <RateInput label="Capital expenditures" note="reserve for roof, HVAC, etc."
-              value={v.capexPct} onChange={set("capexPct")} />
-            <RateInput label="Vacancy" note="months empty, spread over the year"
-              value={v.vacancyPct} onChange={set("vacancyPct")} />
-            <div style={{ margin: "6px 0 10px" }}>
-              <DerivedRow label="Management fee" note={`${v.mgmtPct || 0}% of rent`} value={fmt(d.mgmtFee)} accent="#b5483b" />
-              <DerivedRow label="Repairs & maintenance" note={`${v.repairsPct || 0}% of rent`} value={fmt(d.repairAmt)} accent="#b5483b" />
-              <DerivedRow label="Capital expenditures" note={`${v.capexPct || 0}% of rent`} value={fmt(d.capexAmt)} accent="#b5483b" />
-              <DerivedRow label="Vacancy" note={`${v.vacancyPct || 0}% of rent`} value={fmt(d.vacancyLoss)} accent="#b5483b" />
-            </div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#a1a59c", padding: "4px 0 2px" }}>FIXED COSTS</div>
-            <RateInput label="County Property Tax" note="annual rate" value={v.propTaxRate} onChange={set("propTaxRate")} />
-            <div style={{ margin: "6px 0 10px" }}>
-              <DerivedRow label="Property tax" note="annual" value={fmt(d.annualPropTax)} accent="#b5483b" />
-              <DerivedRow label="Property tax" note="monthly" value={fmt(d.monthlyPropTax)} accent="#b5483b" />
-            </div>
-            <MoneyInput label="Insurance" note="monthly" value={v.insurance} onChange={set("insurance")} />
-            <MoneyInput label="HOA" note="monthly" value={v.hoa} onChange={set("hoa")} />
-            <MoneyInput label="Utilities" note="monthly" value={v.utilities} onChange={set("utilities")} />
-            <MoneyInput label="Lawyer" note="monthly" value={v.lawyer} onChange={set("lawyer")} />
-            <TotalRow label="Total monthly expenses" value={fmt(d.totalExpWithLoan)} accent="#b5483b" />
-          </PropCard>
-
-          <MarketNotes />
-        </div>
-
-        <div>
-          {d.hasData ? (
-            <>
-              <div className="prop-charts">
-                <PropCard title="Where the rent goes">
-                  <Donut buckets={monthlyBuckets(d)} centerLabel="MONTHLY RENT" centerValue={fmt0(d.rentV)}
-                    note="Hover a slice to break it down. Profit is what's left after every line above." />
-                </PropCard>
-                <PropCard title="Cash to close">
-                  <Donut buckets={cashBuckets(d)} centerLabel="CASH NEEDED" centerValue={fmt0(d.cashNeeded)}
-                    note="What you wire at closing — the denominator of cash-on-cash return." />
-                </PropCard>
-              </div>
-
-              <PropCard title="Results · with loan">
-                <DerivedRow label="Monthly revenue" value={fmt(d.rentV)} />
-                <DerivedRow label="Monthly expenses" value={fmt(d.totalExpWithLoan)} />
-                <TotalRow label="Monthly profit" value={fmt(d.monthlyProfit)}
-                  accent={d.monthlyProfit >= 0 ? "#2f7a4e" : "#b5483b"} />
-                <div style={{ marginTop: 8 }}>
-                  <DerivedRow label="Annual cash flow" value={fmt(d.annualProfit)}
-                    accent={d.annualProfit >= 0 ? "#2f7a4e" : "#b5483b"} />
-                </div>
-              </PropCard>
-
-            </>
-          ) : (
-            <PropCard>
-              <div style={{ textAlign: "center", padding: "26px 0", fontSize: 13, color: "#6e776f" }}>
-                Enter a sale price and monthly rent to see the breakdown.
+          <div className="prop-charts" style={{ marginBottom: 12 }}>
+            <PropCard title="Results · with loan" style={{ marginBottom: 0 }}>
+              <DerivedRow label="Monthly revenue" value={fmt(d.rentV)} />
+              <DerivedRow label="Operating expenses" value={fmt(d.totalExpNoLoan)} />
+              <DerivedRow label="Principal + interest" value={fmt(d.pAndI)} />
+              <TotalRow label="Monthly profit" value={fmt(d.monthlyProfit)}
+                accent={d.monthlyProfit >= 0 ? "#2f7a4e" : red} />
+              <div style={{ marginTop: 8 }}>
+                <DerivedRow label="Annual cash flow" value={fmt(d.annualProfit)}
+                  accent={d.annualProfit >= 0 ? "#2f7a4e" : red} />
               </div>
             </PropCard>
-          )}
-        </div>
-      </div>
+            <PropCard title="Where the rent goes" style={{ marginBottom: 0 }}>
+              <Donut buckets={monthlyBuckets(d)} centerLabel="MONTHLY RENT" centerValue={fmt0(d.rentV)}
+                note="Hover a slice to break it down. Profit is what's left after every expense." />
+            </PropCard>
+            <PropCard title="Cash to close" style={{ marginBottom: 0 }}>
+              <Donut buckets={cashBuckets(d)} centerLabel="CASH NEEDED" centerValue={fmt0(d.cashNeeded)}
+                note="What you wire at closing — the denominator of cash-on-cash return." />
+            </PropCard>
+          </div>
+        </>
+      ) : (
+        <PropCard>
+          <div style={{ textAlign: "center", padding: "26px 0", fontSize: 13, color: "#6e776f" }}>
+            Enter a sale price and monthly rent to see the breakdown.
+          </div>
+        </PropCard>
+      )}
+
+      <MarketNotes />
     </>
   );
 }
@@ -3295,15 +3294,15 @@ function ProjectionsTab({ v, set }) {
 }
 
 const PROP_DEFAULTS = {
-  salePrice: "", misc: "", closingCostPct: "4", rehab: "",
-  rent: "", propTaxRate: "", interestRate: "7.25", downPct: "25",
+  salePrice: 0, misc: "", closingCostPct: "4", rehab: "",
+  rent: 0, propTaxRate: "", interestRate: "7.25", downPct: "25",
   insurance: "", hoa: "", utilities: "", lawyer: "",
   mgmtPct: "8", repairsPct: "3", capexPct: "4", vacancyPct: "5",
   rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
   listingUrl: "", lookup: null,
 };
 
-const DRAFT_KEY = "property-draft";
+const DRAFT_KEY = "property-draft-v2";
 /* Deals are saved through /api/deals in worker.js; the in-progress draft is
    cached per browser so switching tabs mid-deal doesn't discard it. */
 function useDeals(v, setAll) {

@@ -160,8 +160,11 @@ are flat dollar amounts.
 
 Repairs & maintenance and capital expenditures are deliberately separate lines:
 R&M is ongoing small work, capex is the reserve for big replacements. R&M
-defaults to 3%. A new deal starts with sale price, rent, county property tax
-and insurance blank (the price slider appears once there's a price).
+defaults to 3%. A new deal starts with sale price and rent at 0 and county
+property tax and insurance blank (the price slider appears once there's a price).
+All the inputs sit in one band of four cards (purchase, mortgage, % of rent,
+fixed costs) under the listing lookup, each showing its dollar figures inline,
+with the results, charts and market notes below.
 A recently renovated property justifies a later replacement date, not a zero
 capex line.
 
