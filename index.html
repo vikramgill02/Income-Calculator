@@ -2391,6 +2391,7 @@ function analyzeDeal(inp) {
   const insV = n(inp.insurance), hoaV = n(inp.hoa), utilV = n(inp.utilities), lawV = n(inp.lawyer);
   const mgmt = pctVal(inp.mgmtPct), capex = pctVal(inp.capexPct), vac = pctVal(inp.vacancyPct);
   const repairs = pctVal(inp.repairsPct);
+  const reserveMonths = n(inp.reserveMonths), sellPct = pctVal(inp.sellCostPct);
 
   const closingCost = sp * ccPct;
   const totalCost = sp + miscV + closingCost + rehabV;
@@ -2415,7 +2416,12 @@ function analyzeDeal(inp) {
   const totalExpWithLoan = totalExpNoLoan + pAndI;
   const monthlyProfit = rentV - totalExpWithLoan;
   const annualProfit = monthlyProfit * 12;
-  const cashNeeded = downAmt + closingCost + miscV + rehabV;
+  /* Lenders want months of PITIA (mortgage, tax, insurance, HOA) sitting in
+     the bank after closing. It's still your money, but it's tied up, so it
+     counts as cash in. */
+  const reserves = reserveMonths * (pAndI + monthlyPropTax + insV + hoaV);
+  const cashToClose = downAmt + closingCost + miscV + rehabV;
+  const cashNeeded = cashToClose + reserves;
   const cashOnCash = cashNeeded > 0 ? annualProfit / cashNeeded : null;
 
   /* Remaining balance after m payments (closed form, clamped at payoff). */
@@ -2433,6 +2439,7 @@ function analyzeDeal(inp) {
     mgmt, repairs, capex, vac, ptRate,
     ccPct, dp, ir, downAmt, loanAmt, pAndI, rentBasedExp, fixedMonthlyExp,
     totalExpNoLoan, totalExpWithLoan, monthlyProfit, annualProfit, cashNeeded,
+    cashToClose, reserves, reserveMonths, sellPct,
     cashOnCash, balanceAfter,
     hasData: sp > 0 && rentV > 0,
   };
@@ -2459,18 +2466,21 @@ function cashFlowYears(d, rentGrowth, expInflation, years) {
   return rows;
 }
 
-/* Total return over `years`: rent profit + appreciation + principal paydown. */
+/* Total return over `years` if you sell at the end: rent profit +
+   appreciation + principal paydown − selling costs on the future value. */
 function totalReturn(d, rentGrowth, expInflation, apprRate, years) {
   const rows = cashFlowYears(d, rentGrowth, expInflation, years);
   const cumCashFlow = rows.length ? rows[rows.length - 1].cumulative : 0;
   const apprGain = d.sp * Math.pow(1 + apprRate, years) - d.sp;
   const paydown = d.loanAmt - d.balanceAfter(years * 12);
-  const totalGain = cumCashFlow + apprGain + paydown;
+  const saleValue = d.sp * Math.pow(1 + apprRate, years);
+  const sellCost = saleValue * d.sellPct;
+  const totalGain = cumCashFlow + apprGain + paydown - sellCost;
   const total = d.cashNeeded > 0 ? totalGain / d.cashNeeded : null;
   /* CAGR is only defined while the position is still worth something. */
   const multiple = total == null ? null : 1 + total;
   const annualized = multiple != null && multiple > 0 ? Math.pow(multiple, 1 / years) - 1 : null;
-  return { rows, cumCashFlow, apprGain, paydown, totalGain, total, annualized };
+  return { rows, cumCashFlow, apprGain, paydown, saleValue, sellCost, totalGain, total, annualized };
 }
 
 const pctLabel = (v, dp = 2) => v == null ? "—" : `${(v * 100).toFixed(dp)}%`;
@@ -2507,6 +2517,8 @@ function cashBuckets(d) {
     { label: "Closing costs", color: C_TAX, value: d.closingCost, items: [] },
     { label: "Rehab", color: C_OPS, value: d.rehabV, items: [] },
     { label: "Misc", color: C_PROFIT, value: d.miscV, items: [] },
+    { label: "Reserves", color: "#7a8a80", value: d.reserves,
+      items: [[`${d.reserveMonths} mo of PITIA`, d.reserves]] },
   ].filter((b) => b.value > 0.005);
 }
 
@@ -2600,10 +2612,11 @@ function returnSeries(d, rentGrowth, expInflation, apprRate, years) {
     const cf = r.cumulative;
     const ap = d.sp * Math.pow(1 + apprRate, t) - d.sp;
     const pd = d.loanAmt - d.balanceAfter(t * 12);
-    const gain = cf + ap + pd;
+    const sc = -(d.sp * Math.pow(1 + apprRate, t) * d.sellPct);   // if sold that year
+    const gain = cf + ap + pd + sc;
     const ret = d.cashNeeded > 0 ? gain / d.cashNeeded : null;
     const mult = ret == null ? null : 1 + ret;
-    return { year: t, cf, ap, pd, gain, ret,
+    return { year: t, cf, ap, pd, sc, gain, ret,
       cagr: mult != null && mult > 0 ? Math.pow(mult, 1 / t) - 1 : null };
   });
 }
@@ -2648,6 +2661,7 @@ function ReturnChart({ series }) {
     { key: "cf", label: "Rent profit", color: C_CF },
     { key: "ap", label: "Appreciation", color: C_APPR },
     { key: "pd", label: "Principal paydown", color: C_PD },
+    { key: "sc", label: "Selling costs", color: C_OPS },
   ];
 
   /* One shared dollar scale across the stack, with a real zero line so a
@@ -3093,6 +3107,14 @@ function DealTab({ v, set }) {
           <RateInput label="Interest Rate" value={v.interestRate} onChange={set("interestRate")} />
           <RateInput label="Down Payment" note={fmt0(d.downAmt)} value={v.downPct} onChange={set("downPct")} />
           <DerivedRow label="Loan amount" value={fmt0(d.loanAmt)} />
+          <PropRow label="Reserves" note={`${fmt0(d.reserves)} · months of PITIA`}>
+            <PropInputShell>
+              <input type="text" inputMode="numeric" value={v.reserveMonths} placeholder="—"
+                onChange={(e) => set("reserveMonths")(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+                style={{ ...propInputStyle, width: 40 }} />
+              <span style={{ color: "#6e776f", fontSize: 12.5 }}>mo</span>
+            </PropInputShell>
+          </PropRow>
           <CardFoot label="Principal + interest" value={perMo(d.pAndI)} accent={red} />
         </PropCard>
 
@@ -3123,7 +3145,7 @@ function DealTab({ v, set }) {
               accent={d.monthlyProfit >= 0 ? "#2f7a4e" : red} />
             <StatTile label="Cash-on-cash" value={pctLabel(d.cashOnCash)} sub="cash flow ÷ cash in"
               accent={gradeCoc(d.cashOnCash)} />
-            <StatTile label="Cash needed" value={fmt0(d.cashNeeded)} sub="to close" />
+            <StatTile label="Cash needed" value={fmt0(d.cashNeeded)} sub={d.reserves > 0 ? "to close + reserves" : "to close"} />
           </div>
 
           <div className="prop-charts" style={{ marginBottom: 12 }}>
@@ -3144,7 +3166,7 @@ function DealTab({ v, set }) {
             </PropCard>
             <PropCard title="Cash to close" style={{ marginBottom: 0 }}>
               <Donut buckets={cashBuckets(d)} centerLabel="CASH NEEDED" centerValue={fmt0(d.cashNeeded)}
-                note="What you wire at closing — the denominator of cash-on-cash return." />
+                note="What you wire at closing plus reserves left in the bank — the denominator of cash-on-cash return." />
             </PropCard>
           </div>
         </>
@@ -3190,6 +3212,7 @@ function ProjectionsTab({ v, set }) {
             <RateInput label="Rent Growth" note="per year, compounding" value={v.rentGrowthPct} onChange={set("rentGrowthPct")} />
             <RateInput label="Expense Inflation" note="tax, insurance, HOA, utilities" value={v.expInflationPct} onChange={set("expInflationPct")} />
             <RateInput label="Appreciation" note="per year, compounding" value={v.apprPct} onChange={set("apprPct")} />
+            <RateInput label="Selling Costs" note="agent + transfer tax, at sale" value={v.sellCostPct} onChange={set("sellCostPct")} />
             <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
               <Pills options={HORIZONS} value={horizon} onChange={setHorizon} />
             </div>
@@ -3203,7 +3226,7 @@ function ProjectionsTab({ v, set }) {
                 <div style={{ fontFamily: FONT, fontSize: 34, fontWeight: 600, color: r.total >= 0 ? "#2f7a4e" : "#b5483b", lineHeight: 1 }}>
                   {pctLabel(r.total)}
                 </div>
-                <div style={{ fontSize: 11.5, color: "#a1a59c", marginTop: 5 }}>cumulative on cash invested</div>
+                <div style={{ fontSize: 11.5, color: "#a1a59c", marginTop: 5 }}>cumulative on cash invested, if sold</div>
               </div>
               <div style={{ marginLeft: "auto", textAlign: "right" }}>
                 <div style={{ fontFamily: FONT, fontSize: 22, fontWeight: 600, color: "#22362c", lineHeight: 1 }}>
@@ -3217,6 +3240,8 @@ function ProjectionsTab({ v, set }) {
                 accent={r.cumCashFlow >= 0 ? "#2f7a4e" : "#b5483b"} />
               <DerivedRow label="Appreciation" note={`${v.apprPct || 0}%/yr compounding`} value={fmt0(r.apprGain)} />
               <DerivedRow label="Principal paydown" value={fmt0(r.paydown)} />
+              <DerivedRow label="Selling costs" note={`${v.sellCostPct || 0}% of ${fmt0(r.saleValue)}`} value={fmt0(-r.sellCost)}
+                accent={r.sellCost > 0 ? "#b5483b" : undefined} />
               <TotalRow label="Total gain" value={fmt0(r.totalGain)} accent={r.totalGain >= 0 ? "#2f7a4e" : "#b5483b"} />
               <div style={{ marginTop: 8 }}>
                 <DerivedRow label="Cash invested" value={fmt0(d.cashNeeded)} />
@@ -3232,8 +3257,8 @@ function ProjectionsTab({ v, set }) {
         </div>
         <div style={{ fontSize: 11.5, color: "#a1a59c", marginTop: 10, lineHeight: 1.55 }}>
           Rent profit is cash you actually banked. Appreciation and paydown are equity — real, but locked
-          in the property until you sell or refinance. A return leaning mostly on appreciation is a forecast,
-          not income.
+          in the property until you sell or refinance. Selling costs are what you'd pay to get that equity out
+          if you sold that year. A return leaning mostly on appreciation is a forecast, not income.
         </div>
       </PropCard>
 
@@ -3285,7 +3310,7 @@ function ProjectionsTab({ v, set }) {
           })}
           <div style={{ fontSize: 11.5, color: "#a1a59c", marginTop: 10, lineHeight: 1.55 }}>
             Equity = appreciation + principal paid down. Total return also includes cumulative rent
-            profit. Gains are before selling costs and taxes.
+            profit, less selling costs. Before income and capital-gains taxes.
           </div>
         </PropCard>
       </div>
@@ -3299,6 +3324,7 @@ const PROP_DEFAULTS = {
   insurance: "", hoa: "", utilities: "", lawyer: "",
   mgmtPct: "8", repairsPct: "3", capexPct: "4", vacancyPct: "5",
   rentGrowthPct: "2", expInflationPct: "3", apprPct: "2",
+  reserveMonths: "6", sellCostPct: "7",
   listingUrl: "", lookup: null,
 };
 

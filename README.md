@@ -168,7 +168,9 @@ with the results, charts and market notes below.
 A recently renovated property justifies a later replacement date, not a zero
 capex line.
 
-**Cash-on-cash ROI** = annual cash flow ÷ (down payment + closing + misc + rehab).
+**Cash-on-cash ROI** = annual cash flow ÷ cash needed, where cash needed = down payment + closing + misc + rehab + **reserves**. Reserves (default 6 months, in the Mortgage card) are months of PITIA — mortgage, property tax, insurance and HOA — that lenders want left in the bank after closing. It's still your money, but it's tied up, so it counts as cash in.
+
+**Selling costs** (default 7%, in Projections → Assumptions) come off the projected sale value at the end of the horizon, so total return and the annualized figure are what you'd net if you sold then. The chart shows them as a negative bar each year (the cost if you sold that year).
 
 **Projections.** Rent and the rent-linked expenses grow at the rent-growth rate;
 tax, insurance, HOA and utilities grow at the expense-inflation rate; the
