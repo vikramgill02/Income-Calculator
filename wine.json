@@ -32,6 +32,14 @@
             40.2
           ],
           "note": "Porta Caeli (Vinero): Bordeaux varieties"
+        },
+        {
+          "name": "Barbaros, Tekirdağ (Thrace)",
+          "at": [
+            27.43,
+            40.9
+          ],
+          "note": "Barbare: organic, above the Sea of Marmara"
         }
       ],
       "spots": [
@@ -85,6 +93,22 @@
                 "at": [
                   26.37,
                   40.2
+                ]
+              }
+            },
+            {
+              "name": "Barbare Premier Merlot",
+              "vintage": 2012,
+              "type": "red",
+              "grapes": "Merlot",
+              "mine": 9.1,
+              "comment": "Very dry, good, smooth.",
+              "menu": "Medium-full, ripe red fruit, velvety finish",
+              "from": {
+                "name": "Barbaros, Tekirdağ (Thrace)",
+                "at": [
+                  27.43,
+                  40.9
                 ]
               }
             }
