@@ -24,6 +24,14 @@
             36.7
           ],
           "note": "Kayraklı Şarapçılık (Asarcık)"
+        },
+        {
+          "name": "Eceabat, Gallipoli peninsula (Çanakkale)",
+          "at": [
+            26.37,
+            40.2
+          ],
+          "note": "Porta Caeli (Vinero): Bordeaux varieties"
         }
       ],
       "spots": [
@@ -61,6 +69,21 @@
                 "at": [
                   28.08,
                   36.7
+                ]
+              }
+            },
+            {
+              "name": "Porta Caeli Petit Verdot",
+              "vintage": 2022,
+              "type": "red",
+              "grapes": "Petit Verdot",
+              "comment": "A lot of wine. Better than the Boğazkere, still smooth, no throat-burner bite. A little sweet, fruity kick I enjoy.",
+              "menu": "Full-bodied, dried forest fruit, long finish",
+              "from": {
+                "name": "Eceabat, Gallipoli peninsula (Çanakkale)",
+                "at": [
+                  26.37,
+                  40.2
                 ]
               }
             }
