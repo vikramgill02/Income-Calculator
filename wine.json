@@ -8,7 +8,14 @@
         "Loved the 7 Bilgeler Solon Attica Malbec at Bağ Pera, Istanbul."
       ],
       "regions": [
-        { "name": "Selçuk, İzmir (Aegean)", "at": [27.368, 37.951], "note": "7 Bilgeler" }
+        {
+          "name": "Selçuk, İzmir (Aegean)",
+          "at": [
+            27.368,
+            37.951
+          ],
+          "note": "7 Bilgeler"
+        }
       ],
       "spots": [
         {
@@ -16,8 +23,22 @@
           "city": "Istanbul",
           "date": "2026-11-12",
           "wines": [
-            { "name": "7 Bilgeler Solon Attica", "vintage": 2023, "type": "red", "grapes": "Malbec",
-              "mine": 9.5, "comment": "Loved it.", "menu": "Full-bodied, firm tannins, black fruit" }
+            {
+              "name": "7 Bilgeler Solon Attica",
+              "vintage": 2023,
+              "type": "red",
+              "grapes": "Malbec",
+              "mine": 9.5,
+              "comment": "Full-bodied, heavy tannins, smooth. Long finish.",
+              "menu": "Full-bodied, firm tannins, black fruit",
+              "from": {
+                "name": "Selçuk, İzmir (Aegean)",
+                "at": [
+                  27.368,
+                  37.951
+                ]
+              }
+            }
           ]
         }
       ]
