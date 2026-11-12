@@ -28,7 +28,7 @@ It is still one `index.html`: `not_found_handling: "single-page-application"` in
 
 Branded **Gill & Co.** The look is a dark charcoal and champagne-gold theme: Cormorant Garamond headings, Inter for numbers and UI.
 
-- **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; pinch, scroll or use the + / − buttons to zoom (up to 12×; it stops spinning while zoomed, and past 2× the finer 1:50m map loads so small countries and islands show). Tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens. Wine-red dots are wine regions from [`wine.json`](./wine.json): a country with wine notes shows 🍷 in the list and a *Wine* section (notes, regions, bottles rated, what to try, spots). Each spot has a **Wine breakdown** button that lists that bar's or restaurant's whole menu, best fits for my palate first.
+- **Travel** (under Tools) — a globe that turns on its own with every country you've been to in green and the bucket list in gold; white dots are the cities. Drag to turn it; pinch, scroll or use the + / − buttons to zoom (up to 12×; it stops spinning while zoomed, and past 2× the finer 1:50m map loads so small countries and islands show). Tap a country (on the globe or in the list) to stop the spin, swing it round to face you and show its cities. Above it: countries out of 195, share of the world, continents and cities. Data lives in [`travel.json`](./travel.json); the map (d3-geo + world-atlas 110m) loads from jsDelivr only when the page opens. Wine-red dots are wine regions from [`wine.json`](./wine.json): a country with wine notes shows 🍷 in the list and a *Wine* section (notes, regions, bottles rated, spots). Each spot has a **Wine breakdown** button with the wines I had there: my score, my comment and a few words from the menu.
 
 - **PTO** (under Tools) — running Sutter PTO balance check by check, and a calendar of your work schedule (live from Google Calendar) where highlighting days shows the PTO they'd use. See [PTO tracker](#pto-tracker).
 
@@ -139,15 +139,13 @@ Only pre-tax 403(b) is tracked; Roth/after-tax contributions are excluded. A `pr
 { "palate": "Darker, full-bodied reds; …",
   "countries": [{ "iso": "792", "name": "Türkiye",
     "notes": ["What I liked, where to go"],
-    "regions": [{ "name": "Selçuk, İzmir (Aegean)", "at": [27.368, 37.951], "note": "" }],
-    "try": ["Boğazkere"],
-    "spots": [{ "name": "Bağ Pera", "city": "Istanbul", "date": "2026-11-12", "note": "",
-      "wines": [{ "n": 16, "name": "7 Bilgeler Solon Attica", "vintage": 2023, "type": "red",
-                  "grapes": "Malbec", "notes": "Full-bodied, firm tannins", "price": "1075 / 4750",
-                  "fit": 5, "why": "", "mine": 9.5 }] }] }] }
+    "regions": [{ "name": "Selçuk, İzmir (Aegean)", "at": [27.368, 37.951], "note": "7 Bilgeler" }],
+    "spots": [{ "name": "Bağ Pera", "city": "Istanbul", "date": "2026-11-12",
+      "wines": [{ "name": "7 Bilgeler Solon Attica", "vintage": 2023, "type": "red", "grapes": "Malbec",
+                  "mine": 9.5, "comment": "Loved it.", "menu": "Full-bodied, firm tannins, black fruit" }] }] }] }
 ```
 
-One entry per country, matched to the globe by `iso` (it doesn't have to be in `travel.json`). `regions` get a wine-red dot. Each spot is one menu: `n` is the number on the list, `type` is `red`, `white` or `rosé`, `price` is glass / bottle in local currency, `fit` (1–5) is how well it suits `palate`, `why` explains the fit, and `mine` is my own score out of 10 once I've had it. *My bottles* collects every wine with a `mine` score. The breakdown shows wines with `fit` 3+ or a score first; *Show all* adds the rest.
+One entry per country, matched to the globe by `iso` (it doesn't have to be in `travel.json`). `regions` get a wine-red dot. Each spot lists only the wines I had there: `mine` is my score out of 10, `comment` is my own note, and `menu` is 3–7 words from the menu. `type` is `red`, `white` or `rosé`. No prices. *My bottles* collects every wine with a score. `palate` is there for Claude's recommendations and isn't shown.
 
 ## Card claims
 

@@ -3800,7 +3800,7 @@ function NetWorth() {
    in the list) to stop the spin, turn it to face you and show its cities.
    wine.json adds a wine layer: wine-red dots on the regions, and a Wine
    section on the country with notes, bottles rated and, per spot (a bar or
-   restaurant whose list was logged), a Wine breakdown of everything on it. */
+   restaurant), a Wine breakdown of what I had there and what I thought. */
 
 const GEO_LIBS = [
   "https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js",
@@ -4180,17 +4180,6 @@ const WINE_TYPE = { red: ["#7a2338", "rgba(122,35,56,0.1)"], white: ["#8a6420", 
   "rosé": ["#b5486a", "rgba(181,72,106,0.1)"] };
 const wineDate = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso || "") ? parseDay(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "");
 
-function FitDots({ fit }) {
-  return (
-    <span aria-label={`Fit ${fit} of 5`} title={`Fit for your palate: ${fit}/5`} style={{ display: "inline-flex", gap: 3 }}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} style={{ width: 7, height: 7, borderRadius: "50%",
-          background: i <= fit ? TRAVEL_COLORS.wine : "rgba(122,35,56,0.14)" }} />
-      ))}
-    </span>
-  );
-}
-
 const Score = ({ v }) => (
   <span style={{ fontSize: 12, fontWeight: 700, color: "#fffdf8", background: TRAVEL_COLORS.wine, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>
     {v}/10
@@ -4225,12 +4214,6 @@ function WineSection({ wine, open, onBreakdown }) {
           ))}
         </div>
       )}
-      {wine.try.length > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <div style={{ ...panelTitle, marginBottom: 8 }}>To try</div>
-          {wine.try.map((t) => <div key={t} style={{ fontSize: 13, color: "#34483e", lineHeight: 1.5, padding: "2px 0" }}>○ {t}</div>)}
-        </div>
-      )}
       {wine.spots.length > 0 && (
         <div style={{ marginTop: 14 }}>
           <div style={{ ...panelTitle, marginBottom: 8 }}>Spots</div>
@@ -4250,54 +4233,41 @@ function WineSection({ wine, open, onBreakdown }) {
   );
 }
 
-// The whole list from one spot, best fits for the palate first.
-function WineBreakdown({ spot, palate, onClose }) {
-  const [all, setAll] = useState(false);
-  const wines = [...spot.wines].sort((a, b) => (b.mine != null) - (a.mine != null) || (b.fit || 0) - (a.fit || 0) || a.n - b.n);
-  const shown = all ? wines : wines.filter((w) => (w.fit || 0) >= 3 || w.mine != null);
+// The wines I had at one spot: my score and comment, plus a few words off the menu.
+function WineBreakdown({ spot, onClose }) {
+  const wines = [...spot.wines].sort((a, b) => (b.mine || 0) - (a.mine || 0));
   return (
     <div style={{ ...panel, marginBottom: 32 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
         <div>
           <div style={{ ...panelTitle, marginBottom: 6, color: TRAVEL_COLORS.wine }}>Wine breakdown</div>
-          <h2 style={{ fontFamily: "var(--serif)", fontWeight: 500, fontSize: 28, margin: "0 0 6px", lineHeight: 1.1 }}>
+          <h2 style={{ fontFamily: "var(--serif)", fontWeight: 500, fontSize: 28, margin: 0, lineHeight: 1.1 }}>
             {spot.name}{spot.city ? <span style={{ color: "#6e776f", fontSize: 18 }}> · {spot.city}</span> : null}
           </h2>
-          {spot.note && <div style={{ fontSize: 13, color: "#6e776f", lineHeight: 1.55, maxWidth: 640 }}>{spot.note}</div>}
-          {palate && <div style={{ fontSize: 12.5, color: "#34483e", lineHeight: 1.55, marginTop: 8, maxWidth: 640 }}>
-            <b style={{ fontWeight: 600 }}>Fit</b> is scored against your palate: {palate}</div>}
+          {spot.date && <div style={{ fontSize: 13, color: "#6e776f", marginTop: 4 }}>{wineDate(spot.date)}</div>}
         </div>
         <button className="refresh-btn" onClick={onClose} aria-label="Close the breakdown">✕</button>
       </div>
       <div style={{ marginTop: 16 }}>
-        {shown.map((w) => {
+        {wines.map((w) => {
           const t = WINE_TYPE[w.type] || WINE_TYPE.red;
           return (
-            <div key={w.n + w.name} className="wine-row">
+            <div key={w.name + (w.vintage || "")} className="wine-row">
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 14.5, color: "#1f3a2e", lineHeight: 1.35 }}>
-                  {w.n != null && <span style={{ color: "#9aa39c", fontSize: 12, marginRight: 6 }}>#{w.n}</span>}
                   <b style={{ fontWeight: 600 }}>{w.name}</b>{w.vintage ? ` ${w.vintage}` : ""}
-                  <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: t[0], background: t[1],
-                    borderRadius: 999, padding: "2px 8px", marginLeft: 8, verticalAlign: 2 }}>{w.type}</span>
+                  {w.type && <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: t[0], background: t[1],
+                    borderRadius: 999, padding: "2px 8px", marginLeft: 8, verticalAlign: 2 }}>{w.type}</span>}
                 </div>
-                <div style={{ fontSize: 12.5, color: "#34483e", marginTop: 3 }}>{w.grapes}</div>
-                <div style={{ fontSize: 12.5, color: "#6e776f", marginTop: 2, lineHeight: 1.5 }}>{w.notes}</div>
-                {w.why && <div style={{ fontSize: 12.5, color: TRAVEL_COLORS.wine, marginTop: 3, lineHeight: 1.5 }}>{w.why}</div>}
+                {w.grapes && <div style={{ fontSize: 12.5, color: "#34483e", marginTop: 3 }}>{w.grapes}</div>}
+                {w.comment && <div style={{ fontSize: 13.5, color: "#1f3a2e", marginTop: 4, lineHeight: 1.5 }}>{w.comment}</div>}
+                {w.menu && <div style={{ fontSize: 12.5, color: "#6e776f", marginTop: 2, fontStyle: "italic" }}>{w.menu}</div>}
               </div>
-              <div style={{ display: "grid", justifyItems: "end", gap: 6, flexShrink: 0 }}>
-                {w.mine != null ? <Score v={w.mine} /> : w.fit ? <FitDots fit={w.fit} /> : null}
-                {w.price && <span style={{ fontSize: 12, color: "#6e776f", whiteSpace: "nowrap" }}>{w.price} ₺</span>}
-              </div>
+              {w.mine != null && <Score v={w.mine} />}
             </div>
           );
         })}
       </div>
-      {wines.length > shown.length || all ? (
-        <button className="refresh-btn" style={{ marginTop: 14 }} onClick={() => setAll(!all)}>
-          {all ? "Only good fits" : `Show all ${wines.length} (incl. whites & rosés)`}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -4331,7 +4301,7 @@ function Travel() {
   const visited = useMemo(() => Object.fromEntries((data ? data.visited : []).map((p) => [p.iso, { ...p, cities: p.cities || [] }])), [data]);
   const bucket = useMemo(() => Object.fromEntries((data ? data.bucket : []).map((p) => [p.iso, p])), [data]);
   const wine = useMemo(() => Object.fromEntries(wineData.countries.filter((w) => w && w.iso).map((w) => [w.iso, {
-    ...w, notes: w.notes || [], regions: w.regions || [], try: w.try || [],
+    ...w, notes: w.notes || [], regions: w.regions || [],
     spots: (w.spots || []).map((sp) => ({ ...sp, wines: sp.wines || [] })),
   }])), [wineData]);
   useEffect(() => setOpenSpot(null), [selected]);
@@ -4395,7 +4365,7 @@ function Travel() {
 
         {selSpot && (
           <div ref={breakdownRef} style={{ scrollMarginTop: 80 }}>
-            <WineBreakdown key={selected + openSpot} spot={selSpot} palate={wineData.palate} onClose={() => setOpenSpot(null)} />
+            <WineBreakdown spot={selSpot} onClose={() => setOpenSpot(null)} />
           </div>
         )}
 

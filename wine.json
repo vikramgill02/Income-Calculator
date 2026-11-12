@@ -5,41 +5,19 @@
       "iso": "792",
       "name": "Türkiye",
       "notes": [
-        "Loved the 7 Bilgeler Solon Attica Malbec at Bağ Pera, Istanbul (Nov 2026)."
+        "Loved the 7 Bilgeler Solon Attica Malbec at Bağ Pera, Istanbul."
       ],
       "regions": [
-        { "name": "Selçuk, İzmir (Aegean)", "at": [27.368, 37.951], "note": "7 Bilgeler: Malbec, Cabernet and Bordeaux-style blends near Ephesus" }
-      ],
-      "try": [
-        "Boğazkere: a dark, tannic grape native to Türkiye; closest local match to your palate",
-        "Öküzgözü–Boğazkere blends: Boğazkere's tannin, softened by Öküzgözü's fruit",
-        "7 Bilgeler Polemos: the producer's top Bordeaux-style blend"
+        { "name": "Selçuk, İzmir (Aegean)", "at": [27.368, 37.951], "note": "7 Bilgeler" }
       ],
       "spots": [
         {
           "name": "Bağ Pera",
           "city": "Istanbul",
           "date": "2026-11-12",
-          "note": "Levon's glass list (updated 1 Nov 2026). Prices are glass / bottle in ₺. Tasting menu: any 4 tasting glasses + amuse-bouche for 1250₺.",
           "wines": [
-            { "n": 1, "name": "Umurbey Sauvignon Blanc", "vintage": 2024, "type": "white", "grapes": "Sauvignon Blanc", "notes": "Vibrant acidity, citrus, refreshing finish", "price": "775 / 3500", "fit": 1 },
-            { "n": 2, "name": "Urla Chardonnay", "vintage": 2025, "type": "white", "grapes": "Chardonnay", "notes": "Medium-bodied, creamy, white fruit", "price": "775 / 3500", "fit": 1 },
-            { "n": 3, "name": "Turasan Emir", "vintage": 2025, "type": "white", "grapes": "Emir", "notes": "Lively acidity, citrus, refreshing finish", "price": "615 / 2750", "fit": 1 },
-            { "n": 4, "name": "Sevilen Bornova Misketi", "vintage": 2024, "type": "white", "grapes": "Bornova Misketi", "notes": "Aromatic, floral, vibrant acidity, clean finish", "price": "585 / 2650", "fit": 1 },
-            { "n": 5, "name": "Gürbüz Naturel", "vintage": 2025, "type": "white", "grapes": "Sauvignon Blanc, Bornova Misketi", "notes": "Floral and tropical fruit, medium finish", "price": "765 / 3450", "fit": 1 },
-            { "n": 6, "name": "Yaban Kolektif Rosé", "vintage": 2024, "type": "rosé", "grapes": "Karasakız, Erciş Karası", "notes": "Refreshing acidity, red fruit, elegant finish", "price": "1100 / 4950", "fit": 1 },
-            { "n": 7, "name": "Kastro Tireli Rosé", "vintage": 2024, "type": "rosé", "grapes": "Kalecik Karası, Syrah, Mourvèdre", "notes": "Fresh red fruit, vibrant acidity, balanced finish", "price": "655 / 2950", "fit": 1 },
-            { "n": 8, "name": "Yaban Kolektif Karasakız", "vintage": 2024, "type": "red", "grapes": "Karasakız", "notes": "Soft tannins, fresh red fruit, easy-drinking", "price": "1100 / 4950", "fit": 2, "why": "Light, red-fruited red, lighter than you like" },
-            { "n": 9, "name": "Asarcık Boğazkere Reserve", "vintage": 2022, "type": "red", "grapes": "Boğazkere", "notes": "Full-bodied, ripe black fruit, long finish", "price": "1100 / 4950", "fit": 5, "why": "Dark, tannic native grape with black fruit and a long finish; the local pick for you" },
-            { "n": 10, "name": "Vinkara Kalecik Karası Reserve", "vintage": 2021, "type": "red", "grapes": "Kalecik Karası", "notes": "Medium-bodied, red fruit, spicy finish", "price": "850 / 3850", "fit": 2, "why": "Medium body and red fruit, more Pinot-like" },
-            { "n": 11, "name": "Porta Caeli Petit Verdot", "vintage": 2022, "type": "red", "grapes": "Petit Verdot", "notes": "Full-bodied, dried forest fruit, long lingering finish", "price": "1225 / 5500", "fit": 4, "why": "Petit Verdot is inky and tannic; full with a long finish" },
-            { "n": 12, "name": "Barbare Premier Merlot", "vintage": 2012, "type": "red", "grapes": "Merlot", "notes": "Medium to full, ripe red fruit, velvety finish", "price": "1450 / 6500", "fit": 3, "why": "Very smooth with 14 years' age, but red rather than black fruit" },
-            { "n": 13, "name": "7 Bilgeler Khilon", "vintage": 2025, "type": "white", "grapes": "Sauvignon Blanc", "notes": "Vibrant acidity, orange blossom, citrus", "price": "875 / 3950", "fit": 1 },
-            { "n": 14, "name": "7 Bilgeler Anaxagoras", "vintage": 2025, "type": "white", "grapes": "Chardonnay", "notes": "Lively acidity, white fruit, medium finish", "price": "765 / 3450", "fit": 1 },
-            { "n": 15, "name": "7 Bilgeler Hippokrates", "vintage": 2024, "type": "red", "grapes": "Cabernet Sauvignon, Merlot, Cabernet Franc, Syrah, Petit Verdot", "notes": "Full-bodied, black fruit, balanced finish", "price": "875 / 3950", "fit": 4, "why": "Cab-led blend with black fruit; young, with a shorter finish than you like" },
-            { "n": 16, "name": "7 Bilgeler Solon Attica", "vintage": 2023, "type": "red", "grapes": "Malbec", "notes": "Full-bodied, firm tannins, black fruit", "price": "1075 / 4750", "fit": 5, "mine": 9.5 },
-            { "n": 17, "name": "7 Bilgeler Pythagoras", "vintage": 2023, "type": "red", "grapes": "Cabernet Sauvignon, Merlot, Cabernet Franc, Petit Verdot", "notes": "Medium to full, firm tannins, long finish", "price": "1050 / 4650", "fit": 4, "why": "Bordeaux blend with a long finish; a touch lighter than Polemos" },
-            { "n": 18, "name": "7 Bilgeler Polemos", "vintage": 2022, "type": "red", "grapes": "Cabernet Sauvignon, Merlot, Cabernet Franc, Petit Verdot", "notes": "Full-bodied, intense fruit, complex, long finish", "price": "1390 / 6250", "fit": 5, "why": "Same producer as your 9.5; their top Cab blend, full with a long finish" }
+            { "name": "7 Bilgeler Solon Attica", "vintage": 2023, "type": "red", "grapes": "Malbec",
+              "mine": 9.5, "comment": "Loved it.", "menu": "Full-bodied, firm tannins, black fruit" }
           ]
         }
       ]
