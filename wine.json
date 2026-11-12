@@ -5,7 +5,8 @@
       "iso": "792",
       "name": "Türkiye",
       "notes": [
-        "Loved the 7 Bilgeler Solon Attica Malbec at Bağ Pera, Istanbul."
+        "Loved the 7 Bilgeler Solon Attica Malbec at Bağ Pera, Istanbul.",
+        "Boğazkere is a winner too: very smooth, a bit more bitter than the Malbec."
       ],
       "regions": [
         {
@@ -15,6 +16,14 @@
             37.951
           ],
           "note": "7 Bilgeler"
+        },
+        {
+          "name": "Asarcık valley, Bozburun peninsula (Muğla)",
+          "at": [
+            28.08,
+            36.7
+          ],
+          "note": "Kayraklı Şarapçılık (Asarcık)"
         }
       ],
       "spots": [
@@ -36,6 +45,22 @@
                 "at": [
                   27.368,
                   37.951
+                ]
+              }
+            },
+            {
+              "name": "Asarcık Boğazkere Reserve",
+              "vintage": 2022,
+              "type": "red",
+              "grapes": "Boğazkere",
+              "mine": 9,
+              "comment": "Very smooth, a little more bitter than the Solon Attica. Black fruit aromas. Really, really good.",
+              "menu": "Full-bodied, ripe black fruit, long finish",
+              "from": {
+                "name": "Asarcık valley, Bozburun peninsula (Muğla)",
+                "at": [
+                  28.08,
+                  36.7
                 ]
               }
             }
