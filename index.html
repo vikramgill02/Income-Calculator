@@ -413,9 +413,10 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 /* Shifts wear Google Calendar's Peacock blue, paydays its Sage green, so the
    page reads like the BSN calendar. Text stays dark enough to read. */
 .pto-cal-cell.work { background: rgba(3,155,229,0.1); border-color: rgba(3,155,229,0.45); box-shadow: inset 0 3px 0 #039be5; }
-.pto-cal-cell.pto { background: rgba(154,113,40,0.18); border-color: rgba(154,113,40,0.45); box-shadow: inset 0 3px 0 #9a7128; }
-.pto-cal-cell.sel { background: #1f3a2e; border-color: #1f3a2e; color: #f6f1e7; }
-.pto-cal-cell.sel .pto-cal-d, .pto-cal-cell.sel .pto-cal-tag, .pto-cal-cell.sel .pto-cal-b { color: #f6f1e7 !important; }
+/* PTO: green = requested in Clairvia, orange = possible (planned here), grey = used. */
+.pto-cal-cell.req, .pto-cal-cell.alt.req { background: rgba(47,122,78,0.17); border-color: rgba(47,122,78,0.5); box-shadow: inset 0 3px 0 #2f7a4e; }
+.pto-cal-cell.maybe, .pto-cal-cell.alt.maybe { background: rgba(239,108,0,0.14); border-color: rgba(239,108,0,0.55); box-shadow: inset 0 3px 0 #ef6c00; }
+.pto-cal-cell.used, .pto-cal-cell.alt.used { background: rgba(31,58,46,0.08); border-color: rgba(31,58,46,0.25); box-shadow: inset 0 3px 0 #8a918a; }
 .pto-cal-cell.past { opacity: 0.5; }
 .pto-cal-cell.today::after {
   content: ""; position: absolute; inset: -3px; border-radius: 12px; border: 1.5px solid #1f3a2e; pointer-events: none;
@@ -439,14 +440,15 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
   min-height: 32px; padding: 0 14px; border-radius: 999px;
 }
 .pto-seg button.on { background: #fffdf8; color: #1f3a2e; font-weight: 600; box-shadow: 0 1px 3px rgba(31,58,46,0.15); }
-.pto-cal-cell.work .pto-cal-d, .pto-cal-cell.pto .pto-cal-d { font-weight: 700; color: #1f3a2e; }
+.pto-cal-cell.work .pto-cal-d, .pto-cal-cell.req .pto-cal-d, .pto-cal-cell.maybe .pto-cal-d, .pto-cal-cell.used .pto-cal-d { font-weight: 700; color: #1f3a2e; }
 .pto-cal-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #01679a; min-height: 12px; }
 .pto-cal-pay {
   font-size: 10.5px; font-weight: 700; color: #1d7a4f; min-height: 15px; line-height: 15px;
 }
 .pto-cal-cell.pay .pto-cal-pay { background: rgba(51,182,121,0.18); border-radius: 999px; padding: 0 6px; }
-.pto-cal-cell.sel .pto-cal-pay { color: #f6f1e7 !important; background: rgba(246,241,231,0.18) !important; }
-.pto-cal-cell.pto .pto-cal-tag { color: #9a7128; }
+.pto-cal-cell.req .pto-cal-tag { color: #23603d; }
+.pto-cal-cell.maybe .pto-cal-tag { color: #a64b00; }
+.pto-cal-cell.used .pto-cal-tag { color: #66706a; }
 .pto-cal-b { font-size: 12px; font-weight: 500; color: #34483e; white-space: nowrap; }
 .pto-cal-nav {
   width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(31,58,46,0.15); background: transparent;
@@ -458,8 +460,12 @@ button.pto-cal-cell:focus-visible { outline: 1.5px solid var(--accent); outline-
 .pto-sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
 .pto-sw.work { background: rgba(3,155,229,0.1); border: 1px solid rgba(3,155,229,0.45); box-shadow: inset 0 3px 0 #039be5; }
 .pto-sw.pay { background: rgba(51,182,121,0.3); border-radius: 999px; }
-.pto-sw.pto { background: rgba(154,113,40,0.18); border: 1px solid rgba(154,113,40,0.45); box-shadow: inset 0 3px 0 #9a7128; }
-.pto-sw.sel { background: #1f3a2e; }
+.pto-sw.req { background: rgba(47,122,78,0.17); border: 1px solid rgba(47,122,78,0.5); box-shadow: inset 0 3px 0 #2f7a4e; }
+.pto-sw.maybe { background: rgba(239,108,0,0.14); border: 1px solid rgba(239,108,0,0.55); box-shadow: inset 0 3px 0 #ef6c00; }
+.pto-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; vertical-align: 0; }
+.pto-dot.req { background: #2f7a4e; }
+.pto-dot.maybe { background: #ef6c00; }
+.pto-dot.used { background: #8a918a; }
 @media (max-width: 560px) {
   .pto-cal-grid { gap: 3px; }
   .pto-cal-cell { min-height: 72px; padding: 5px 1px; border-radius: 8px; }
@@ -4524,6 +4530,7 @@ function ptoNormalize(d) {
     checks: p.checks && typeof p.checks === "object" && !Array.isArray(p.checks) ? p.checks : {},
     trips: (Array.isArray(p.trips) ? p.trips : []).filter((t) => t && t.id).map((t) => ({
       ...t, name: String(t.name || "Trip"), on: t.on !== false,
+      status: t.status === "clairvia" || t.status === "taken" ? t.status : "possible",
       days: [...new Set((Array.isArray(t.days) ? t.days : []).filter((x) => PTO_ISO.test(x)))].sort(),
     })),
   };
@@ -4658,7 +4665,8 @@ function PtoChart({ rows, end, floor, trips, today }) {
   const bands = trips.filter((t) => t.on && t.days.length).map((t) => {
     const a = t.start && t.start < t.days[0] ? t.start : t.days[0];
     const z = t.end && t.end > t.days[t.days.length - 1] ? t.end : t.days[t.days.length - 1];
-    return { id: t.id, name: t.name, x0: x(a), x1: Math.max(x(ptoAddDays(z, 1)), x(a) + 3) };
+    return { id: t.id, name: t.name, x0: x(a), x1: Math.max(x(ptoAddDays(z, 1)), x(a) + 3),
+      fill: t.status === "clairvia" ? "rgba(47,122,78,0.16)" : t.status === "taken" ? "rgba(31,58,46,0.08)" : "rgba(239,108,0,0.15)" };
   });
   let lastLabelEnd = -Infinity;
   const bandLabels = bands.map((b) => {
@@ -4695,7 +4703,7 @@ function PtoChart({ rows, end, floor, trips, today }) {
         onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)}>
         {bands.map((b, i) => (
           <g key={b.id}>
-            <rect x={b.x0} y={m.t} width={b.x1 - b.x0} height={H - m.t - m.b} fill="rgba(154,113,40,0.13)" />
+            <rect x={b.x0} y={m.t} width={b.x1 - b.x0} height={H - m.t - m.b} fill={b.fill} />
             {bandLabels[i] && (
               <text x={(b.x0 + b.x1) / 2} y={m.t - 8} textAnchor="middle" fontSize="10.5" fill="#66706a" fontFamily="Inter, sans-serif">{b.name}</text>
             )}
@@ -4797,11 +4805,12 @@ function PtoSyncNote({ sync }) {
 
 /* One row per payday: hours earned, PTO used since the last check, and the
    balance right after the check. */
-function PtoCheckTable({ rows, today, floor }) {
+function PtoCheckTable({ rows, today, floor, trips }) {
+  const tripById = Object.fromEntries((trips || []).map((t) => [t.id, t]));
   const checks = [];
   let used = 0, nights = 0, adj = 0, labels = new Set();
   for (const r of rows) {
-    if (r.kind === "pto") { used += r.change; nights++; labels.add(r.label); }
+    if (r.kind === "pto") { used += r.change; nights++; labels.add(r.trip); }
     else if ((r.kind === "start" || r.kind === "check") && r.change) adj += r.change;
     if (r.kind === "payday") {
       checks.push({ date: r.date, earned: r.change, used, nights, adj: ptoR2(adj), labels: [...labels], balance: r.balance });
@@ -4838,7 +4847,9 @@ function PtoCheckTable({ rows, today, floor }) {
                   </td>
                   <td style={{ color: c.date > today ? PTO_GREEN : undefined }}>{ptoChange(c.earned)}</td>
                   <td>
-                    {c.nights ? <>{ptoChange(c.used)}<span className="pto-sub">{c.nights} night{c.nights === 1 ? "" : "s"} · {c.labels.join(", ")}</span></> : "—"}
+                    {c.nights ? <>{ptoChange(c.used)}<span className="pto-sub">{c.nights} night{c.nights === 1 ? "" : "s"} · {c.labels.map((id, k) => (
+                      <React.Fragment key={id}>{k ? ", " : ""}<i className={"pto-dot " + ptoStatus(tripById[id]).cls} /> {tripById[id] ? tripById[id].name : id}</React.Fragment>
+                    ))}</span></> : "—"}
                   </td>
                   <td style={{ fontWeight: 600, color: c.balance < floor ? PTO_RED : c.balance < 0 ? "#9a4452" : "#1f3a2e" }}>{ptoHrs(c.balance)}</td>
                 </tr>
@@ -4857,7 +4868,90 @@ function PtoCheckTable({ rows, today, floor }) {
 const PTO_DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PTO_VIEW_KEY = "pto-calendar-view";
 
-function PtoCalendar({ plan, base, shifts, today }) {
+/* PTO by where it stands: "clairvia" is requested officially in Clairvia
+   (green), "possible" is planned on this site (orange), "taken" was used
+   without a request (a call-out). */
+const PTO_STATUS = {
+  clairvia: { label: "In Clairvia", tag: "Clairvia", cls: "req" },
+  possible: { label: "Possible", tag: "Possible", cls: "maybe" },
+  taken: { label: "Used", tag: "Used", cls: "used" },
+};
+const ptoStatus = (t) => PTO_STATUS[t && t.status] || PTO_STATUS.possible;
+const ptoRange = (t) => {
+  const a = t.start || t.days[0], z = t.end || t.days[t.days.length - 1];
+  if (!a) return "No nights yet";
+  return a === z ? ptoDayY(a) : `${ptoDay(a)} – ${ptoDayY(z)}`;
+};
+
+// The trips in each group, with nights and hours, and how low the balance
+// gets with and without the possible ones.
+function PtoRequests({ plan, today, led }) {
+  const R = plan.rules;
+  const solid = useMemo(() => {
+    const off = {};
+    for (const t of plan.trips) if ((t.status || "possible") === "possible") off[t.id] = false;
+    return ptoLedger(plan, today, off);
+  }, [plan, today]);
+  const lowAll = ptoLowest(led.rows, today);
+  const lowSolid = ptoLowest(solid.rows, today);
+  const group = (status) => plan.trips.filter((t) => t.on && (t.status || "possible") === status && t.days.length);
+  const hrs = (ts) => ts.reduce((s, t) => s + t.days.filter((d) => d >= today).length, 0) * R.shift_hours;
+  const section = (status) => {
+    const ts = group(status);
+    const st = PTO_STATUS[status];
+    return (
+      <div style={{ marginTop: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "6px 0" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "#1f3a2e" }}>
+            <i className={"pto-dot " + st.cls} />{st.label}
+          </span>
+          <span style={{ fontSize: 12, color: "#66706a" }}>{ts.length ? `${hrs(ts)} hrs still ahead` : ""}</span>
+        </div>
+        {!ts.length && <div style={{ fontSize: 12.5, color: "#8a918a", padding: "2px 0 6px 16px" }}>
+          {status === "possible" ? "None. Tap work nights on the calendar to add some." : "None."}
+        </div>}
+        {ts.map((t) => {
+          const done = t.days[t.days.length - 1] < today;
+          return (
+            <div key={t.id} style={{ ...rowLine, fontSize: 12.5, paddingLeft: 16, opacity: done ? 0.6 : 1 }}>
+              <span style={{ color: "#1f3a2e", minWidth: 0 }}>
+                {t.name}
+                <span style={{ display: "block", color: "#66706a", fontSize: 11.5, marginTop: 1 }}>{ptoRange(t)}{done ? " · taken" : ""}</span>
+              </span>
+              <span style={{ color: "#4f5d55", whiteSpace: "nowrap", textAlign: "right" }}>
+                {t.days.length} night{t.days.length === 1 ? "" : "s"}
+                <span style={{ display: "block", color: "#66706a", fontSize: 11.5, marginTop: 1 }}>−{t.days.length * R.shift_hours} hrs</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+  const lowLine = (k, low) => low && (
+    <div style={{ ...rowLine, fontSize: 12.5 }}>
+      <span style={{ color: "#4f5d55" }}>{k}</span>
+      <strong style={{ fontWeight: 600, color: low.balance < R.floor ? PTO_RED : low.balance < 0 ? "#9a4452" : "#1f3a2e", textAlign: "right" }}>
+        {ptoHrs(low.balance)} · {ptoDay(low.date)}{low.date.slice(0, 4) !== today.slice(0, 4) ? `, ${low.date.slice(0, 4)}` : ""}
+      </strong>
+    </div>
+  );
+  return (
+    <div style={{ ...panel, padding: "16px 18px" }}>
+      <div style={{ ...panelTitle, marginBottom: 4 }}>PTO requests</div>
+      {section("clairvia")}
+      {section("possible")}
+      <div style={{ ...panelTitle, margin: "16px 0 4px" }}>Lowest ahead</div>
+      {lowLine("Clairvia only", lowSolid)}
+      {lowLine("With possible", lowAll)}
+      <p style={{ fontSize: 11.5, color: "#66706a", margin: "6px 0 0", lineHeight: 1.5 }}>Floor is {ptoChange(R.floor)}.</p>
+    </div>
+  );
+}
+
+/* Calendar of work nights. Green = in Clairvia, orange = possible (tap a
+   work night to add one, tap it again to take it off; Save keeps it). */
+function PtoCalendar({ plan, base, shifts, today, onTogglePossible }) {
   const R = plan.rules;
   const firstDay = base.rows.length ? base.rows[0].date : today;
   const lastDay = base.end;
@@ -4869,7 +4963,6 @@ function PtoCalendar({ plan, base, shifts, today }) {
   const setView = (v) => { setViewRaw(v); try { window.localStorage.setItem(PTO_VIEW_KEY, v); } catch (e) {} };
   const home = today < firstDay ? firstDay : today > lastDay ? lastDay : today;
   const [focus, setFocus] = useState(home); // any date inside the period shown
-  const [sel, setSel] = useState(() => new Set());
 
   let start, end, lead;
   if (view === "month") {
@@ -4911,27 +5004,16 @@ function PtoCalendar({ plan, base, shifts, today }) {
   }, [base]);
   const booked = useMemo(() => {
     const map = {};
-    for (const t of plan.trips) if (t.on) for (const d of t.days) map[d] = t.name;
+    for (const t of plan.trips) if (t.on) for (const d of t.days) map[d] = t;
     return map;
   }, [plan]);
 
-  const picked = [...sel].sort();
-  const extra = picked.filter((d) => work[d] && !booked[d]);
-  const already = picked.filter((d) => booked[d]);
-  const led = useMemo(() => (extra.length
-    ? ptoLedger({ ...plan, trips: [...plan.trips, { id: "__preview", name: "Highlighted", on: true, days: extra }] }, today)
-    : base), [plan, base, today, extra.join()]);
-  const rows = led.rows;
-
-  const after = extra.length ? ptoBalanceOn(rows, extra[extra.length - 1]) : null;
-  const low = extra.length ? ptoLowest(rows, extra[0]) : null;
-  const fits = !low || low.balance >= R.floor;
+  const rows = base.rows;
   const from = today > start ? today : start;
-  const lowAhead = from <= led.end ? ptoLowest(rows, from) : null;
+  const lowAhead = from <= base.end ? ptoLowest(rows, from) : null;
   const room = lowAhead ? Math.max(0, Math.floor((lowAhead.balance - R.floor) / R.shift_hours + 1e-9)) : null;
   const workInPeriod = Object.keys(work).filter((d) => d >= start && d <= end).length;
-
-  const toggle = (d) => setSel((s) => { const n = new Set(s); n.has(d) ? n.delete(d) : n.add(d); return n; });
+  const possibleInPeriod = Object.keys(booked).filter((d) => d >= start && d <= end && (booked[d].status || "possible") === "possible").length;
 
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push(<div key={`b${i}`} className="pto-cal-cell blank" />);
@@ -4940,22 +5022,27 @@ function PtoCalendar({ plan, base, shifts, today }) {
     // In the 8-week view the 1st of each month (and the first square) says which month it is.
     const dayLabel = view === "8w" && (d === 1 || day === start)
       ? parseDay(day).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : d;
-    const bal = rows[0] && day >= rows[0].date && day <= led.end ? ptoBalanceOn(rows, day) : null;
-    const isWork = !!work[day], isBooked = !!booked[day], isSel = sel.has(day);
-    const can = day >= today;
+    const bal = rows[0] && day >= rows[0].date && day <= base.end ? ptoBalanceOn(rows, day) : null;
+    const trip = booked[day];
+    const st = trip ? ptoStatus(trip) : null;
+    const isWork = !!work[day];
+    // Future work nights can be added as possible PTO; possible days can be
+    // taken off again. Clairvia days change in Clairvia, not here.
+    const can = day >= today && (trip ? st === PTO_STATUS.possible : isWork);
     // 8 weeks: every other month gets a warm tint, and a gold line steps
     // along each month boundary (above the first week, left of the 1st).
     const mo = day.slice(0, 7);
     const alt = view === "8w" && (Number(mo.slice(0, 4)) * 12 + Number(mo.slice(5))) % 2 === 1;
     const lineTop = view === "8w" && ptoAddDays(day, -7) >= start && ptoAddDays(day, -7).slice(0, 7) !== mo;
     const lineLeft = view === "8w" && parseDay(day).getDay() !== 0 && d === 1 && day !== start;
-    const cls = "pto-cal-cell" + (alt ? " alt" : "") + (view === "8w" && d === 1 ? " m1" : "") + (isWork ? " work" : "") + (pays[day] != null ? " pay" : "") + (isBooked ? " pto" : "") + (isSel ? " sel" : "")
-      + (day < today ? " past" : "") + (day === today ? " today" : "");
     const pay = pays[day];
-    const tag = isBooked ? "PTO" : isWork ? (/\bOT\b/i.test(work[day][0].summary) ? "OT" : /swap/i.test(work[day][0].summary) ? "Swap" : "CVICU") : "";
-    const what = (isBooked ? `PTO (${booked[day]})` : isWork ? work[day].map((s) => `${s.summary} ${s.time}`).join(", ") : "Off")
+    const cls = "pto-cal-cell" + (alt ? " alt" : "") + (view === "8w" && d === 1 ? " m1" : "") + (isWork ? " work" : "")
+      + (pay != null ? " pay" : "") + (st ? ` ${st.cls}` : "") + (day < today ? " past" : "") + (day === today ? " today" : "");
+    const tag = st ? st.tag : isWork ? (/\bOT\b/i.test(work[day][0].summary) ? "OT" : /swap/i.test(work[day][0].summary) ? "Swap" : "CVICU") : "";
+    const what = (trip ? `${st.label}: ${trip.name}` : isWork ? work[day].map((s) => `${s.summary} ${s.time}`).join(", ") : "Off")
       + (pay != null ? ` · Payday ${ptoChange(pay)} hrs` : "");
-    const label = `${ptoDayY(day)}: ${what}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}${isSel ? ", highlighted" : ""}`;
+    const hint = !can ? "" : trip ? " (tap to take it off)" : " (tap to mark as possible PTO)";
+    const label = `${ptoDayY(day)}: ${what}${bal != null ? `, ${ptoHrs(bal)} hrs` : ""}${hint}`;
     const body = (
       <>
         {lineTop && <i className="pto-cal-line top" aria-hidden="true" />}
@@ -4963,11 +5050,11 @@ function PtoCalendar({ plan, base, shifts, today }) {
         <span className="pto-cal-d">{dayLabel}</span>
         <span className="pto-cal-tag">{tag}</span>
         <span className="pto-cal-pay">{pay != null ? ptoChange(pay) : ""}</span>
-        {bal != null && <span className="pto-cal-b" style={{ color: isSel ? undefined : bal < R.floor ? PTO_RED : bal < 0 ? "#9a4452" : undefined }}>{ptoHrs(bal)}</span>}
+        {bal != null && <span className="pto-cal-b" style={{ color: bal < R.floor ? PTO_RED : bal < 0 ? "#9a4452" : undefined }}>{ptoHrs(bal)}</span>}
       </>
     );
     cells.push(can
-      ? <button key={day} type="button" className={cls} aria-label={label} aria-pressed={isSel} onClick={() => toggle(day)} title={what}>{body}</button>
+      ? <button key={day} type="button" className={cls} aria-label={label} aria-pressed={!!trip} onClick={() => onTogglePossible(day)} title={what + hint}>{body}</button>
       : <div key={day} className={cls} aria-label={label} title={what}>{body}</div>);
   }
 
@@ -5009,65 +5096,22 @@ function PtoCalendar({ plan, base, shifts, today }) {
         </div>
         <div className="pto-cal-key">
           <span><i className="pto-sw work" /> CVICU shift</span>
+          <span><i className="pto-sw req" /> PTO in Clairvia</span>
+          <span><i className="pto-sw maybe" /> Possible PTO (tap a shift)</span>
           <span><i className="pto-sw pay" /> Payday (+hrs)</span>
-          <span><i className="pto-sw pto" /> PTO booked</span>
-          <span><i className="pto-sw sel" /> Highlighted</span>
           <span>Numbers = hrs at the end of the day</span>
         </div>
       </div>
 
       <div>
-        <div style={{ ...panel, padding: "16px 18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-            <div style={{ ...panelTitle, marginBottom: 8 }}>Highlighted</div>
-            {picked.length > 0 && <button type="button" className="pto-link" onClick={() => setSel(new Set())}>Clear</button>}
-          </div>
-          {!picked.length ? (
-            <p style={{ fontSize: 13, color: "#66706a", lineHeight: 1.55, margin: 0 }}>
-              Tap days on the calendar. Each work night you highlight uses {R.shift_hours} hrs of PTO; days off use none. Nothing is saved.
-            </p>
-          ) : (
-            <>
-              <div style={{ fontSize: 30, fontWeight: 600, lineHeight: 1.1, color: "#1f3a2e" }}>
-                {extra.length * R.shift_hours} hrs
-              </div>
-              <div style={{ fontSize: 12.5, color: "#66706a", margin: "4px 0 10px" }}>
-                {extra.length} work night{extra.length === 1 ? "" : "s"} in {picked.length} day{picked.length === 1 ? "" : "s"}
-                {already.length ? ` · ${already.length} already PTO` : ""}
-              </div>
-              {extra.length > 0 && (
-                <>
-                  {fact("Balance after", `${ptoHrs(after)} hrs`, after < 0 ? PTO_RED : undefined)}
-                  {fact("Lowest from then on", `${ptoHrs(low.balance)} · ${ptoDay(low.date)}`, low.balance < R.floor ? PTO_RED : undefined)}
-                  <div className="pto-verdict">
-                    <span className={"pto-badge " + (fits ? "ok" : "bad")}>
-                      {fits ? "Fits" : `Short ${ptoHrs(R.floor - low.balance)} hrs`}
-                    </span>
-                    <span style={{ color: "#4f5d55" }}>
-                      {fits ? `stays above ${ptoChange(R.floor)}` : `goes below ${ptoChange(R.floor)}`}
-                    </span>
-                  </div>
-                </>
-              )}
-              <div style={{ marginTop: 10 }}>
-                {picked.map((d) => (
-                  <div key={d} style={{ ...rowLine, fontSize: 12.5 }}>
-                    <span style={{ color: "#4f5d55" }}>{ptoDay(d)}</span>
-                    <span style={{ color: "#66706a" }}>
-                      {booked[d] ? `already PTO · ${booked[d]}` : work[d] ? `work · −${R.shift_hours}` : "off · 0"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <PtoRequests plan={plan} today={today} led={base} />
         <div style={{ ...panel, padding: "16px 18px", marginTop: 14 }}>
           <div style={{ ...panelTitle, marginBottom: 8 }}>{periodName}</div>
           {fact("Work nights", workInPeriod)}
-          {room != null && fact(picked.length ? "Room left after highlight" : "Room from here on", `${room} night${room === 1 ? "" : "s"} · ${room * R.shift_hours} hrs`, room > 0 ? PTO_GREEN : PTO_RED)}
+          {fact("Possible PTO nights", possibleInPeriod)}
+          {room != null && fact("Room from here on", `${room} night${room === 1 ? "" : "s"} · ${room * R.shift_hours} hrs`, room > 0 ? PTO_GREEN : PTO_RED)}
           {lowAhead && <p style={{ fontSize: 12, color: "#66706a", lineHeight: 1.5, margin: "8px 0 0" }}>
-            Tightest point ahead: {ptoHrs(lowAhead.balance)} on {ptoDayY(lowAhead.date)}.
+            Tightest point ahead, counting possible PTO: {ptoHrs(lowAhead.balance)} on {ptoDayY(lowAhead.date)}.
           </p>}
         </div>
       </div>
@@ -5103,6 +5147,30 @@ function Pto() {
     if (hours == null && !rest.length) return; // keep at least one starting balance
     n.balances = hours == null ? rest : [...rest, { date, when, hours, note }];
     n.balances.sort((a, b) => a.date.localeCompare(b.date) || PTO_ORDER[a.when] - PTO_ORDER[b.when]);
+  });
+  // Calendar tap: a possible night comes off; a work night becomes possible
+  // PTO, joining a possible trip whose dates it falls in, else "Possible".
+  // Clairvia and used days don't change here.
+  const togglePossible = (d) => update((n) => {
+    const isPossible = (t) => (t.status || "possible") === "possible";
+    const holders = n.trips.filter((t) => t.on && isPossible(t) && t.days.includes(d));
+    if (holders.length) {
+      holders.forEach((t) => { t.days = t.days.filter((x) => x !== d); });
+      n.trips = n.trips.filter((t) => !(t.id === "possible" && !t.days.length));
+      return;
+    }
+    if (n.trips.some((t) => t.on && t.days.includes(d))) return;
+    const inside = (t) => {
+      const a = t.start || t.days[0], z = t.end || t.days[t.days.length - 1];
+      return a && z && d >= a && d <= z;
+    };
+    let host = n.trips.find((t) => t.on && isPossible(t) && t.id !== "possible" && inside(t));
+    if (!host) {
+      host = n.trips.find((t) => t.id === "possible");
+      if (!host) { host = { id: "possible", name: "Possible", on: true, status: "possible", days: [] }; n.trips.push(host); }
+      host.on = true;
+    }
+    host.days.push(d);
   });
   const doSave = async () => {
     setBusy(true); setSaveErr("");
@@ -5154,7 +5222,7 @@ function Pto() {
         </div>
 
         {tab === "calendar" ? (
-          <PtoCalendar plan={plan} base={led} shifts={sync.shifts} today={today} />
+          <PtoCalendar plan={plan} base={led} shifts={sync.shifts} today={today} onTogglePossible={togglePossible} />
         ) : (<>
           <div style={{ ...panel, marginBottom: 28, padding: "18px 18px 10px" }}>
             <div style={{ ...panelTitle, marginBottom: 6 }}>Balance (hrs)</div>
@@ -5164,7 +5232,7 @@ function Pto() {
           <div className="pto-split">
             <section>
               <div style={{ ...panelTitle, marginBottom: 12 }}>Every check</div>
-              <PtoCheckTable rows={rows} today={today} floor={R.floor} />
+              <PtoCheckTable rows={rows} today={today} floor={R.floor} trips={plan.trips} />
               <p style={{ fontSize: 12, color: "#66706a", lineHeight: 1.5, margin: "10px 2px 0" }}>
                 +{R.accrual_per_check} per check (0.1 per paid hour, 8.0 max) · {R.shift_hours} hrs per PTO night · may go to {ptoChange(R.floor)}.
                 PTO used counts the nights since the previous check; on a payday the check posts first.
@@ -5172,7 +5240,8 @@ function Pto() {
             </section>
 
             <section>
-              <div style={{ ...panelTitle, marginBottom: 12 }}>Kronos balance</div>
+              <PtoRequests plan={plan} today={today} led={led} />
+              <div style={{ ...panelTitle, margin: "28px 0 12px" }}>Kronos balance</div>
               <div style={{ ...panel, padding: 16 }}>
                 <p style={{ margin: "0 0 12px", fontSize: 12.5, color: "#66706a", lineHeight: 1.5 }}>
                   Enter what Kronos or your stub shows. It replaces the running total from that day on.
