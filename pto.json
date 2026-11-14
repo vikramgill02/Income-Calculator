@@ -8,7 +8,8 @@
     "through_year": 2027
   },
   "balances": [
-    { "date": "2026-10-27", "when": "start", "hours": 69.13, "note": "Kronos, before the call-out and the Oct 28 check" }
+    { "date": "2026-10-27", "when": "start", "hours": 69.13, "note": "Kronos, before the call-out and the Oct 28 check" },
+    { "date": "2026-11-08", "when": "start", "hours": 29.21, "note": "Kronos on Nov 7, after that night's PTO" }
   ],
   "checks": {
     "2026-10-28": { "accrual": 8.0, "done": true }
