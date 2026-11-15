@@ -18,7 +18,7 @@
     {
       "name": "CRNA Fund",
       "kind": "liquid",
-      "cash": 6291.32,
+      "cash": 2963.38,
       "holdings": [
         {
           "symbol": "VBIL",
@@ -142,7 +142,7 @@
       "lineOfCredit"
     ],
     "exclude_names": [
-      "Fidelity CMA"
+      "CMA (6293)"
     ]
   }
 }
