@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-11-01",
+  "as_of": "2026-11-15",
   "milestones": [
     {
       "date": "2027-03-01",
@@ -18,17 +18,17 @@
     {
       "name": "CRNA Fund",
       "kind": "liquid",
-      "cash": 0.08,
+      "cash": 6291.32,
       "holdings": [
         {
-          "symbol": "SGOV",
-          "name": "iShares 0-3 Month Treasury",
-          "shares": 25.822,
-          "price": 100.73,
-          "cost": 2600.87
+          "symbol": "VBIL",
+          "name": "Vanguard 0-3 Month Treasury Bill",
+          "shares": 111.41,
+          "price": 75.64,
+          "cost": 8421.24
         }
       ],
-      "chart_label": "Fidelity CMA (SGOV)"
+      "chart_label": "Fidelity CMA (VBIL + cash)"
     },
     {
       "name": "Taxable Brokerage",
@@ -39,7 +39,7 @@
           "symbol": "VTI",
           "name": "Vanguard Total Stock Market",
           "shares": 0.567,
-          "price": 371.57,
+          "price": 371.11,
           "cost": 208.45
         }
       ]
@@ -47,18 +47,21 @@
     {
       "name": "Roth IRA",
       "kind": "retirement",
-      "cash": 60.45,
-      "pending": {
-        "amount": 9486.18,
-        "note": "Moving to a Traditional IRA"
-      },
+      "cash": 0.03,
       "holdings": [
         {
           "symbol": "VTI",
           "name": "Vanguard Total Stock Market",
           "shares": 63.056,
-          "price": 371.57,
+          "price": 371.11,
           "cost": 22953.04
+        },
+        {
+          "symbol": "VXUS",
+          "name": "Vanguard Total International Stock",
+          "shares": 114.13,
+          "price": 82.64,
+          "cost": 9546.6
         }
       ]
     },
@@ -72,14 +75,14 @@
           "symbol": "FXAIX",
           "name": "Fidelity 500 Index",
           "shares": 53.028,
-          "price": 263.5,
+          "price": 262.98,
           "cost": 13699.79
         },
         {
           "symbol": "FSGGX",
           "name": "Fidelity Global ex US Index",
           "shares": 113.446,
-          "price": 20.66,
+          "price": 20.7,
           "cost": 2405.88
         }
       ]
