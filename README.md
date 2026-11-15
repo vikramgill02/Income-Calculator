@@ -1,6 +1,6 @@
 <p align="center"><img src="logos/gill-co-banner.png" alt="Gill &amp; Co." width="520" /></p>
 
-# Income-Calculator
+# Gill & Co.
 
 Single-page app deployed on Cloudflare Workers at <https://dashboard.vikramgill101.workers.dev/>, behind a password (see [Hosting & password](#hosting--password)). Four tabs, in this order (opens on Net Worth, and the Gill & Co. logo in the top-left goes back there); Pay Calc, Property, Travel and PTO live under Tools. Phones get a bottom tab bar; each tab splits into sections with its own sub-tabs.
 
