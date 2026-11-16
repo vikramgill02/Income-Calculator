@@ -6,7 +6,7 @@ import { listShifts, HOME_TZ } from "./ical.js";
 
 const COOKIE = "ic_auth";
 const PUBLIC_FILES = new Set(["/favicon.png", "/apple-touch-icon.png", "/icon.png", "/icon-192.png", "/manifest.json",
-  "/logos/gill-co-wordmark.png"]);
+  "/logos/gill-co-wordmark.png", "/logos/gill-co-lockup.png"]);
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 async function tokenFor(password) {
@@ -46,7 +46,7 @@ function loginPage(error, next = "/") {
   body { margin: 0; min-height: 100vh; display: grid; place-items: center;
          background: #0a0a0a; color: #ece8e1; font: 16px system-ui, -apple-system, sans-serif; }
   form { width: min(320px, calc(100vw - 32px)); display: grid; gap: 12px; }
-  .logo { display: block; width: 210px; height: auto; margin: 0 auto 18px; filter: brightness(0) invert(0.92); }
+  .logo { display: block; width: 260px; max-width: 100%; height: auto; margin: 0 auto 22px; }
   h1 { font-size: 15px; font-weight: 500; margin: 0 0 2px; color: #8a867f; text-align: center; }
   input, button { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(236,232,225,0.198); }
   input { background: #131313; color: inherit; }
@@ -57,7 +57,7 @@ function loginPage(error, next = "/") {
 </head><body>
 <form method="POST" action="/__login">
   <input type="hidden" name="next" value="${escapeAttr(next)}" />
-  <img class="logo" src="/logos/gill-co-wordmark.png" alt="Gill &amp; Co." />
+  <img class="logo" src="/logos/gill-co-lockup.png" alt="Gill &amp; Co. Holdings" />
   <h1>Enter password</h1>
   <input type="password" name="password" autocomplete="current-password" autofocus required />
   ${error ? `<p>${error}</p>` : ""}
@@ -654,8 +654,8 @@ export default {
 
     // Icons and the manifest load without the password: browsers fetch the
     // manifest without cookies, and iOS may fetch the home-screen icon the
-    // same way. They hold only the logo, the G&C mark and the app name; the login page
-    // shows the wordmark.
+    // same way. They hold only the logo, the castle mark and the app name; the login page
+    // shows the full logo.
     if (readCookie(request, COOKIE) !== expected && !PUBLIC_FILES.has(url.pathname)) {
       return html(loginPage("", safeNext(url.pathname + url.search)), 401);
     }

@@ -284,7 +284,7 @@ details.fine[open] summary::before { content: "− "; }
 a.wordmark { text-decoration: none; -webkit-tap-highlight-color: transparent; transition: opacity 0.13s ease; }
 a.wordmark:hover { opacity: 0.78; }
 a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
-.wordmark .logo { height: 28px; width: auto; display: block; filter: brightness(0) invert(0.92); } /* temporary: makes the dark-green wordmark ivory until the new logo files land */
+.wordmark .logo { height: 24px; width: auto; display: block; }
 .wordmark em { color: var(--accent); font-style: italic; }
 .topnav-tabs { display: flex; gap: 6px; }
 .topnav-tabs a {
@@ -307,7 +307,7 @@ a.wordmark:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 4
 @media (max-width: 720px) {
   .topnav-inner { justify-content: center; height: 52px; }
   .wordmark { font-size: 23px; gap: 10px; }
-  .wordmark .logo { height: 24px; }
+  .wordmark .logo { height: 20px; }
   .topnav-tabs { display: none; }
   .bottomnav {
     display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;

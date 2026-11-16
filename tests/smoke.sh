@@ -40,7 +40,7 @@ for p in / /networth/accounts /networth/loans /dashboard /dashboard/employers /d
 done
 
 echo "Files still load as files:"
-for f in /cards.json /paystubs.json /networth.json /travel.json /wine.json /pto.json /shifts.json /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gc-seal.png /logos/gc-circle.png /logos/gill-co-wordmark.png; do
+for f in /cards.json /paystubs.json /networth.json /travel.json /wine.json /pto.json /shifts.json /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gc-seal.png /logos/gc-circle.png /logos/gill-co-wordmark.png /logos/gill-co-lockup.png; do
   check "$f" 200 "$(status "$f")"
 done
 check "/cards.json is JSON" yes "$(curl -s -H "Cookie: $COOKIE" "$BASE/cards.json" | head -c1 | grep -q '{' && echo yes || echo no)"
@@ -51,7 +51,7 @@ for f in /worker.js /ical.js /wrangler.jsonc /README.md /tests/smoke.sh; do
 done
 
 echo "Password gate:"
-for f in /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gill-co-wordmark.png; do
+for f in /favicon.png /apple-touch-icon.png /icon.png /icon-192.png /manifest.json /logos/gill-co-wordmark.png /logos/gill-co-lockup.png; do
   check "$f loads without password" 200 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE$f")"
 done
 check "/cards.json still needs password" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/cards.json")"
