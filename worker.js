@@ -41,6 +41,12 @@ function loginPage(error, next = "/") {
 <meta name="theme-color" content="#0a0a0a" />
 <title>Gill &amp; Co.</title>
 <link rel="icon" type="image/png" href="/favicon.png?v=manor" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=manor" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-title" content="Gill &amp; Co." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
 <style>
