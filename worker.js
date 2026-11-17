@@ -40,11 +40,13 @@ function loginPage(error, next = "/") {
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#0a0a0a" />
 <title>Gill &amp; Co.</title>
-<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="icon" type="image/png" href="/favicon.png?v=manor" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
 <style>
   :root { color-scheme: dark; }
   body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-         background: #0a0a0a; color: #ece8e1; font: 16px system-ui, -apple-system, sans-serif; }
+         background: #0a0a0a; color: #ece8e1; font: 16px 'Noto Serif', Georgia, serif; }
   form { width: min(320px, calc(100vw - 32px)); display: grid; gap: 12px; }
   .logo { display: block; width: 260px; max-width: 100%; height: auto; margin: 0 auto 22px; }
   h1 { font-size: 15px; font-weight: 500; margin: 0 0 2px; color: #8a867f; text-align: center; }

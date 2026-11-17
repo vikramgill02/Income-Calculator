@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Gill &amp; Co.</title>
-<link rel="icon" type="image/png" href="/favicon.png" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/favicon.png?v=manor" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=manor" />
 <link rel="manifest" href="/manifest.json" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -14,14 +14,14 @@
 <meta name="theme-color" content="#0a0a0a" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@500;600;700&family=Noto+Serif:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <style>
 :root {
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --serif: 'Cormorant Garamond', 'Iowan Old Style', Georgia, serif;
+  --font: 'Noto Serif', Georgia, 'Times New Roman', serif;
+  --serif: 'Noto Serif Display', 'Noto Serif', Georgia, serif;
   --bg: #0a0a0a;
   --surface: #131313;
   --line: rgba(236,232,225,0.09);
@@ -44,15 +44,15 @@ html, body {
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.006em;
+  letter-spacing: 0;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-/* Headings are set in the serif; numbers and UI stay in Inter. */
+/* Headings use Noto Serif Display, the closest match to the logo lettering; everything else is Noto Serif. */
 h1 {
   font-family: var(--serif) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   font-size: clamp(32px, 4.2vw, 42px) !important;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--text) !important;
 }
 ::selection { background: rgba(236,232,225,0.162); }
@@ -242,6 +242,10 @@ input { font-family: var(--font); }
   content: ""; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 1.5px; background: var(--accent);
 }
 .subtabs a:first-child.active::after { left: 2px; }
+@media (max-width: 640px) {
+  .subtabs a { padding: 0 10px; font-size: 13px; }
+  .subtabs a.active::after { left: 10px; right: 10px; }
+}
 .page-head {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
 }
@@ -3995,7 +3999,7 @@ function Globe({ features, visited, bucket, wine, grown, selected, onSelect }) {
         const front = d3.geoDistance(g.at, [-st.current.rot[0], -st.current.rot[1]]) < Math.PI / 2;
         const pt = front && proj(g.at);
         if (pt) {
-          ctx.font = "600 12px Inter, system-ui, sans-serif";
+          ctx.font = "600 12px 'Noto Serif', Georgia, serif";
           const w = ctx.measureText(g.name).width;
           const x = Math.min(Math.max(pt[0] - w / 2 - 8, 4), size - w - 20), y = pt[1] - R * 0.012 - 34;
           ctx.fillStyle = "rgba(19,19,19,0.95)"; ctx.strokeStyle = TRAVEL_COLORS.wine; ctx.lineWidth = 1;
@@ -4707,29 +4711,29 @@ function PtoChart({ rows, end, floor, trips, today }) {
           <g key={b.id}>
             <rect x={b.x0} y={m.t} width={b.x1 - b.x0} height={H - m.t - m.b} fill={b.fill} />
             {bandLabels[i] && (
-              <text x={(b.x0 + b.x1) / 2} y={m.t - 8} textAnchor="middle" fontSize="10.5" fill="#8a867f" fontFamily="Inter, sans-serif">{b.name}</text>
+              <text x={(b.x0 + b.x1) / 2} y={m.t - 8} textAnchor="middle" fontSize="10.5" fill="#8a867f" fontFamily="'Noto Serif', Georgia, serif">{b.name}</text>
             )}
           </g>
         ))}
         {sc.ticks.map((v) => (
           <g key={v}>
             <line x1={m.l} x2={w - m.r} y1={y(v)} y2={y(v)} stroke={v === 0 ? "rgba(236,232,225,0.288)" : "rgba(236,232,225,0.063)"} />
-            <text x={m.l - 6} y={y(v) + 3.5} textAnchor="end" fontSize="10.5" fill="#8a867f" fontFamily="Inter, sans-serif">{v < 0 ? `−${Math.abs(v)}` : v}</text>
+            <text x={m.l - 6} y={y(v) + 3.5} textAnchor="end" fontSize="10.5" fill="#8a867f" fontFamily="'Noto Serif', Georgia, serif">{v < 0 ? `−${Math.abs(v)}` : v}</text>
           </g>
         ))}
         <line x1={m.l} x2={w - m.r} y1={y(floor)} y2={y(floor)} stroke={PTO_RED} strokeWidth="1.25" strokeDasharray="5 4" />
-        <text x={w - m.r} y={y(floor) - 5} textAnchor="end" fontSize="10.5" fill="#8a867f" fontFamily="Inter, sans-serif">
+        <text x={w - m.r} y={y(floor) - 5} textAnchor="end" fontSize="10.5" fill="#8a867f" fontFamily="'Noto Serif', Georgia, serif">
           {`floor ${floor < 0 ? "−" : ""}${Math.abs(floor)}`}
         </text>
         {months.map((dt, i) => i % every === 0 && (
-          <text key={i} x={x(iso(dt))} y={H - 8} textAnchor="middle" fontSize="10.5" fill="#8a867f" fontFamily="Inter, sans-serif">
+          <text key={i} x={x(iso(dt))} y={H - 8} textAnchor="middle" fontSize="10.5" fill="#8a867f" fontFamily="'Noto Serif', Georgia, serif">
             {dt.getMonth() === 0 ? `Jan ’${String(dt.getFullYear()).slice(2)}` : dt.toLocaleDateString("en-US", { month: "short" })}
           </text>
         ))}
         {todayX != null && (
           <g>
             <line x1={todayX} x2={todayX} y1={m.t} y2={H - m.b} stroke="rgba(236,232,225,0.405)" strokeDasharray="2 3" />
-            <text x={todayX + 4} y={m.t + 10} fontSize="10.5" fill="#8a867f" fontFamily="Inter, sans-serif">Today</text>
+            <text x={todayX + 4} y={m.t + 10} fontSize="10.5" fill="#8a867f" fontFamily="'Noto Serif', Georgia, serif">Today</text>
           </g>
         )}
         <path d={d} fill="none" stroke={PTO_GREEN} strokeWidth="2" strokeLinejoin="round" />
