@@ -7,6 +7,34 @@
 <link rel="icon" type="image/png" href="/favicon.png?v=manor" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=manor" />
 <link rel="manifest" href="/manifest.json" />
+<script>
+(() => {
+  // Sign-in lapses after 5 minutes without use (see SESSION_TTL in worker.js).
+  // While you're using the page it pings /api/session to stay signed in; after
+  // 5 idle minutes, on return to a backgrounded tab or app, or on any 401, it
+  // reloads, which shows the lock screen.
+  const IDLE = 5 * 60 * 1000, PING = 30 * 1000;
+  let last = Date.now(), pinged = Date.now(), locked = false;
+  const idle = () => Date.now() - last > IDLE;
+  const lock = () => { if (!locked) { locked = true; location.reload(); } };
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (...args) => realFetch(...args).then((r) => {
+    if (r.status === 401 && r.url.startsWith(location.origin)) lock();
+    return r;
+  });
+  const active = () => {
+    if (idle()) return lock();
+    last = Date.now();
+    if (last - pinged > PING) { pinged = last; fetch("/api/session", { cache: "no-store" }).catch(() => {}); }
+  };
+  for (const ev of ["pointerdown", "keydown", "wheel", "touchstart", "scroll"]) {
+    addEventListener(ev, active, { passive: true, capture: true });
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && idle()) lock(); });
+  addEventListener("pageshow", (e) => { if (e.persisted && idle()) lock(); });
+  setInterval(() => { if (idle()) lock(); }, 15000);
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />

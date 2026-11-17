@@ -7,7 +7,37 @@ import { listShifts, HOME_TZ } from "./ical.js";
 const COOKIE = "ic_auth";
 const PUBLIC_FILES = new Set(["/favicon.png", "/apple-touch-icon.png", "/icon.png", "/icon-192.png", "/manifest.json",
   "/logos/gill-co-wordmark.png", "/logos/gill-co-lockup.png"]);
-const ONE_YEAR = 60 * 60 * 24 * 365;
+
+// Sign-in lasts while the site is in use: each request (and the page's
+// activity ping) renews it, and it lapses after SESSION_TTL with nothing.
+// The cookie is "v1.<expiry ms>.<MAC>", signed with a key derived from
+// PASSWORD, so it can't be forged or stretched, and changing the password
+// signs every device out.
+const SESSION_TTL = 5 * 60 * 1000;
+const RENEW_AFTER = 30 * 1000; // re-issue at most every 30s
+
+async function sessionMac(env, payload) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode("session:" + env.PASSWORD),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return b64u(new Uint8Array(mac).subarray(0, 18));
+}
+
+async function sessionCookie(env) {
+  const payload = `v1.${Date.now() + SESSION_TTL}`;
+  const value = `${payload}.${await sessionMac(env, payload)}`;
+  return `${COOKIE}=${value}; Max-Age=${SESSION_TTL / 1000}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+}
+
+// The session's expiry if the cookie is genuine and current, else null.
+async function readSession(request, env) {
+  const m = /^(v1\.(\d{13}))\.([\w-]{24})$/.exec(readCookie(request, COOKIE) || "");
+  if (!m || +m[2] < Date.now()) return null;
+  const mac = await sessionMac(env, m[1]);
+  let diff = mac.length ^ m[3].length;
+  for (let i = 0; i < mac.length; i++) diff |= mac.charCodeAt(i) ^ m[3].charCodeAt(i);
+  return diff ? null : +m[2];
+}
 
 async function tokenFor(password) {
   const bytes = new TextEncoder().encode("income-calculator:" + password);
@@ -31,6 +61,36 @@ function safeNext(value) {
 }
 
 const escapeAttr = (v) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+// Idle lock for pages served by the worker; index.html has its own copy.
+const IDLE_CLIENT = String.raw`
+(() => {
+  // Sign-in lapses after 5 minutes without use (see SESSION_TTL in worker.js).
+  // While you're using the page it pings /api/session to stay signed in; after
+  // 5 idle minutes, on return to a backgrounded tab or app, or on any 401, it
+  // reloads, which shows the lock screen.
+  const IDLE = 5 * 60 * 1000, PING = 30 * 1000;
+  let last = Date.now(), pinged = Date.now(), locked = false;
+  const idle = () => Date.now() - last > IDLE;
+  const lock = () => { if (!locked) { locked = true; location.reload(); } };
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (...args) => realFetch(...args).then((r) => {
+    if (r.status === 401 && r.url.startsWith(location.origin)) lock();
+    return r;
+  });
+  const active = () => {
+    if (idle()) return lock();
+    last = Date.now();
+    if (last - pinged > PING) { pinged = last; fetch("/api/session", { cache: "no-store" }).catch(() => {}); }
+  };
+  for (const ev of ["pointerdown", "keydown", "wheel", "touchstart", "scroll"]) {
+    addEventListener(ev, active, { passive: true, capture: true });
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && idle()) lock(); });
+  addEventListener("pageshow", (e) => { if (e.persisted && idle()) lock(); });
+  setInterval(() => { if (idle()) lock(); }, 15000);
+})();
+`;
 
 // Browser side of passkeys, shared by the login and /passkeys pages.
 const PASSKEY_CLIENT = String.raw`
@@ -164,6 +224,7 @@ function passkeysPage() {
 <p id="msg"></p>
 <ul id="list"></ul>
 </main>
+<script>${IDLE_CLIENT}</script>
 <script>${PASSKEY_CLIENT}
 const deviceName = () => { const u = navigator.userAgent;
   return /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) ? "iPad"
@@ -796,7 +857,7 @@ async function lookupResponse(env, url) {
 
 /* ─── Passkeys (Face ID / Touch ID) ───
    A signed-in device can add a passkey at /passkeys; the login page then
-   offers "Unlock with Face ID", which sets the same one-year cookie as the
+   offers "Unlock with Face ID", which signs in the same way as the
    password. The password keeps working as a backup.
 
    Only ES256 (P-256) keys, which is what Apple and Google passkeys use.
@@ -913,7 +974,7 @@ async function passkeyRegister(request, env, url) {
   return json({ ok: true });
 }
 
-async function passkeyLogin(request, env, url, cookieValue) {
+async function passkeyLogin(request, env, url) {
   const body = await readJson(request);
   const fail = async (msg) => {
     await new Promise((r) => setTimeout(r, 1000));
@@ -938,7 +999,7 @@ async function passkeyLogin(request, env, url, cookieValue) {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      "Set-Cookie": `${COOKIE}=${cookieValue}; Max-Age=${ONE_YEAR}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+      "Set-Cookie": await sessionCookie(env),
     },
   });
 }
@@ -1001,7 +1062,7 @@ export default {
         status: 303,
         headers: {
           Location: safeNext(form.get("next")),
-          "Set-Cookie": `${COOKIE}=${expected}; Max-Age=${ONE_YEAR}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+          "Set-Cookie": await sessionCookie(env),
         },
       });
     }
@@ -1012,16 +1073,33 @@ export default {
       return json({ available: count > 0, challenge: await newChallenge(env, "login"), rpId: url.hostname });
     }
     if (url.pathname === "/__passkey/login" && request.method === "POST") {
-      return passkeyLogin(request, env, url, expected);
+      return passkeyLogin(request, env, url);
     }
 
     // Icons and the manifest load without the password: browsers fetch the
     // manifest without cookies, and iOS may fetch the home-screen icon the
     // same way. They hold only the logo, the castle mark and the app name; the login page
     // shows the full logo.
-    if (readCookie(request, COOKIE) !== expected && !PUBLIC_FILES.has(url.pathname)) {
+    const expires = await readSession(request, env);
+    if (!expires) {
+      if (PUBLIC_FILES.has(url.pathname)) return serve(request, env, url);
+      // The app's own data requests get a plain 401 so the page can reload
+      // into the login screen; anything else gets the login page itself.
+      if (url.pathname.startsWith("/api/")) return json({ error: "Signed out", signedOut: true }, 401);
       return html(loginPage("", safeNext(url.pathname + url.search)), 401);
     }
+    const res = await serve(request, env, url);
+    if (expires - Date.now() > SESSION_TTL - RENEW_AFTER) return res;
+    const out = new Response(res.body, res);
+    out.headers.append("Set-Cookie", await sessionCookie(env));
+    return out;
+  },
+};
+
+// Everything behind the password.
+async function serve(request, env, url) {
+    // The page pings this while you're using it, to keep the session alive.
+    if (url.pathname === "/api/session") return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 
     if (url.pathname === "/passkeys") return html(passkeysPage(), 200);
     if (url.pathname === "/api/passkeys") {
@@ -1078,5 +1156,4 @@ export default {
       out.headers.set("Cache-Control", "no-cache");
     }
     return out;
-  },
-};
+}

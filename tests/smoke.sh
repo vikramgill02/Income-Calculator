@@ -17,7 +17,6 @@ PASS=0; FAIL=0
 
 # Throwaway local password; .dev.vars is never deployed.
 printf 'PASSWORD=smoke-test\n' > .dev.vars
-COOKIE="ic_auth=$(printf 'income-calculator:smoke-test' | sha256sum | cut -d' ' -f1)"
 
 $WRANGLER dev --port "$PORT" > "$LOG" 2>&1 &
 PID=$!
@@ -25,6 +24,9 @@ cleanup() { kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f .dev.vars "$
 trap cleanup EXIT
 
 for _ in $(seq 1 60); do curl -s -o /dev/null "$BASE/robots.txt" && break; sleep 1; done
+
+# A real 5-minute session, the way the login form gets one.
+COOKIE="$(curl -s -D - -o /dev/null -d 'password=smoke-test' "$BASE/__login" | tr -d '\r' | sed -n 's/^[Ss]et-[Cc]ookie: \(ic_auth=[^;]*\).*/\1/p')"
 
 check() { # name, expected, actual
   if [ "$2" = "$3" ]; then PASS=$((PASS+1)); echo "  ok   $1"
@@ -60,6 +62,13 @@ check "no cookie -> login" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/
 check "login keeps the page" "/cards" "$(curl -s -o /dev/null -w '%{redirect_url}' -d 'password=smoke-test&next=/cards' "$BASE/__login" | sed "s#$BASE##")"
 check "login refuses other sites" "/" "$(curl -s -o /dev/null -w '%{redirect_url}' -d 'password=smoke-test&next=//evil.example' "$BASE/__login" | sed "s#$BASE##")"
 check "/api/version answers" 200 "$(status /api/version)"
+echo "Sessions (5 minutes without use):"
+check "login sets a 5-minute cookie" yes "$(curl -s -D - -o /dev/null -d 'password=smoke-test' "$BASE/__login" | grep -qi '^set-cookie: ic_auth=v1\.[0-9]*\.[A-Za-z0-9_-]*; Max-Age=300;' && echo yes || echo no)"
+check "old one-year cookie refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: ic_auth=$(printf 'income-calculator:smoke-test' | sha256sum | cut -d' ' -f1)" "$BASE/cards")"
+check "forged session refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H 'Cookie: ic_auth=v1.9999999999999.AAAAAAAAAAAAAAAAAAAAAAAA' "$BASE/cards")"
+check "stretched session refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $(echo "$COOKIE" | sed 's/v1\.[0-9]*\./v1.9999999999999./')" "$BASE/cards")"
+check "/api/session keeps it alive" 204 "$(status /api/session)"
+check "signed-out API answers 401 JSON" yes "$(curl -s "$BASE/api/networth" | grep -q '"signedOut":true' && echo yes || echo no)"
 echo "Face ID (passkeys):"
 check "/__passkey/options is public" yes "$(curl -s -X POST "$BASE/__passkey/options" | grep -q '"challenge"' && echo yes || echo no)"
 check "no passkeys yet -> no Face ID button" yes "$(curl -s -X POST "$BASE/__passkey/options" | grep -q '"available":false' && echo yes || echo no)"

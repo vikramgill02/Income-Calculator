@@ -11,4 +11,4 @@
 ## Gotchas
 
 - `ynab.exclude_names` in `networth.json` must match the CMA's exact name in YNAB (currently `CMA (6293)`). If the name doesn't match, the CMA is counted twice: once as YNAB cash and once as the CRNA Fund.
-- Don't change the `income-calculator:` text in `worker.js` or `tests/smoke.sh`. The login cookie is built from it, so changing it signs out every device.
+- Sign-in lasts 5 minutes without use (`SESSION_TTL` in `worker.js`; the idle timer in `index.html` and `IDLE_CLIENT` in `worker.js` must match). Changing `PASSWORD` signs out every device and cancels Face ID sign-ins in progress; registered Face ID devices keep working.
