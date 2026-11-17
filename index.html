@@ -1720,8 +1720,9 @@ const benefitStatus = (benefit, year, claims = NO_CLAIMS) => {
 /* ─── Card claims ───
    Which credits are used is stored in Supabase, through /api/claims in
    worker.js (the site password is the only login). Each row is one benefit
-   for one period ("2026-Q4") with claimed true/false. The worker also marks
-   YNAB statement credits used before answering, so the list arrives current. */
+   for one period ("2026-Q4") with claimed true/false. The page shows the saved
+   rows straight away, then /api/claims?sync has the worker mark any new YNAB
+   statement credits and send the list again. */
 
 const claimKey = (cardId, benefitId, period) => `${cardId}|${benefitId}|${period}`;
 
@@ -1735,22 +1736,41 @@ function useCardClaims() {
     setTimeout(() => setMsg((m) => m === text ? "" : m), 4000);
   }, []);
 
-  // Each load also has the worker pull fresh credits from YNAB, so this is
-  // what the Refresh button calls too.
+  // Bumped on every mark/unmark, so a sync that started before it doesn't
+  // overwrite the change on screen.
+  const edits = useRef(0);
+  const load = useCallback((url) => {
+    const startedAt = edits.current;
+    return fetch(url, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (edits.current === startedAt) {
+          setRows(new Map((d.rows || []).map((r) => [claimKey(r.card_id, r.benefit_id, r.period), r])));
+        }
+        setStatus((s) => ({
+          loading: false, saving: !!d.saving, error: d.error || "",
+          // The fast read doesn't check YNAB; keep the last known state.
+          ynab: d.ynab && d.ynab.ok !== null ? d.ynab : (s.loading ? { ok: null, error: "" } : s.ynab),
+        }));
+        return d;
+      })
+      .catch(() => setStatus({ loading: false, saving: false, error: "Couldn't reach the server", ynab: { ok: false, error: "" } }));
+  }, []);
+
+  // Refresh (and the background check after the first paint) asks the worker
+  // to pull recent credits from YNAB.
   const [refreshing, setRefreshing] = useState(false);
   const reload = useCallback(() => {
     setRefreshing(true);
-    return fetch("/api/claims", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        setRows(new Map((d.rows || []).map((r) => [claimKey(r.card_id, r.benefit_id, r.period), r])));
-        setStatus({ loading: false, saving: !!d.saving, error: d.error || "", ynab: d.ynab || { ok: false, error: "" } });
-      })
-      .catch(() => setStatus({ loading: false, saving: false, error: "Couldn't reach the server", ynab: { ok: false, error: "" } }))
-      .finally(() => setRefreshing(false));
-  }, []);
+    return load("/api/claims?sync").finally(() => setRefreshing(false));
+  }, [load]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    load("/api/claims").then((d) => {
+      // A full sync already ran when Supabase isn't reachable (ynab is set).
+      if (!d || !d.ynab || d.ynab.ok === null) reload();
+    });
+  }, [load, reload]);
 
   // { "card|benefit": { on: Set(periods), off: Set(periods) } }
   const index = useMemo(() => {
@@ -1769,6 +1789,7 @@ function useCardClaims() {
   // fails. Resolves true when it saved.
   const setClaimed = useCallback(async (cardId, benefitId, periods, claimed) => {
     if (!periods.length) return true;
+    edits.current++;
     let before;
     setRows((m) => {
       before = m;

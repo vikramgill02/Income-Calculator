@@ -265,9 +265,12 @@ async function readJson(request) {
    from marking that period again.
 
    YNAB statement credits on card accounts whose bank wording contains a
-   benefit's `match` text (cards.json) are written in as claimed. That runs
-   every time the Cards page loads and nightly from the cron, so the page is
-   current before you open it. */
+   benefit's `match` text (cards.json) are written in as claimed. The Cards
+   page first gets the saved rows (one fast Supabase read), then asks for a
+   quick sync over the last RECENT_DAYS of YNAB. The nightly cron syncs the
+   full two years, which also corrects any amounts the quick sync skipped. */
+
+const RECENT_DAYS = 45;
 
 async function loadCards(env, origin) {
   const res = await env.ASSETS.fetch(new Request(origin + "/cards.json"));
@@ -275,12 +278,11 @@ async function loadCards(env, origin) {
   return (await res.json()).cards || [];
 }
 
-// Inflows on credit-card accounts this year and last (so January still sees
-// December), minus card payments.
-async function fetchCardCredits(env) {
+// Inflows on credit-card accounts since `since`, minus card payments. The full
+// sync looks back to January of last year (so January still sees December).
+async function fetchCardCredits(env, since) {
   if (!env.YNABKEY) return { ok: false, error: "YNABKEY not set", credits: [] };
   try {
-    const since = `${new Date().getUTCFullYear() - 1}-01-01`;
     const headers = { Authorization: `Bearer ${env.YNABKEY}` };
     const [accRes, txRes] = await Promise.all([
       fetch("https://api.ynab.com/v1/budgets/last-used/accounts", { headers }),
@@ -317,6 +319,15 @@ function periodKeyFor(cadence, date) {
 }
 
 const claimKey = (r) => `${r.card_id}|${r.benefit_id}|${r.period}`;
+
+// First day of a period key, so a quick sync can tell which periods it only
+// partly sees. "once" has no start.
+function periodStart(period) {
+  const m = /^(\d{4})(?:-(\d{2})|-Q([1-4])|-H([12]))?$/.exec(period);
+  if (!m) return null;
+  const month = m[2] ? +m[2] : m[3] ? (m[3] - 1) * 3 + 1 : m[4] ? (m[4] - 1) * 6 + 1 : 1;
+  return `${m[1]}-${String(month).padStart(2, "0")}-01`;
+}
 const round2 = (x) => Math.round(x * 100) / 100;
 
 // YNAB credits → one entry per benefit per period. Two postings in the same
@@ -344,9 +355,28 @@ function matchCredits(cards, credits) {
 
 const CLAIM_COLS = "card_id,benefit_id,period,claimed,source,amount,posted_on";
 
-// Read every claim, write in new YNAB matches, and return the result.
-async function syncClaims(env, origin) {
-  const [cards, ynab] = await Promise.all([loadCards(env, origin), fetchCardCredits(env)]);
+// Saved claims only: what the Cards page shows first. Falls back to a full
+// sync (which has a read-only mode) when Supabase isn't set up or reachable.
+async function readClaims(env, origin) {
+  if (!supabaseKey(env)) return syncClaims(env, origin);
+  try {
+    const rows = await supabase(env, `card_claims?select=${CLAIM_COLS}`);
+    return { saving: true, error: "", ynab: { ok: null, error: "" }, rows };
+  } catch {
+    return syncClaims(env, origin);
+  }
+}
+
+// Read every claim, write in new YNAB matches, and return the result. With
+// `recent`, only the last RECENT_DAYS of YNAB are read. That can miss half of
+// a credit posted in two parts, so it adds new claims but leaves saved amounts
+// alone for any period that started before the window.
+async function syncClaims(env, origin, { recent = false } = {}) {
+  recent = recent && !!supabaseKey(env); // read-only mode needs the full history
+  const since = recent
+    ? new Date(Date.now() - RECENT_DAYS * 864e5).toISOString().slice(0, 10)
+    : `${new Date().getUTCFullYear() - 1}-01-01`;
+  const [cards, ynab] = await Promise.all([loadCards(env, origin), fetchCardCredits(env, since)]);
   const matches = matchCredits(cards, ynab.credits);
   const ynabStatus = { ok: ynab.ok, error: ynab.error };
   // Not set up, or Supabase is down: show what YNAB found, read-only.
@@ -367,21 +397,21 @@ async function syncClaims(env, origin) {
   for (const [k, m] of matches) {
     const r = byKey.get(k);
     if (!r) fresh.push({ ...m, claimed: true, source: "ynab", updated_at: now });
+    else if (recent && !((periodStart(m.period) || "") >= since)) continue;
     else if (r.claimed && (r.amount == null || Number(r.amount) !== m.amount || r.posted_on !== m.posted_on)) {
       // Already marked (by hand or from history): just record what posted.
       amounts.push({ ...m, updated_at: now });
     }
   }
   const upsert = "card_claims?on_conflict=card_id,benefit_id,period";
-  if (fresh.length) {
+  // The two writes touch different rows, so they run side by side.
+  await Promise.all([
     // Never over a row saved meanwhile (e.g. un-marked on another device).
-    await supabase(env, upsert, { method: "POST", body: fresh, prefer: "resolution=ignore-duplicates,return=minimal" });
-    for (const r of fresh) if (!byKey.has(claimKey(r))) byKey.set(claimKey(r), r);
-  }
-  if (amounts.length) {
-    await supabase(env, upsert, { method: "POST", body: amounts, prefer: "resolution=merge-duplicates,return=minimal" });
-    for (const r of amounts) byKey.set(claimKey(r), { ...byKey.get(claimKey(r)), ...r });
-  }
+    fresh.length && supabase(env, upsert, { method: "POST", body: fresh, prefer: "resolution=ignore-duplicates,return=minimal" }),
+    amounts.length && supabase(env, upsert, { method: "POST", body: amounts, prefer: "resolution=merge-duplicates,return=minimal" }),
+  ]);
+  for (const r of fresh) if (!byKey.has(claimKey(r))) byKey.set(claimKey(r), r);
+  for (const r of amounts) byKey.set(claimKey(r), { ...byKey.get(claimKey(r)), ...r });
   const rows = [...byKey.values()].map(({ card_id, benefit_id, period, claimed, source, amount, posted_on }) =>
     ({ card_id, benefit_id, period, claimed, source, amount, posted_on }));
   return { saving: true, error: "", ynab: ynabStatus, rows };
@@ -679,7 +709,8 @@ export default {
         if (url.pathname === "/api/pto") return await ptoResponse(request, env, url.origin);
         if (request.method === "POST") return await saveClaims(request, env, url.origin);
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
-        return json(await syncClaims(env, url.origin));
+        if (url.searchParams.has("sync")) return json(await syncClaims(env, url.origin, { recent: true }));
+        return json(await readClaims(env, url.origin));
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }
