@@ -32,6 +32,16 @@ function safeNext(value) {
 
 const escapeAttr = (v) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
+// Browser side of passkeys, shared by the login and /passkeys pages.
+const PASSKEY_CLIENT = String.raw`
+const $ = (id) => document.getElementById(id);
+const dec = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const enc = (b) => { let s = ""; for (const x of new Uint8Array(b)) s += String.fromCharCode(x); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const say = (text) => { $("msg").textContent = text || ""; };
+const cancelled = (e) => e && (e.name === "NotAllowedError" || e.name === "AbortError");
+const hasPasskeys = !!(window.PublicKeyCredential && navigator.credentials);
+`;
+
 function loginPage(error, next = "/") {
   return `<!doctype html>
 <html lang="en"><head>
@@ -60,17 +70,151 @@ function loginPage(error, next = "/") {
   input { background: #131313; color: inherit; }
   input:focus { outline: 2px solid rgba(236,232,225,0.315); outline-offset: 1px; }
   button { background: #ece8e1; color: #0a0a0a; font-weight: 600; border: 0; cursor: pointer; }
-  p { margin: 0; color: #c0675a; font-size: 14px; }
+  button.ghost { background: transparent; color: #ece8e1; border: 1px solid rgba(236,232,225,0.198); font-weight: 500; }
+  .or { color: #8a867f; font-size: 13px; text-align: center; margin: 6px 0 0; }
+  #msg { margin: 0; color: #c0675a; font-size: 14px; }
+  #msg:empty, [hidden] { display: none !important; }
 </style>
 </head><body>
 <form method="POST" action="/__login">
-  <input type="hidden" name="next" value="${escapeAttr(next)}" />
+  <input type="hidden" name="next" id="next" value="${escapeAttr(next)}" />
   <img class="logo" src="/logos/gill-co-lockup.png" alt="Gill &amp; Co. Holdings" />
-  <h1>Enter password</h1>
-  <input type="password" name="password" autocomplete="current-password" autofocus required />
-  ${error ? `<p>${error}</p>` : ""}
-  <button type="submit">Unlock</button>
+  <button type="button" id="faceid" hidden>Unlock with Face ID</button>
+  <p class="or" id="or" hidden>or use the password</p>
+  <h1 id="prompt">Enter password</h1>
+  <input type="password" name="password" id="pw" autocomplete="current-password" autofocus required />
+  <p id="msg">${error || ""}</p>
+  <button type="submit" id="unlock">Unlock</button>
 </form>
+<script>${PASSKEY_CLIENT}
+// The challenge is fetched ahead of time (and renewed) so the Face ID prompt
+// opens straight from the tap, which Safari requires.
+let opts = null;
+const refresh = () => fetch("/__passkey/options", { method: "POST" }).then((r) => r.json()).then((o) => {
+  opts = o;
+  if (!o.available) return;
+  $("faceid").hidden = false; $("or").hidden = false; $("prompt").hidden = true;
+  $("unlock").className = "ghost"; $("pw").removeAttribute("required");
+  if (document.activeElement === $("pw")) $("pw").blur();
+}).catch(() => {});
+if (hasPasskeys) { refresh(); setInterval(refresh, 4 * 60 * 1000); }
+$("faceid").onclick = async () => {
+  if (!opts) return;
+  say("");
+  try {
+    const cred = await navigator.credentials.get({ publicKey: {
+      challenge: dec(opts.challenge), rpId: opts.rpId, userVerification: "required", timeout: 60000 } });
+    const r = cred.response;
+    const res = await fetch("/__passkey/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: cred.id, clientDataJSON: enc(r.clientDataJSON), authenticatorData: enc(r.authenticatorData),
+        signature: enc(r.signature), next: $("next").value }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Face ID didn't work");
+    location.replace(d.next);
+  } catch (e) {
+    if (!cancelled(e)) say(e.message);
+    refresh();
+  }
+};
+$("unlock").onclick = () => $("pw").setAttribute("required", "");
+</script>
+</body></html>`;
+}
+
+function passkeysPage() {
+  return `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<title>Face ID · Gill &amp; Co.</title>
+<link rel="icon" type="image/png" href="/favicon.png?v=manor" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=manor" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@600&family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0a0a0a; color: #ece8e1; font: 15px/1.5 'Noto Serif', Georgia, serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 20px 56px; }
+  a.back { color: #8a867f; text-decoration: none; font-size: 14px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; margin: 28px 0 6px; }
+  h1 { font: 600 38px/1.05 'Noto Serif Display', Georgia, serif; margin: 0 0 12px; }
+  .note { color: #8a867f; font-size: 14px; margin: 0 0 22px; }
+  button { font: inherit; font-weight: 600; padding: 12px 16px; border-radius: 10px; border: 0; cursor: pointer;
+           background: #ece8e1; color: #0a0a0a; width: 100%; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #msg { margin: 12px 0 0; font-size: 14px; color: #c0675a; }
+  #msg.ok { color: #6b9a7d; }
+  #msg:empty { display: none; }
+  ul { list-style: none; padding: 0; margin: 28px 0 0; border-top: 1px solid rgba(236,232,225,0.09); }
+  li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(236,232,225,0.09); }
+  li small { display: block; color: #8a867f; font-size: 12.5px; }
+  li button { width: auto; background: transparent; color: #c0675a; border: 1px solid rgba(192,103,90,0.35); padding: 6px 12px; font-weight: 500; font-size: 13px; }
+  .empty { color: #6f6c67; font-size: 14px; padding: 14px 0; }
+</style>
+</head><body><main>
+<a class="back" href="/tools">← Tools</a>
+<p class="eyebrow">Sign-in</p>
+<h1>Face ID</h1>
+<p class="note">Add Face ID on each phone or computer you use. When the site asks you to sign in, tap <em>Unlock with Face ID</em> instead of typing the password. The password still works as a backup.</p>
+<button type="button" id="add" disabled>Add Face ID on this device</button>
+<p id="msg"></p>
+<ul id="list"></ul>
+</main>
+<script>${PASSKEY_CLIENT}
+const deviceName = () => { const u = navigator.userAgent;
+  return /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) ? "iPad"
+    : /Macintosh/.test(u) ? "Mac" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "Windows PC" : "This device"; };
+const when = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "never";
+let opts = null;
+const getOptions = () => fetch("/api/passkeys?options").then((r) => r.json()).then((o) => { opts = o; $("add").disabled = !hasPasskeys; });
+const load = () => fetch("/api/passkeys").then((r) => r.json()).then(({ passkeys }) => {
+  const ul = $("list"); ul.innerHTML = "";
+  if (!passkeys.length) { ul.innerHTML = '<li class="empty">No devices yet.</li>'; return; }
+  for (const p of passkeys) {
+    const li = document.createElement("li");
+    li.innerHTML = '<div><span></span><small></small></div><button type="button">Remove</button>';
+    li.querySelector("span").textContent = p.name;
+    li.querySelector("small").textContent = "Added " + when(p.created) + " · last used " + when(p.lastUsed);
+    li.querySelector("button").onclick = async () => {
+      if (!confirm("Remove Face ID for " + p.name + "? You can add it again any time.")) return;
+      await fetch("/api/passkeys?id=" + encodeURIComponent(p.id), { method: "DELETE" });
+      load(); getOptions();
+    };
+    ul.appendChild(li);
+  }
+});
+if (!hasPasskeys) say("This browser can't use passkeys.");
+load(); getOptions(); setInterval(getOptions, 4 * 60 * 1000);
+$("add").onclick = async () => {
+  if (!opts) return;
+  say(""); $("msg").className = "";
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: dec(opts.challenge), rp: opts.rp,
+      user: { id: dec(opts.user.id), name: opts.user.name, displayName: opts.user.displayName },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+      authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "required" },
+      excludeCredentials: opts.exclude.map((id) => ({ type: "public-key", id: dec(id) })),
+      attestation: "none", timeout: 60000 } });
+    const r = cred.response;
+    const res = await fetch("/api/passkeys", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: cred.id, clientDataJSON: enc(r.clientDataJSON), authenticatorData: enc(r.getAuthenticatorData()),
+        publicKey: enc(r.getPublicKey()), publicKeyAlgorithm: r.getPublicKeyAlgorithm(), name: deviceName() }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Couldn't save");
+    $("msg").className = "ok"; say("Face ID is set up on this device.");
+    load();
+  } catch (e) {
+    if (e && e.name === "InvalidStateError") say("This device already has Face ID set up.");
+    else if (!cancelled(e)) say(e.message);
+  }
+  getOptions();
+};
+</script>
 </body></html>`;
 }
 
@@ -650,6 +794,178 @@ async function lookupResponse(env, url) {
   return json({ zip, county, tax, rent });
 }
 
+/* ─── Passkeys (Face ID / Touch ID) ───
+   A signed-in device can add a passkey at /passkeys; the login page then
+   offers "Unlock with Face ID", which sets the same one-year cookie as the
+   password. The password keeps working as a backup.
+
+   Only ES256 (P-256) keys, which is what Apple and Google passkeys use.
+   Registration is allowed only with a valid cookie, so it never needs
+   attestation. Challenges are signed with a key derived from PASSWORD instead
+   of being stored. Passkeys live in the HISTORY KV namespace under their own
+   key, so no new Cloudflare resource is needed. */
+
+const PASSKEYS_KEY = "auth:passkeys";
+const CHALLENGE_TTL = 5 * 60 * 1000;
+const MAX_PASSKEYS = 10;
+const enc = new TextEncoder();
+
+const b64u = (buf) => {
+  let s = "";
+  for (const b of new Uint8Array(buf)) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+const unb64u = (str) => {
+  const s = String(str || "").replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(s + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+};
+const concat = (...parts) => {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let i = 0;
+  for (const p of parts) { out.set(p, i); i += p.length; }
+  return out;
+};
+const sha256 = async (bytes) => new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+const sameBytes = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+async function challengeMac(env, body, purpose) {
+  const key = await crypto.subtle.importKey("raw", enc.encode("passkey-challenge:" + env.PASSWORD),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, concat(body, enc.encode(purpose)))).subarray(0, 16);
+}
+
+// 16 random bytes + expiry (ms) + a MAC tying both to the purpose.
+async function newChallenge(env, purpose) {
+  const body = new Uint8Array(24);
+  crypto.getRandomValues(body.subarray(0, 16));
+  new DataView(body.buffer).setFloat64(16, Date.now() + CHALLENGE_TTL);
+  return b64u(concat(body, await challengeMac(env, body, purpose)));
+}
+
+async function challengeOk(env, challenge, purpose) {
+  let raw;
+  try { raw = unb64u(challenge); } catch { return false; }
+  if (raw.length !== 40) return false;
+  const body = raw.slice(0, 24);
+  if (new DataView(body.buffer).getFloat64(16) < Date.now()) return false;
+  return sameBytes(raw.subarray(24), await challengeMac(env, body, purpose));
+}
+
+async function readPasskeys(env) {
+  if (!env.HISTORY) return [];
+  return (await env.HISTORY.get(PASSKEYS_KEY, "json")) || [];
+}
+async function writePasskeys(env, list) {
+  await env.HISTORY.put(PASSKEYS_KEY, JSON.stringify(list));
+}
+
+// Checks what every ceremony shares: clientData type, challenge and origin,
+// then the authenticator data's RP hash and the user-present + user-verified
+// flags (UV is what makes it Face ID rather than just a tap).
+async function checkCeremony(env, url, { clientDataJSON, authenticatorData }, type, purpose) {
+  const clientBytes = unb64u(clientDataJSON);
+  const client = JSON.parse(new TextDecoder().decode(clientBytes));
+  if (client.type !== type || client.origin !== url.origin) throw new Error("Wrong origin");
+  if (!(await challengeOk(env, client.challenge, purpose))) throw new Error("Expired, try again");
+  const auth = unb64u(authenticatorData);
+  if (auth.length < 37 || !sameBytes(auth.subarray(0, 32), await sha256(enc.encode(url.hostname)))) {
+    throw new Error("Wrong site");
+  }
+  if ((auth[32] & 0x05) !== 0x05) throw new Error("Face ID wasn't confirmed");
+  return { auth, clientBytes };
+}
+
+// WebAuthn signatures are DER; Web Crypto wants r || s, 32 bytes each.
+function derToRaw(der) {
+  let i = der[1] & 0x80 ? 2 + (der[1] & 0x7f) : 2;
+  const int = () => {
+    if (der[i++] !== 0x02) throw new Error("Bad signature");
+    const len = der[i++];
+    let v = der.subarray(i, i + len);
+    i += len;
+    while (v.length > 32 && v[0] === 0) v = v.subarray(1);
+    const out = new Uint8Array(32);
+    out.set(v, 32 - v.length);
+    return out;
+  };
+  const r = int();
+  return concat(r, int());
+}
+
+const ES256 = { name: "ECDSA", namedCurve: "P-256" };
+
+async function passkeyRegister(request, env, url) {
+  const body = await readJson(request);
+  if (!body || body.publicKeyAlgorithm !== -7 || !body.id || !body.publicKey) {
+    return json({ error: "This device's passkey type isn't supported" }, 400);
+  }
+  try {
+    await checkCeremony(env, url, body, "webauthn.create", "register");
+    await crypto.subtle.importKey("spki", unb64u(body.publicKey), ES256, false, ["verify"]);
+  } catch (e) {
+    return json({ error: String(e.message || e) }, 400);
+  }
+  const list = (await readPasskeys(env)).filter((p) => p.id !== body.id);
+  if (list.length >= MAX_PASSKEYS) return json({ error: `Remove one first (limit ${MAX_PASSKEYS})` }, 400);
+  const name = String(body.name || "This device").slice(0, 40);
+  list.push({ id: body.id, publicKey: body.publicKey, name, created: new Date().toISOString(), lastUsed: null });
+  await writePasskeys(env, list);
+  return json({ ok: true });
+}
+
+async function passkeyLogin(request, env, url, cookieValue) {
+  const body = await readJson(request);
+  const fail = async (msg) => {
+    await new Promise((r) => setTimeout(r, 1000));
+    return json({ error: msg }, 401);
+  };
+  if (!body || !body.id || !body.signature) return fail("Face ID didn't finish");
+  const list = await readPasskeys(env);
+  const key = list.find((p) => p.id === body.id);
+  if (!key) return fail("This passkey was removed. Use the password, then add Face ID again.");
+  try {
+    const { auth, clientBytes } = await checkCeremony(env, url, body, "webauthn.get", "login");
+    const pub = await crypto.subtle.importKey("spki", unb64u(key.publicKey), ES256, false, ["verify"]);
+    const signed = concat(auth, await sha256(clientBytes));
+    const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, pub, derToRaw(unb64u(body.signature)), signed);
+    if (!ok) return fail("Face ID didn't match");
+  } catch (e) {
+    return fail(String(e.message || e));
+  }
+  key.lastUsed = new Date().toISOString();
+  await writePasskeys(env, list).catch(() => {});
+  return new Response(JSON.stringify({ ok: true, next: safeNext(body.next) }), {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "Set-Cookie": `${COOKIE}=${cookieValue}; Max-Age=${ONE_YEAR}; Path=/; HttpOnly; Secure; SameSite=Lax`,
+    },
+  });
+}
+
+async function passkeysApi(request, env, url) {
+  if (request.method === "GET" && url.searchParams.has("options")) {
+    const list = await readPasskeys(env);
+    return json({
+      challenge: await newChallenge(env, "register"),
+      rp: { id: url.hostname, name: "Gill & Co." },
+      user: { id: b64u(enc.encode("gill-co-owner")), name: "Gill & Co.", displayName: "Gill & Co." },
+      exclude: list.map((p) => p.id),
+    });
+  }
+  if (request.method === "GET") {
+    return json({ passkeys: (await readPasskeys(env)).map(({ id, name, created, lastUsed }) => ({ id, name, created, lastUsed })) });
+  }
+  if (request.method === "POST") return passkeyRegister(request, env, url);
+  if (request.method === "DELETE") {
+    const id = url.searchParams.get("id");
+    const list = await readPasskeys(env);
+    await writePasskeys(env, list.filter((p) => p.id !== id));
+    return json({ ok: true });
+  }
+  return json({ error: "Method not allowed" }, 405);
+}
+
 export default {
   async scheduled(event, env, ctx) {
     // Marks new YNAB card credits used, and the read also keeps the free
@@ -690,12 +1006,27 @@ export default {
       });
     }
 
+    // Face ID sign-in happens before the password gate, like /__login.
+    if (url.pathname === "/__passkey/options" && request.method === "POST") {
+      const count = (await readPasskeys(env)).length;
+      return json({ available: count > 0, challenge: await newChallenge(env, "login"), rpId: url.hostname });
+    }
+    if (url.pathname === "/__passkey/login" && request.method === "POST") {
+      return passkeyLogin(request, env, url, expected);
+    }
+
     // Icons and the manifest load without the password: browsers fetch the
     // manifest without cookies, and iOS may fetch the home-screen icon the
     // same way. They hold only the logo, the castle mark and the app name; the login page
     // shows the full logo.
     if (readCookie(request, COOKIE) !== expected && !PUBLIC_FILES.has(url.pathname)) {
       return html(loginPage("", safeNext(url.pathname + url.search)), 401);
+    }
+
+    if (url.pathname === "/passkeys") return html(passkeysPage(), 200);
+    if (url.pathname === "/api/passkeys") {
+      try { return await passkeysApi(request, env, url); }
+      catch (e) { return json({ error: String(e.message || e) }, 500); }
     }
 
     if (url.pathname === "/api/networth") {
