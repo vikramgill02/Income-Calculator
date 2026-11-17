@@ -1,11 +1,11 @@
 {
   "year": 2026,
-  "last_updated": "2026-10-30",
+  "last_updated": "2026-11-13",
   "projection": {
-    "notes": "Sutter base rate is $78.31/hr. Projection assumes 72 hrs per biweekly period at the straight day-shift rate ($5,638.32/check), no differentials or OT - a conservative floor, since actual checks have been running well above it. Nov (11/13, 11/27) and Dec (12/11, 12/25) are 2 checks each. October is complete through the 10/30 check, so it carries no projection. NorthBay: quit as of 8/21/2026.",
+    "notes": "Sutter base rate is $78.31/hr. Projection assumes 72 hrs per biweekly period at the straight day-shift rate ($5,638.32/check), no differentials or OT - a conservative floor, since actual checks have been running well above it. Nov (11/13, 11/27) and Dec (12/11, 12/25) are 2 checks each. October is complete through the 10/30 check, so it carries no projection. November = the actual 11/13 check ($10,386.01) + one projected 11/27 check ($5,638.32). NorthBay: quit as of 8/21/2026.",
     "monthly": {
       "2026-11": {
-        "Sutter": 11276.64
+        "Sutter": 16024.33
       },
       "2026-12": {
         "Sutter": 11276.64
@@ -235,6 +235,13 @@
       "pay_date": "2026-10-30",
       "gross": 12538.53,
       "net": 8000.82,
+      "retirement_403b": 0
+    },
+    {
+      "employer": "Sutter",
+      "pay_date": "2026-11-13",
+      "gross": 10386.01,
+      "net": 6781.86,
       "retirement_403b": 0
     }
   ]
