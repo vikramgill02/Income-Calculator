@@ -16,7 +16,7 @@ LOG="$(mktemp)"
 PASS=0; FAIL=0
 
 # Throwaway local password; .dev.vars is never deployed.
-printf 'PASSWORD=smoke-test\n' > .dev.vars
+printf 'PASSWORD=smoke-test\nPIN=246810\n' > .dev.vars
 
 $WRANGLER dev --port "$PORT" > "$LOG" 2>&1 &
 PID=$!
@@ -25,8 +25,11 @@ trap cleanup EXIT
 
 for _ in $(seq 1 60); do curl -s -o /dev/null "$BASE/robots.txt" && break; sleep 1; done
 
-# A real 5-minute session, the way the login form gets one.
-COOKIE="$(curl -s -D - -o /dev/null -d 'password=smoke-test' "$BASE/__login" | tr -d '\r' | sed -n 's/^[Ss]et-[Cc]ookie: \(ic_auth=[^;]*\).*/\1/p')"
+# A real 5-minute session, the way the login form gets one. Typing the
+# password also gives the step-up that adding Face ID needs.
+LOGIN_HEADERS="$(curl -s -D - -o /dev/null -d 'password=smoke-test' "$BASE/__login" | tr -d '\r')"
+COOKIE="$(echo "$LOGIN_HEADERS" | sed -n 's/^[Ss]et-[Cc]ookie: \(ic_auth=[^;]*\).*/\1/p')"
+STEPUP="$(echo "$LOGIN_HEADERS" | sed -n 's/^[Ss]et-[Cc]ookie: \(ic_stepup=[^;]*\).*/\1/p')"
 
 check() { # name, expected, actual
   if [ "$2" = "$3" ]; then PASS=$((PASS+1)); echo "  ok   $1"
@@ -69,6 +72,23 @@ check "forged session refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H 
 check "stretched session refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $(echo "$COOKIE" | sed 's/v1\.[0-9]*\./v1.9999999999999./')" "$BASE/cards")"
 check "/api/session keeps it alive" 204 "$(status /api/session)"
 check "signed-out API answers 401 JSON" yes "$(curl -s "$BASE/api/networth" | grep -q '"signedOut":true' && echo yes || echo no)"
+echo "PIN keypad (PIN=246810 in .dev.vars):"
+pin() { curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"pin\":\"$1\"}" "$BASE/__pin"; }
+check "lock screen shows the keypad" yes "$(curl -s "$BASE/cards" | grep -q '<main class="pin">' && echo yes || echo no)"
+check "wrong PIN refused" 401 "$(pin 111111)"
+check "right PIN signs in" yes "$(curl -s -D - -o /dev/null -H 'Content-Type: application/json' -d '{"pin":"246810"}' "$BASE/__pin" | grep -qi '^set-cookie: ic_auth=v1' && echo yes || echo no)"
+check "PIN gives no Face ID step-up" no "$(curl -s -D - -o /dev/null -H 'Content-Type: application/json' -d '{"pin":"246810"}' "$BASE/__pin" | grep -qi '^set-cookie: ic_stepup' && echo yes || echo no)"
+for _ in 1 2 3 4; do pin 000000 > /dev/null; done
+check "5th wrong PIN locks the keypad" 429 "$(pin 000000)"
+check "right PIN refused while locked" 429 "$(pin 246810)"
+curl -s -o /dev/null -d 'password=smoke-test' "$BASE/__login"
+check "password sign-in clears the lock" 200 "$(pin 246810)"
+echo "Adding Face ID needs the password:"
+check "password sign-in gives the step-up" yes "$([ -n "$STEPUP" ] && echo yes || echo no)"
+check "register options refused on a PIN/Face ID session" 403 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE" "$BASE/api/passkeys?options")"
+check "register options allowed after the password" 200 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE; $STEPUP" "$BASE/api/passkeys?options")"
+check "re-entering a wrong password refused" 403 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{"password":"nope"}' "$BASE/api/passkeys?stepup")"
+check "re-entering the password grants it" yes "$(curl -s -D - -o /dev/null -H "Cookie: $COOKIE" -H 'Content-Type: application/json' -d '{"password":"smoke-test"}' "$BASE/api/passkeys?stepup" | grep -qi '^set-cookie: ic_stepup=s1' && echo yes || echo no)"
 echo "Face ID (passkeys):"
 check "/__passkey/options is public" yes "$(curl -s -X POST "$BASE/__passkey/options" | grep -q '"challenge"' && echo yes || echo no)"
 check "no passkeys yet -> no Face ID button" yes "$(curl -s -X POST "$BASE/__passkey/options" | grep -q '"available":false' && echo yes || echo no)"

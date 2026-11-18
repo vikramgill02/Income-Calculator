@@ -29,14 +29,72 @@ async function sessionCookie(env) {
   return `${COOKIE}=${value}; Max-Age=${SESSION_TTL / 1000}; Path=/; HttpOnly; Secure; SameSite=Lax`;
 }
 
-// The session's expiry if the cookie is genuine and current, else null.
-async function readSession(request, env) {
-  const m = /^(v1\.(\d{13}))\.([\w-]{24})$/.exec(readCookie(request, COOKIE) || "");
+// A signed "<prefix>.<expiry ms>.<MAC>" cookie's expiry if genuine and current.
+async function readSigned(request, env, name, prefix) {
+  const m = new RegExp(`^(${prefix}\\.(\\d{13}))\\.([\\w-]{24})$`).exec(readCookie(request, name) || "");
   if (!m || +m[2] < Date.now()) return null;
   const mac = await sessionMac(env, m[1]);
   let diff = mac.length ^ m[3].length;
   for (let i = 0; i < mac.length; i++) diff |= mac.charCodeAt(i) ^ m[3].charCodeAt(i);
   return diff ? null : +m[2];
+}
+const readSession = (request, env) => readSigned(request, env, COOKIE, "v1");
+
+// Typing the password (not the PIN or Face ID) also grants a 5-minute
+// "step-up", which adding a Face ID device requires. So someone holding an
+// unlocked phone can't add their own face without knowing the password.
+const STEPUP = "ic_stepup";
+async function stepupCookie(env) {
+  const payload = `s1.${Date.now() + SESSION_TTL}`;
+  return `${STEPUP}=${payload}.${await sessionMac(env, payload)}; Max-Age=${SESSION_TTL / 1000}; Path=/; HttpOnly; Secure; SameSite=Strict`;
+}
+const stepupOk = (request, env) => readSigned(request, env, STEPUP, "s1");
+
+/* ─── PIN ───
+   The PIN secret on the Worker (4–8 digits) turns the lock screen into a
+   keypad. Five wrong PINs lock the keypad for 15 minutes; Face ID and the
+   password still work meanwhile, and either one clears the lock. */
+const PIN_TRIES = 5;
+const PIN_LOCK = 15 * 60 * 1000;
+const PIN_STATE = "auth:pin";
+const pinOf = (env) => { const p = String(env.PIN || "").trim(); return /^\d{4,8}$/.test(p) ? p : ""; };
+async function pinState(env) {
+  return (env.HISTORY && (await env.HISTORY.get(PIN_STATE, "json"))) || { fails: 0, until: 0 };
+}
+async function setPinState(env, state) {
+  if (env.HISTORY) await env.HISTORY.put(PIN_STATE, JSON.stringify(state));
+}
+async function clearPinLock(env) {
+  const s = await pinState(env);
+  if (s.fails || s.until) await setPinState(env, { fails: 0, until: 0 });
+}
+const pinLockedMsg = (until) =>
+  `Too many wrong PINs. Use Face ID or the password, or wait ${Math.max(1, Math.ceil((until - Date.now()) / 60000))} min.`;
+
+async function pinLogin(request, env) {
+  const pin = pinOf(env);
+  if (!pin) return json({ error: "No PIN is set" }, 404);
+  const body = (await readJson(request)) || {};
+  const state = await pinState(env);
+  if (state.until > Date.now()) return json({ error: pinLockedMsg(state.until), locked: true, until: state.until }, 429);
+  const digest = async (v) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("pin:" + v)));
+  const ok = sameBytes(await digest(String(body.pin || "")), await digest(pin));
+  if (!ok) {
+    await new Promise((r) => setTimeout(r, 800));
+    const fails = state.fails + 1;
+    if (fails >= PIN_TRIES) {
+      const until = Date.now() + PIN_LOCK;
+      await setPinState(env, { fails: 0, until });
+      return json({ error: pinLockedMsg(until), locked: true, until }, 429);
+    }
+    await setPinState(env, { fails, until: 0 });
+    const left = PIN_TRIES - fails;
+    return json({ error: `Wrong PIN · ${left} ${left === 1 ? "try" : "tries"} left` }, 401);
+  }
+  if (state.fails) await setPinState(env, { fails: 0, until: 0 });
+  return new Response(JSON.stringify({ ok: true, next: safeNext(body.next) }), {
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Set-Cookie": await sessionCookie(env) },
+  });
 }
 
 async function tokenFor(password) {
@@ -97,16 +155,18 @@ const PASSKEY_CLIENT = String.raw`
 const $ = (id) => document.getElementById(id);
 const dec = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
 const enc = (b) => { let s = ""; for (const x of new Uint8Array(b)) s += String.fromCharCode(x); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
-const say = (text) => { $("msg").textContent = text || ""; };
+const say = (text) => { (window.msgEl ? window.msgEl() : $("msg")).textContent = text || ""; };
 const cancelled = (e) => e && (e.name === "NotAllowedError" || e.name === "AbortError");
 const hasPasskeys = !!(window.PublicKeyCredential && navigator.credentials);
 `;
 
-function loginPage(error, next = "/") {
+function loginPage(error, next = "/", pinLength = 0) {
+  const pinFirst = pinLength && !error;
+  const digit = (d) => `<button type="button" class="key" data-d="${d}">${d}</button>`;
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#0a0a0a" />
 <title>Gill &amp; Co.</title>
@@ -118,41 +178,136 @@ function loginPage(error, next = "/") {
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="Gill &amp; Co." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@400&family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
 <style>
   :root { color-scheme: dark; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
          background: #0a0a0a; color: #ece8e1; font: 16px 'Noto Serif', Georgia, serif; }
-  form { width: min(320px, calc(100vw - 32px)); display: grid; gap: 12px; }
-  .logo { display: block; width: 260px; max-width: 100%; height: auto; margin: 0 auto 22px; }
-  h1 { font-size: 15px; font-weight: 500; margin: 0 0 2px; color: #8a867f; text-align: center; }
-  input, button { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(236,232,225,0.198); }
+  main { width: min(320px, calc(100vw - 32px)); padding: 16px 0; }
+  form { display: grid; gap: 12px; }
+  .logo { display: block; width: 240px; max-width: 100%; height: auto; margin: 0 auto 22px; }
+  main.pin .logo { width: 190px; margin-bottom: 18px; }
+  h1, .label { font-size: 15px; font-weight: 500; margin: 0 0 2px; color: #8a867f; text-align: center; }
+  input, form button { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(236,232,225,0.198); }
   input { background: #131313; color: inherit; }
   input:focus { outline: 2px solid rgba(236,232,225,0.315); outline-offset: 1px; }
-  button { background: #ece8e1; color: #0a0a0a; font-weight: 600; border: 0; cursor: pointer; }
-  button.ghost { background: transparent; color: #ece8e1; border: 1px solid rgba(236,232,225,0.198); font-weight: 500; }
+  form button { background: #ece8e1; color: #0a0a0a; font-weight: 600; border: 0; cursor: pointer; }
+  form button.ghost { background: transparent; color: #ece8e1; border: 1px solid rgba(236,232,225,0.198); font-weight: 500; }
   .or { color: #8a867f; font-size: 13px; text-align: center; margin: 6px 0 0; }
-  #msg { margin: 0; color: #c0675a; font-size: 14px; }
-  #msg:empty, [hidden] { display: none !important; }
+  .msg { margin: 0; color: #c0675a; font-size: 14px; text-align: center; min-height: 0; }
+  .msg:empty, [hidden] { display: none !important; }
+  /* keypad */
+  .dots { display: flex; gap: 14px; justify-content: center; margin: 10px 0 6px; }
+  .dots i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(236,232,225,0.5); transition: background .12s; }
+  .dots i.on { background: #ece8e1; border-color: #ece8e1; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 15%, 55% { transform: translateX(-9px); } 35%, 75% { transform: translateX(9px); } }
+  .pad { display: grid; grid-template-columns: repeat(3, 74px); gap: 14px 24px; justify-content: center; margin: 16px 0 6px; }
+  .key { width: 74px; height: 74px; border-radius: 50%; padding: 0; display: grid; place-items: center; cursor: pointer;
+         border: 1px solid rgba(236,232,225,0.17); background: rgba(236,232,225,0.03); color: #ece8e1;
+         font: 400 30px/1 'Noto Serif Display', Georgia, serif; user-select: none; -webkit-user-select: none;
+         touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: background .1s; }
+  .key:active { background: rgba(236,232,225,0.18); }
+  .key.fn { border-color: transparent; background: transparent; color: #c9c4bb; }
+  .key.fn:active { background: rgba(236,232,225,0.08); }
+  .key:disabled { opacity: .35; cursor: default; }
+  .links { display: flex; justify-content: center; gap: 18px; margin-top: 8px; }
+  .link { background: none; border: 0; padding: 8px; color: #8a867f; font: inherit; font-size: 14px; cursor: pointer; }
 </style>
 </head><body>
-<form method="POST" action="/__login">
-  <input type="hidden" name="next" id="next" value="${escapeAttr(next)}" />
+<main class="${pinFirst ? "pin" : ""}">
   <img class="logo" src="/logos/gill-co-lockup.png" alt="Gill &amp; Co. Holdings" />
-  <button type="button" id="faceid" hidden>Unlock with Face ID</button>
-  <p class="or" id="or" hidden>or use the password</p>
-  <h1 id="prompt">Enter password</h1>
-  <input type="password" name="password" id="pw" autocomplete="current-password" autofocus required />
-  <p id="msg">${error || ""}</p>
-  <button type="submit" id="unlock">Unlock</button>
-  <button type="button" id="setup" class="ghost" hidden>Set up Face ID</button>
-</form>
+
+  <section id="pinView" ${pinFirst ? "" : "hidden"}>
+    <p class="label">Enter PIN</p>
+    <div class="dots" id="dots">${"<i></i>".repeat(pinLength)}</div>
+    <p class="msg" id="pmsg"></p>
+    <div class="pad">
+      ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit).join("")}
+      <button type="button" class="key fn" id="faceKey" aria-label="Unlock with Face ID" style="visibility:hidden">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 15.5c1.4 1.2 3.6 1.2 5 0"/></svg>
+      </button>
+      ${digit(0)}
+      <button type="button" class="key fn" id="del" aria-label="Delete">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>
+      </button>
+    </div>
+    <div class="links"><button type="button" class="link" id="usePw">Use password</button></div>
+  </section>
+
+  <form method="POST" action="/__login" id="pwView" ${pinFirst ? "hidden" : ""}>
+    <input type="hidden" name="next" id="next" value="${escapeAttr(next)}" />
+    <button type="button" id="faceid" hidden>Unlock with Face ID</button>
+    <p class="or" id="or" hidden>or use the password</p>
+    <h1 id="prompt">Enter password</h1>
+    <input type="password" name="password" id="pw" autocomplete="current-password" ${pinFirst ? "" : "autofocus"} required />
+    <p class="msg" id="msg">${error || ""}</p>
+    <button type="submit" id="unlock">Unlock</button>
+    ${pinLength ? '<button type="button" class="link" id="usePin">Use PIN</button>' : ""}
+  </form>
+
+  <div class="links"><button type="button" class="link" id="setup" hidden>Set up Face ID</button></div>
+</main>
+<script>
+// Face ID errors show under whichever view is open.
+window.msgEl = () => $("pinView").hidden ? $("msg") : $("pmsg");
+</script>
 <script>${PASSKEY_CLIENT}
+const PIN_LEN = ${pinLength};
+const pinMode = () => !$("pinView").hidden;
+const showPin = (on) => {
+  $("pinView").hidden = !on; $("pwView").hidden = on;
+  document.querySelector("main").className = on ? "pin" : "";
+  if (!on) $("pw").focus();
+};
+$("usePw").onclick = () => showPin(false);
+if ($("usePin")) $("usePin").onclick = () => showPin(true);
+
+// ── PIN keypad ──
+let pin = "", busy = false, lockedUntil = 0;
+const dots = [...document.querySelectorAll("#dots i")];
+const draw = () => dots.forEach((d, i) => d.classList.toggle("on", i < pin.length));
+const setLocked = (until) => {
+  lockedUntil = until || 0;
+  document.querySelectorAll(".key[data-d], #del").forEach((k) => { k.disabled = Date.now() < lockedUntil; });
+  if (lockedUntil > Date.now()) setTimeout(() => { setLocked(0); $("pmsg").textContent = ""; }, lockedUntil - Date.now() + 500);
+};
+const submitPin = async () => {
+  busy = true;
+  try {
+    const r = await fetch("/__pin", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin, next: $("next").value }) });
+    const d = await r.json();
+    if (r.ok) return location.replace(d.next);
+    $("dots").classList.remove("shake"); void $("dots").offsetWidth; $("dots").classList.add("shake");
+    $("pmsg").textContent = d.error || "Wrong PIN";
+    if (d.locked) setLocked(d.until);
+  } catch (e) {
+    $("pmsg").textContent = "Couldn't reach the server";
+  }
+  pin = ""; draw(); busy = false;
+};
+const press = (d) => {
+  if (busy || Date.now() < lockedUntil || pin.length >= PIN_LEN) return;
+  if (!pin) $("pmsg").textContent = "";
+  pin += d; draw();
+  if (pin.length === PIN_LEN) setTimeout(submitPin, 120);
+};
+document.querySelectorAll(".key[data-d]").forEach((k) => k.onclick = () => press(k.dataset.d));
+$("del").onclick = () => { if (!busy) { pin = pin.slice(0, -1); draw(); } };
+document.addEventListener("keydown", (e) => {
+  if (!pinMode()) return;
+  if (/^[0-9]$/.test(e.key)) press(e.key);
+  else if (e.key === "Backspace") $("del").click();
+});
+
+// ── Face ID ──
 // The challenge is fetched ahead of time (and renewed) so the Face ID prompt
-// opens straight from the tap, which Safari requires.
+// opens straight from a tap, which Safari requires.
 let opts = null;
 const refresh = () => fetch("/__passkey/options", { method: "POST" }).then((r) => r.json()).then(async (o) => {
   opts = o;
+  if (o.pinLockedUntil) setLocked(o.pinLockedUntil);
   if (!o.available) {
     // Nothing set up yet: offer it on devices that have Face ID / Touch ID.
     const can = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
@@ -160,6 +315,7 @@ const refresh = () => fetch("/__passkey/options", { method: "POST" }).then((r) =
     return;
   }
   $("setup").hidden = true;
+  $("faceKey").style.visibility = "visible";
   $("faceid").hidden = false; $("or").hidden = false; $("prompt").hidden = true;
   $("unlock").className = "ghost"; $("pw").removeAttribute("required");
   if (document.activeElement === $("pw")) $("pw").blur();
@@ -195,18 +351,21 @@ const faceId = async (auto) => {
   }
 };
 $("faceid").onclick = () => faceId(false);
+$("faceKey").onclick = () => faceId(false);
 $("unlock").onclick = () => $("pw").setAttribute("required", "");
-// Sign in with the password once, then land on the Face ID page to add it.
+// Adding Face ID needs the password itself (not the PIN), so set-up goes
+// through the password form and then to the Face ID page.
 $("setup").onclick = () => {
+  showPin(false);
   $("next").value = "/passkeys"; $("setup").hidden = true;
-  $("prompt").textContent = "Enter the password once to set up Face ID";
-  $("pw").focus();
+  $("prompt").hidden = false; $("prompt").textContent = "Enter the password once to set up Face ID";
+  $("pw").setAttribute("required", ""); $("pw").focus();
 };
 </script>
 </body></html>`;
 }
 
-function passkeysPage() {
+function passkeysPage(pinLength = 0) {
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8" />
@@ -239,15 +398,34 @@ function passkeysPage() {
   li small { display: block; color: #8a867f; font-size: 12.5px; }
   li button { width: auto; background: transparent; color: #c0675a; border: 1px solid rgba(192,103,90,0.35); padding: 6px 12px; font-weight: 500; font-size: 13px; }
   .empty { color: #6f6c67; font-size: 14px; padding: 14px 0; }
+  #stepup { display: grid; gap: 10px; margin: 0 0 14px; }
+  #stepup[hidden] { display: none; }
+  #stepup input { font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(236,232,225,0.198); background: #131313; color: inherit; }
+  #stepup button { background: transparent; color: #ece8e1; border: 1px solid rgba(236,232,225,0.198); font-weight: 500; }
+  .pin { margin: 36px 0 0; padding-top: 18px; border-top: 1px solid rgba(236,232,225,0.09); }
+  .pin h2 { font: 600 20px 'Noto Serif Display', Georgia, serif; margin: 0 0 6px; }
+  .pin p { color: #8a867f; font-size: 14px; margin: 0; }
+  .pin code { color: #c9c4bb; }
 </style>
 </head><body><main>
 <a class="back" href="/tools">← Tools</a>
 <p class="eyebrow">Sign-in</p>
 <h1>Face ID</h1>
 <p class="note">Add Face ID on each phone or computer you use. When the site asks you to sign in, tap <em>Unlock with Face ID</em> instead of typing the password. The password still works as a backup.</p>
+<form id="stepup" hidden>
+  <p class="note" style="margin:0">For security, enter the password to add a device.</p>
+  <input type="password" id="spw" autocomplete="current-password" required />
+  <button type="submit">Continue</button>
+</form>
 <button type="button" id="add" disabled>Add Face ID on this device</button>
 <p id="msg"></p>
 <ul id="list"></ul>
+<section class="pin">
+  <h2>PIN</h2>
+  ${pinLength
+    ? `<p>The lock screen shows a ${pinLength}-digit keypad. Five wrong PINs lock it for 15 minutes (Face ID and the password still work). To change the PIN, edit the <code>PIN</code> secret in Cloudflare.</p>`
+    : `<p>Not set. To unlock with a keypad, add a secret named <code>PIN</code> (4–8 digits) to the <code>dashboard</code> Worker in Cloudflare: Settings → Variables and Secrets.</p>`}
+</section>
 </main>
 <script>${IDLE_CLIENT}</script>
 <script>${PASSKEY_CLIENT}
@@ -256,7 +434,20 @@ const deviceName = () => { const u = navigator.userAgent;
     : /Macintosh/.test(u) ? "Mac" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "Windows PC" : "This device"; };
 const when = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "never";
 let opts = null;
-const getOptions = () => fetch("/api/passkeys?options").then((r) => r.json()).then((o) => { opts = o; $("add").disabled = !hasPasskeys; });
+// Adding a device needs the password typed in the last 5 minutes.
+const getOptions = () => fetch("/api/passkeys?options").then(async (r) => {
+  const o = await r.json();
+  if (r.status === 403) { opts = null; $("add").disabled = true; $("stepup").hidden = false; return; }
+  opts = o; $("stepup").hidden = true; $("add").disabled = !hasPasskeys;
+});
+$("stepup").onsubmit = async (e) => {
+  e.preventDefault(); say(""); $("msg").className = "";
+  const r = await fetch("/api/passkeys?stepup", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: $("spw").value }) });
+  if (!r.ok) { say((await r.json().catch(() => ({}))).error || "Wrong password."); return; }
+  $("spw").value = ""; await getOptions();
+  $("msg").className = "ok"; say("Now tap Add Face ID on this device.");
+};
 const load = () => fetch("/api/passkeys").then((r) => r.json()).then(({ passkeys }) => {
   const ul = $("list"); ul.innerHTML = "";
   if (!passkeys.length) { ul.innerHTML = '<li class="empty">No devices yet.</li>'; return; }
@@ -1020,6 +1211,7 @@ async function passkeyLogin(request, env, url) {
   }
   key.lastUsed = new Date().toISOString();
   await writePasskeys(env, list).catch(() => {});
+  await clearPinLock(env).catch(() => {});
   return new Response(JSON.stringify({ ok: true, next: safeNext(body.next) }), {
     headers: {
       "Content-Type": "application/json",
@@ -1030,7 +1222,20 @@ async function passkeyLogin(request, env, url) {
 }
 
 async function passkeysApi(request, env, url) {
+  // Re-enter the password on the Face ID page to get the step-up.
+  if (request.method === "POST" && url.searchParams.has("stepup")) {
+    const body = (await readJson(request)) || {};
+    if ((await tokenFor(String(body.password || ""))) !== (await tokenFor(env.PASSWORD))) {
+      await new Promise((r) => setTimeout(r, 1500));
+      // 403, not 401: the page treats 401 as "signed out" and locks.
+      return json({ error: "Wrong password." }, 403);
+    }
+    return new Response(null, { status: 204, headers: { "Set-Cookie": await stepupCookie(env) } });
+  }
   if (request.method === "GET" && url.searchParams.has("options")) {
+    // The register challenge is only handed out with a fresh password, and
+    // registering needs that challenge, so this is the step-up check.
+    if (!(await stepupOk(request, env))) return json({ error: "Enter the password to add a device", needPassword: true }, 403);
     const list = await readPasskeys(env);
     return json({
       challenge: await newChallenge(env, "register"),
@@ -1081,22 +1286,22 @@ export default {
       if ((await tokenFor(attempt)) !== expected) {
         // Slow down guessing.
         await new Promise((r) => setTimeout(r, 1500));
-        return html(loginPage("Wrong password.", safeNext(form.get("next"))), 401);
+        return html(loginPage("Wrong password.", safeNext(form.get("next")), pinOf(env).length), 401);
       }
-      return new Response(null, {
-        status: 303,
-        headers: {
-          Location: safeNext(form.get("next")),
-          "Set-Cookie": await sessionCookie(env),
-        },
-      });
+      await clearPinLock(env);
+      const headers = new Headers({ Location: safeNext(form.get("next")) });
+      headers.append("Set-Cookie", await sessionCookie(env));
+      headers.append("Set-Cookie", await stepupCookie(env));
+      return new Response(null, { status: 303, headers });
     }
 
     // Face ID sign-in happens before the password gate, like /__login.
     if (url.pathname === "/__passkey/options" && request.method === "POST") {
-      const count = (await readPasskeys(env)).length;
-      return json({ available: count > 0, challenge: await newChallenge(env, "login"), rpId: url.hostname });
+      const [count, pin] = [(await readPasskeys(env)).length, await pinState(env)];
+      return json({ available: count > 0, challenge: await newChallenge(env, "login"), rpId: url.hostname,
+        pinLockedUntil: pin.until > Date.now() ? pin.until : 0 });
     }
+    if (url.pathname === "/__pin" && request.method === "POST") return pinLogin(request, env);
     if (url.pathname === "/__passkey/login" && request.method === "POST") {
       return passkeyLogin(request, env, url);
     }
@@ -1111,7 +1316,7 @@ export default {
       // The app's own data requests get a plain 401 so the page can reload
       // into the login screen; anything else gets the login page itself.
       if (url.pathname.startsWith("/api/")) return json({ error: "Signed out", signedOut: true }, 401);
-      return html(loginPage("", safeNext(url.pathname + url.search)), 401);
+      return html(loginPage("", safeNext(url.pathname + url.search), pinOf(env).length), 401);
     }
     const res = await serve(request, env, url);
     if (expires - Date.now() > SESSION_TTL - RENEW_AFTER) return res;
@@ -1126,7 +1331,7 @@ async function serve(request, env, url) {
     // The page pings this while you're using it, to keep the session alive.
     if (url.pathname === "/api/session") return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 
-    if (url.pathname === "/passkeys") return html(passkeysPage(), 200);
+    if (url.pathname === "/passkeys") return html(passkeysPage(pinOf(env).length), 200);
     if (url.pathname === "/api/passkeys") {
       try { return await passkeysApi(request, env, url); }
       catch (e) { return json({ error: String(e.message || e) }, 500); }

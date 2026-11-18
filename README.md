@@ -76,6 +76,10 @@ Cloudflare builds and deploys the site on every push to `main`. `worker.js` sits
 
 **Face ID.** Signed in, open Tools → Face ID (`/passkeys`) and tap *Add Face ID on this device*; that saves a passkey to the device (iCloud Keychain on Apple). The password page then shows *Unlock with Face ID*, which signs you in the same way. The password keeps working, and devices can be removed on the same page. `worker.js` verifies the passkeys itself (ES256 with Web Crypto, no extra packages) and keeps their public keys in the `HISTORY` KV namespace under `auth:passkeys`. Challenges are signed with a key derived from `PASSWORD`, so changing the password also cancels any half-finished sign-in. `/__passkey/options` and `/__passkey/login` are the only new addresses reachable without the password.
 
+**PIN keypad.** Add a secret named `PIN` (4–8 digits) to the `dashboard` Worker (Settings → Variables and Secrets) and the lock screen becomes a phone-style keypad that unlocks as soon as the last digit is in; *Use password* is underneath, and the Face ID key sits bottom-left. Without the secret the lock screen keeps the password box. Five wrong PINs lock the keypad for 15 minutes (state in `HISTORY` under `auth:pin`); Face ID and the password still work and clear the lock.
+
+**Adding Face ID needs the password.** Typing the password (not the PIN or Face ID) also sets a 5-minute `ic_stepup` cookie, and `/api/passkeys?options`, which hands out the challenge a new passkey must sign, refuses without it. So someone holding an unlocked phone can't add their own face. The Face ID page asks for the password again when it's been more than 5 minutes.
+
 - `wrangler.jsonc` — Worker config. `name` must match the Worker's name in Cloudflare.
 - `.assetsignore` — files that are never served (the worker code and `ical.js`, config, this README, the SQL).
 - Changing the password logs out every device.
