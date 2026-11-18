@@ -163,9 +163,20 @@ const refresh = () => fetch("/__passkey/options", { method: "POST" }).then((r) =
   $("faceid").hidden = false; $("or").hidden = false; $("prompt").hidden = true;
   $("unlock").className = "ghost"; $("pw").removeAttribute("required");
   if (document.activeElement === $("pw")) $("pw").blur();
+  autoTry();
 }).catch(() => {});
+// Open Face ID by itself once, as soon as the lock screen is showing. Safari
+// may insist on a tap; then this fails quietly and the button stays.
+let tried = false;
+const autoTry = () => {
+  if (tried || !opts || !opts.available) return;
+  if (document.visibilityState !== "visible") return;
+  tried = true;
+  faceId(true);
+};
+document.addEventListener("visibilitychange", autoTry);
 if (hasPasskeys) { refresh(); setInterval(refresh, 4 * 60 * 1000); }
-$("faceid").onclick = async () => {
+const faceId = async (auto) => {
   if (!opts) return;
   say("");
   try {
@@ -179,10 +190,11 @@ $("faceid").onclick = async () => {
     if (!res.ok) throw new Error(d.error || "Face ID didn't work");
     location.replace(d.next);
   } catch (e) {
-    if (!cancelled(e)) say(e.message);
+    if (!auto && !cancelled(e)) say(e.message);
     refresh();
   }
 };
+$("faceid").onclick = () => faceId(false);
 $("unlock").onclick = () => $("pw").setAttribute("required", "");
 // Sign in with the password once, then land on the Face ID page to add it.
 $("setup").onclick = () => {
