@@ -51,13 +51,13 @@ async function stepupCookie(env) {
 const stepupOk = (request, env) => readSigned(request, env, STEPUP, "s1");
 
 /* ─── PIN ───
-   The PIN secret on the Worker (4–8 digits) turns the lock screen into a
+   The vik_key secret on the Worker (4–8 digits) turns the lock screen into a
    keypad. Five wrong PINs lock the keypad for 15 minutes; Face ID and the
    password still work meanwhile, and either one clears the lock. */
 const PIN_TRIES = 5;
 const PIN_LOCK = 15 * 60 * 1000;
 const PIN_STATE = "auth:pin";
-const pinOf = (env) => { const p = String(env.PIN || "").trim(); return /^\d{4,8}$/.test(p) ? p : ""; };
+const pinOf = (env) => { const p = String(env.vik_key || "").trim(); return /^\d{4,8}$/.test(p) ? p : ""; };
 async function pinState(env) {
   return (env.HISTORY && (await env.HISTORY.get(PIN_STATE, "json"))) || { fails: 0, until: 0 };
 }
@@ -423,8 +423,8 @@ function passkeysPage(pinLength = 0) {
 <section class="pin">
   <h2>PIN</h2>
   ${pinLength
-    ? `<p>The lock screen shows a ${pinLength}-digit keypad. Five wrong PINs lock it for 15 minutes (Face ID and the password still work). To change the PIN, edit the <code>PIN</code> secret in Cloudflare.</p>`
-    : `<p>Not set. To unlock with a keypad, add a secret named <code>PIN</code> (4–8 digits) to the <code>dashboard</code> Worker in Cloudflare: Settings → Variables and Secrets.</p>`}
+    ? `<p>The lock screen shows a ${pinLength}-digit keypad. Five wrong PINs lock it for 15 minutes (Face ID and the password still work). To change the PIN, edit the <code>vik_key</code> secret in Cloudflare.</p>`
+    : `<p>Not set. To unlock with a keypad, add a secret named <code>vik_key</code> (4–8 digits) to the <code>dashboard</code> Worker in Cloudflare: Settings → Variables and Secrets.</p>`}
 </section>
 </main>
 <script>${IDLE_CLIENT}</script>
