@@ -145,14 +145,21 @@ function loginPage(error, next = "/") {
   <input type="password" name="password" id="pw" autocomplete="current-password" autofocus required />
   <p id="msg">${error || ""}</p>
   <button type="submit" id="unlock">Unlock</button>
+  <button type="button" id="setup" class="ghost" hidden>Set up Face ID</button>
 </form>
 <script>${PASSKEY_CLIENT}
 // The challenge is fetched ahead of time (and renewed) so the Face ID prompt
 // opens straight from the tap, which Safari requires.
 let opts = null;
-const refresh = () => fetch("/__passkey/options", { method: "POST" }).then((r) => r.json()).then((o) => {
+const refresh = () => fetch("/__passkey/options", { method: "POST" }).then((r) => r.json()).then(async (o) => {
   opts = o;
-  if (!o.available) return;
+  if (!o.available) {
+    // Nothing set up yet: offer it on devices that have Face ID / Touch ID.
+    const can = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
+    if (can && $("next").value !== "/passkeys") $("setup").hidden = false;
+    return;
+  }
+  $("setup").hidden = true;
   $("faceid").hidden = false; $("or").hidden = false; $("prompt").hidden = true;
   $("unlock").className = "ghost"; $("pw").removeAttribute("required");
   if (document.activeElement === $("pw")) $("pw").blur();
@@ -177,6 +184,12 @@ $("faceid").onclick = async () => {
   }
 };
 $("unlock").onclick = () => $("pw").setAttribute("required", "");
+// Sign in with the password once, then land on the Face ID page to add it.
+$("setup").onclick = () => {
+  $("next").value = "/passkeys"; $("setup").hidden = true;
+  $("prompt").textContent = "Enter the password once to set up Face ID";
+  $("pw").focus();
+};
 </script>
 </body></html>`;
 }
