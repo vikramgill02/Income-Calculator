@@ -16,11 +16,13 @@ LOG="$(mktemp)"
 PASS=0; FAIL=0
 
 # Throwaway local password; .dev.vars is never deployed.
-printf 'PASSWORD=smoke-test\nVik_key=246810\n' > .dev.vars
+printf 'PASSWORD=smoke-test\nVik_code=246810\n' > .dev.vars
 
 $WRANGLER dev --port "$PORT" > "$LOG" 2>&1 &
 PID=$!
-cleanup() { kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f .dev.vars "$LOG"; }
+# npx leaves wrangler and workerd running after its own exit, which would
+# answer the next run with old code; stop everything on this port.
+cleanup() { kill "$PID" 2>/dev/null; pkill -f "(--port |localhost:)$PORT" 2>/dev/null; wait "$PID" 2>/dev/null; rm -f .dev.vars "$LOG"; }
 trap cleanup EXIT
 
 for _ in $(seq 1 60); do curl -s -o /dev/null "$BASE/robots.txt" && break; sleep 1; done
@@ -72,7 +74,7 @@ check "forged session refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H 
 check "stretched session refused" 401 "$(curl -s -o /dev/null -w '%{http_code}' -H "Cookie: $(echo "$COOKIE" | sed 's/v1\.[0-9]*\./v1.9999999999999./')" "$BASE/cards")"
 check "/api/session keeps it alive" 204 "$(status /api/session)"
 check "signed-out API answers 401 JSON" yes "$(curl -s "$BASE/api/networth" | grep -q '"signedOut":true' && echo yes || echo no)"
-echo "PIN keypad (Vik_key=246810 in .dev.vars):"
+echo "PIN keypad (Vik_code=246810 in .dev.vars):"
 pin() { curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"pin\":\"$1\"}" "$BASE/__pin"; }
 check "lock screen shows the keypad" yes "$(curl -s "$BASE/cards" | grep -q '<main class="pin">' && echo yes || echo no)"
 check "wrong PIN refused" 401 "$(pin 111111)"
