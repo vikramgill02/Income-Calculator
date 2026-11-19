@@ -11,4 +11,4 @@
 ## Gotchas
 
 - `ynab.exclude_names` in `networth.json` must match the CMA's exact name in YNAB (currently `CMA (6293)`). If the name doesn't match, the CMA is counted twice: once as YNAB cash and once as the CRNA Fund.
-- Sign-in lasts 5 minutes without use (`SESSION_TTL` in `worker.js`; the idle timer in `index.html` and `IDLE_CLIENT` in `worker.js` must match). Changing `PASSWORD` signs out every device and cancels Face ID sign-ins in progress; registered Face ID devices keep working. The keypad PIN is the `vik_key` Worker secret; only the password (not the PIN or Face ID) allows adding a Face ID device.
+- Sign-in lasts 5 minutes without use (`SESSION_TTL` in `worker.js`; the idle timer in `index.html` and `IDLE_CLIENT` in `worker.js` must match). Changing `PASSWORD` signs out every device and cancels Face ID sign-ins in progress; registered Face ID devices keep working. The keypad PIN is the `Vik_key` Worker secret (capital V; names are case-sensitive); only the password (not the PIN or Face ID) allows adding a Face ID device.

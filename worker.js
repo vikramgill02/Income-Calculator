@@ -51,21 +51,21 @@ async function stepupCookie(env) {
 const stepupOk = (request, env) => readSigned(request, env, STEPUP, "s1");
 
 /* ─── PIN ───
-   The vik_key secret on the Worker (4–8 digits) turns the lock screen into a
+   The Vik_key secret on the Worker (4–8 digits) turns the lock screen into a
    keypad. Five wrong PINs lock the keypad for 15 minutes; Face ID and the
    password still work meanwhile, and either one clears the lock. */
 const PIN_TRIES = 5;
 const PIN_LOCK = 15 * 60 * 1000;
 const PIN_STATE = "auth:pin";
-const pinOf = (env) => { const p = String(env.vik_key || "").trim(); return /^\d{4,8}$/.test(p) ? p : ""; };
+const pinOf = (env) => { const p = String(env.Vik_key || "").trim(); return /^\d{4,8}$/.test(p) ? p : ""; };
 // Why the keypad isn't showing, without revealing the PIN: is the secret
-// there, and is it 4-8 digits? Also notices a near-miss name (e.g. VIK_KEY).
+// there, and is it 4-8 digits? Also notices a near-miss name (e.g. vik_key).
 function pinStatus(env) {
-  if (env.vik_key === undefined) {
+  if (env.Vik_key === undefined) {
     const near = Object.keys(env).find((k) => k.toLowerCase().replace(/[^a-z]/g, "") === "vikkey");
     return near ? `misnamed:${near}` : "missing";
   }
-  const p = String(env.vik_key).trim();
+  const p = String(env.Vik_key).trim();
   if (/^\d{4,8}$/.test(p)) return "ok";
   if (!/^\d+$/.test(p)) return "not-only-digits";
   return p.length < 4 ? "too-short" : "too-long";
@@ -435,8 +435,8 @@ function passkeysPage(pinLength = 0) {
 <section class="pin">
   <h2>PIN</h2>
   ${pinLength
-    ? `<p>The lock screen shows a ${pinLength}-digit keypad. Five wrong PINs lock it for 15 minutes (Face ID and the password still work). To change the PIN, edit the <code>vik_key</code> secret in Cloudflare.</p>`
-    : `<p>Not set. To unlock with a keypad, add a secret named <code>vik_key</code> (4–8 digits) to the <code>dashboard</code> Worker in Cloudflare: Settings → Variables and Secrets.</p>`}
+    ? `<p>The lock screen shows a ${pinLength}-digit keypad. Five wrong PINs lock it for 15 minutes (Face ID and the password still work). To change the PIN, edit the <code>Vik_key</code> secret in Cloudflare.</p>`
+    : `<p>Not set. To unlock with a keypad, add a secret named <code>Vik_key</code> (4–8 digits) to the <code>dashboard</code> Worker in Cloudflare: Settings → Variables and Secrets.</p>`}
 </section>
 </main>
 <script>${IDLE_CLIENT}</script>
