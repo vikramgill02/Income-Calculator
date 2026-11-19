@@ -58,6 +58,18 @@ const PIN_TRIES = 5;
 const PIN_LOCK = 15 * 60 * 1000;
 const PIN_STATE = "auth:pin";
 const pinOf = (env) => { const p = String(env.vik_key || "").trim(); return /^\d{4,8}$/.test(p) ? p : ""; };
+// Why the keypad isn't showing, without revealing the PIN: is the secret
+// there, and is it 4-8 digits? Also notices a near-miss name (e.g. VIK_KEY).
+function pinStatus(env) {
+  if (env.vik_key === undefined) {
+    const near = Object.keys(env).find((k) => k.toLowerCase().replace(/[^a-z]/g, "") === "vikkey");
+    return near ? `misnamed:${near}` : "missing";
+  }
+  const p = String(env.vik_key).trim();
+  if (/^\d{4,8}$/.test(p)) return "ok";
+  if (!/^\d+$/.test(p)) return "not-only-digits";
+  return p.length < 4 ? "too-short" : "too-long";
+}
 async function pinState(env) {
   return (env.HISTORY && (await env.HISTORY.get(PIN_STATE, "json"))) || { fails: 0, until: 0 };
 }
@@ -1299,7 +1311,7 @@ export default {
     if (url.pathname === "/__passkey/options" && request.method === "POST") {
       const [count, pin] = [(await readPasskeys(env)).length, await pinState(env)];
       return json({ available: count > 0, challenge: await newChallenge(env, "login"), rpId: url.hostname,
-        pinLockedUntil: pin.until > Date.now() ? pin.until : 0 });
+        pinLockedUntil: pin.until > Date.now() ? pin.until : 0, pinStatus: pinStatus(env) });
     }
     if (url.pathname === "/__pin" && request.method === "POST") return pinLogin(request, env);
     if (url.pathname === "/__passkey/login" && request.method === "POST") {
